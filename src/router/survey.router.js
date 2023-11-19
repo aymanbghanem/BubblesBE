@@ -1,0 +1,36 @@
+const express = require("express");
+const router = express.Router();
+const surveyModel = require('../models/survey.models')
+const {hashPassword} = require('../helper/hashPass.helper')
+const config = require('../../config')
+const auth = require('../middleware/auth')
+var jwt = require('jsonwebtoken');
+require('dotenv').config()
+
+
+router.post('/api/v1/createSurvey',auth,async(req,res)=>{
+      try {
+        let role = req.user.user_role
+        let {survey_title,survey_description,company_id,} = req.body
+        if (role=='admin'){
+           let existingSurvey = await surveyModel.findOne({survey_title:survey_title,active:1})
+           if(existingSurvey){
+              res.json({message:"survey title already exist"})
+           }
+           else{
+              let survey = await surveyModel.create({
+                survey_title : survey_title,
+                survey_description:survey_description
+              })
+              res.json({message:"successfully added",survey})
+           }
+        }
+        else{
+         res.json({ message: "sorry you are unauthorized" })
+        }
+      } catch (error) {
+        res.json({message:"catch error "+error})
+      }
+})
+
+module.exports = router
