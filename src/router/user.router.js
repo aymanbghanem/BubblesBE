@@ -29,6 +29,17 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 company_name: company_name,
             });
         }
+
+        // Check if an owner already exists for the company
+        const existingOwner = await userModels.findOne({
+            user_role: 'owner',
+            company_id: company._id,
+        });
+
+        if (existingOwner) {
+            return res.json({ message: "There is already an owner for this company" });
+        }
+
         // Check for existing users within the company
         const existingUser = await userModels.findOne({
             $and: [
