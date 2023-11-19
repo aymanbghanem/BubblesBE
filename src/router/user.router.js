@@ -10,6 +10,47 @@ var jwt = require('jsonwebtoken');
 require('dotenv').config()
 
 
+const addOwner = async (company) => {
+    const existingOwner = await userModels.findOne({
+        user_role: 'owner',
+        company_id: company._id,
+    });
+
+    if (existingOwner) {
+        throw new Error("There is already an owner for this company");
+    }
+};
+
+const addDepartmentAndUser = async (userParams, company_id, department_name) => {
+    let department_id;
+
+    const department = await departmentModel
+        .find({ department_name: department_name.toLowerCase(), company_id: company_id })
+        .populate({
+            path: 'company_id',
+            select: 'company_name',
+        });
+
+    if (department.length !== 0) {
+        const filteredData = department.filter((entry) => entry.company_id !== null);
+        department_id = filteredData[0]._id.toString();
+    } else {
+        const newDepartment = await departmentModel.create({
+            department_name: department_name,
+            company_id: company_id,
+        });
+        department_id = newDepartment._id;
+    }
+
+    const user = await userModels.create({
+        ...userParams,
+        company_id: company_id,
+        department_id: department_id,
+    });
+
+    return user;
+};
+
 router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
         const role = req.user.user_role.toLowerCase();
@@ -18,29 +59,22 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         if (!config.roles.includes(role)) {
             return res.json({ message: "Sorry, you are unauthorized" });
         }
-        // Find the company by name
+
         let company = await companyModel.findOne({
             company_name: company_name.toLowerCase(),
             active: 1,
         });
+
         if (!company) {
-            // If the company doesn't exist, create it
             company = await companyModel.create({
                 company_name: company_name,
             });
         }
 
-        // Check if an owner already exists for the company
-        const existingOwner = await userModels.findOne({
-            user_role: 'owner',
-            company_id: company._id,
-        });
-
-        if (existingOwner) {
-            return res.json({ message: "There is already an owner for this company" });
+        if (user_role.toLowerCase() == 'owner') {
+            await addOwner(company);
         }
 
-        // Check for existing users within the company
         const existingUser = await userModels.findOne({
             $and: [
                 { $or: [{ email_address: email_address }, { user_name: user_name }] },
@@ -54,73 +88,65 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
         let token = jwt.sign({ email: email_address }, process.env.TOKEN_KEY);
 
-        if (user_role.toLowerCase() === 'owner') {
-            hashPassword(password, async (hashedPassword) => {
-                let user = await userModels.create({
-                    user_name: user_name,
-                    password: password,
-                    email_address: email_address,
-                    company_id: company._id,
-                    user_role: user_role,
-                    token: token,
-                });
-
-                return res.json({
-                    message: "Successfully added",
-                    token: user.token,
-                    user_role: user.user_role,
-                    email_address: user.email_address,
-                });
+        if (user_role.toLowerCase() === 'owner' && role == "superadmin") {
+            const user = await userModels.create({
+                user_name: user_name,
+                password: password,
+                email_address: email_address,
+                company_id: company._id,
+                user_role: user_role,
+                token: token,
             });
-        } else if (department_name && (user_role.toLowerCase() === 'admin' || user_role.toLowerCase() === 'survey-reader')) {
-            let company_id = company._id;
 
-            let department = await departmentModel
-                .find({ department_name: department_name.toLowerCase(), company_id: company_id })
-                .populate({
-                    path: 'company_id',
-                    select: 'company_name',
-                });
-
-            let department_id;
-
-            if (department.length !== 0) {
-                const filteredData = department.filter((entry) => entry.company_id !== null);
-                department_id = filteredData[0]._id.toString();
-            } else {
-                let department = await departmentModel.create({
-                    department_name: department_name,
-                    company_id: company_id,
-                });
-                department_id = department._id;
-            }
-
-            hashPassword(password, async (hashedPassword) => {
-                let user = await userModels.create({
-                    user_name: user_name,
-                    password: password,
-                    email_address: email_address,
-                    company_id: company_id,
-                    department_id: department_id,
-                    user_role: user_role,
-                    token: token,
-                });
-
-                return res.json({
-                    message: "Successfully added",
-                    token: user.token,
-                    user_role: user.user_role,
-                    email_address: user.email_address,
-                });
+            return res.json({
+                message: "Successfully added",
+                token: user.token,
+                user_role: user.user_role,
+                email_address: user.email_address,
             });
-        } else {
-            return res.json({ message: "Sorry, you are trying to add a new role without enough info" });
+        } 
+        
+        else if (department_name && (user_role.toLowerCase() === 'admin') && role == 'owner') {
+            const userParams = {
+                user_name: user_name,
+                password: password,
+                email_address: email_address,
+                user_role: user_role,
+                token: token,
+            };
+            const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
+
+            return res.json({
+                message: "Successfully added",
+                token: user.token,
+                user_role: user.user_role,
+                email_address: user.email_address,
+            });
+        } 
+        else if (department_name && (user_role.toLowerCase() === 'survey-reader') && role == 'admin') {
+            const userParams = {
+                user_name: user_name,
+                password: password,
+                email_address: email_address,
+                user_role: user_role,
+                token: token,
+            };
+            const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
+
+            return res.json({
+                message: "Successfully added",
+                token: user.token,
+                user_role: user.user_role,
+                email_address: user.email_address,
+            });
+        } 
+        else {
+            return res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        return res.json({ message: "Catch error: " + error });
+        return res.json({ message:error.message });
     }
 });
-
 
 
 router.post('/api/v1/addSuperadmin', async (req, res) => {

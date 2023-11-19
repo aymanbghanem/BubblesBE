@@ -12,19 +12,17 @@ const questionsSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'department'
     },
-    created_by: {
+    survey_id: {
         type: Schema.Types.ObjectId,
         ref: 'user'
     },
-    company_logo: String,
-
     active: {
         type: Number,
         default: 1
     },
-    survey_description:String,
-    logo:{
-        type:String
+
+    required_question:{
+        type:Boolean
     }
 
 
