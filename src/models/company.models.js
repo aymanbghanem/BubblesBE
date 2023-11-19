@@ -9,6 +9,7 @@ const companySchema = new Schema({
         type: Number,
         default: 1
     },
+    company_logo:String
     
 }, { timestamps: true })
 

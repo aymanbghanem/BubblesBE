@@ -9,6 +9,7 @@ const departmentRouter = require('./src/router/department.router')
 const surveyRouter = require('./src/router/survey.router')
 const app = express()
 app.use(cors())
+app.use(express.static("logo"));
 app.use(express.json());
 
 

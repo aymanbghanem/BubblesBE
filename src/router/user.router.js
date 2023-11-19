@@ -9,104 +9,107 @@ const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 require('dotenv').config()
 
+
 router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
-        let department;
-        let department_id;
-        let role = (req.user.user_role).toLowerCase();
-        let { user_name, password, email_address, company_name, user_role, department_name } = req.body;
+        const role = req.user.user_role.toLowerCase();
+        const { user_name, password, email_address, user_role, company_name, department_name } = req.body;
 
-        if (config.roles.includes(role)) {
-            const existingUser = await userModels.findOne({
-                $or: [{ email_address: email_address }, { user_name: user_name }],
+        if (!config.roles.includes(role)) {
+            return res.json({ message: "Sorry, you are unauthorized" });
+        }
+        // Find the company by name
+        let company = await companyModel.findOne({
+            company_name: company_name.toLowerCase(),
+            active: 1,
+        });
+        if (!company) {
+            // If the company doesn't exist, create it
+            company = await companyModel.create({
+                company_name: company_name,
             });
+        }
+        // Check for existing users within the company
+        const existingUser = await userModels.findOne({
+            $and: [
+                { $or: [{ email_address: email_address }, { user_name: user_name }] },
+                { company_id: company._id },
+            ],
+        });
 
-            if (existingUser) {
-                res.json({ message: "The email address or username already exists" });
-            }
-            else {
-                let token = jwt.sign({ email: email_address }, process.env.TOKEN_KEY);
-                if ((user_role.toLowerCase()) == 'owner' && company_name != null) {
-                    //we need the company id , we will use the company_name to get the company_id from the table
+        if (existingUser) {
+            return res.json({ message: "The email address or username already exists within the company" });
+        }
 
-                    //check if the company exist or not 
-                    let company = await companyModel.findOne({ company_name: company_name.toLowerCase(), active: 1 }).select('company_name')
+        let token = jwt.sign({ email: email_address }, process.env.TOKEN_KEY);
 
-                    if (company) {
-                        hashPassword(password, async (hashedPassword) => {
-                            password = hashedPassword;
+        if (user_role.toLowerCase() === 'owner') {
+            hashPassword(password, async (hashedPassword) => {
+                let user = await userModels.create({
+                    user_name: user_name,
+                    password: password,
+                    email_address: email_address,
+                    company_id: company._id,
+                    user_role: user_role,
+                    token: token,
+                });
 
-                            let user = await userModels.create({
-                                user_name: user_name,
-                                password: password,
-                                email_address: email_address,
-                                company_id: company._id,
-                                user_role: user_role,
-                                token: token,
-                            });
+                return res.json({
+                    message: "Successfully added",
+                    token: user.token,
+                    user_role: user.user_role,
+                    email_address: user.email_address,
+                });
+            });
+        } else if (department_name && (user_role.toLowerCase() === 'admin' || user_role.toLowerCase() === 'survey-reader')) {
+            let company_id = company._id;
 
-                            let response = {
-                                message: "Successfully added",
-                                token: user.token,
-                                user_role: user.user_role,
-                                email_address: user.email_address,
-                            };
-                            res.json({ response });
-                        });
-                    }
-                    else{
-                        res.json({ message: "Company name does not exist" });
-                    }
+            let department = await departmentModel
+                .find({ department_name: department_name.toLowerCase(), company_id: company_id })
+                .populate({
+                    path: 'company_id',
+                    select: 'company_name',
+                });
 
-                }
-                else if ((department_name!=null) && (((user_role.toLowerCase()) == 'admin') || ((user_role.toLowerCase()) == 'survey-reader'))) {
-                    department = await departmentModel.find({ department_name: department_name.toLowerCase() })
-                        .populate({
-                            path: 'company_id',
-                            match: { company_name: company_name },
-                            select: 'company_name'
-                        });
-                   if(department.length!=0){
-                    const filteredData = department.filter(entry => entry.company_id !== null);
-                    department_id = filteredData[0]._id.toString();
-                    hashPassword(password, async (hashedPassword) => {
-                        password = hashedPassword;
+            let department_id;
 
-                        let user = await userModels.create({
-                            user_name: user_name,
-                            password: password,
-                            email_address: email_address,
-                            company_id: company._id,
-                            department_id : department_id,
-                            user_role: user_role,
-                            token: token,
-                        });
-
-                        let response = {
-                            message: "Successfully added",
-                            token: user.token,
-                            user_role: user.user_role,
-                            email_address: user.email_address,
-                        };
-                        res.json({ response });
-                    });
-                   }
-                   else{
-                        res.json({ message: "Department name does not exist" });
-                   }
-                }
-                else {
-                    res.json({ message:"Sorry, you are try to add new role without enough info" })
-                }
+            if (department.length !== 0) {
+                const filteredData = department.filter((entry) => entry.company_id !== null);
+                department_id = filteredData[0]._id.toString();
+            } else {
+                let department = await departmentModel.create({
+                    department_name: department_name,
+                    company_id: company_id,
+                });
+                department_id = department._id;
             }
 
+            hashPassword(password, async (hashedPassword) => {
+                let user = await userModels.create({
+                    user_name: user_name,
+                    password: password,
+                    email_address: email_address,
+                    company_id: company_id,
+                    department_id: department_id,
+                    user_role: user_role,
+                    token: token,
+                });
+
+                return res.json({
+                    message: "Successfully added",
+                    token: user.token,
+                    user_role: user.user_role,
+                    email_address: user.email_address,
+                });
+            });
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            return res.json({ message: "Sorry, you are trying to add a new role without enough info" });
         }
     } catch (error) {
-        res.json({ message: "Catch error: " + error });
+        return res.json({ message: "Catch error: " + error });
     }
 });
+
 
 
 router.post('/api/v1/addSuperadmin', async (req, res) => {
@@ -147,101 +150,4 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
 });
 
 module.exports = router
-/*
 
- else {
-                if (department_name !== null && (user_role=='admin' || user_role=='survey-reader')) {
-                    department = await departmentModel.find({ department_name: department_name })
-                        .populate({
-                            path: 'company_id',
-                            match: { company_name: company_name },
-                            select: 'company_name'
-                        });
-
-                    const filteredData = department.filter(entry => entry.company_id !== null);
-
-                    if (filteredData.length > 0) {
-                        department_id = filteredData[0]._id.toString();
-                        company_id = filteredData[0].company_id._id.toString();
-                    } else {
-                        // Handle the case where the department is empty or not found
-                        res.json({ message: "Department name cannot be empty" });
-                    }
-                } 
-                           
-                hashPassword(password, async (hashedPassword) => {
-                    password = hashedPassword;
-                    let token = jwt.sign({ email: email_address }, process.env.TOKEN_KEY);
-                    let user = await userModels.create({
-                        user_name: user_name,
-                        password: password,
-                        email_address: email_address,
-                        company_id: company_id,
-                        user_role: user_role,
-                        token: token,
-                    });
-
-                    let response = {
-                        message: "Successfully added",
-                        token: user.token,
-                        user_role: user.user_role,
-                        email_address: user.email_address,
-                    };
-                    res.json({ response });
-                });
-            }
-
-
-*/
-
-/*
-
-    if (company_name == null) {
-                    res.json({ message: "Company name cannot be empty" });
-                }
-                else {
-                    if (department_name == null && (user_role == 'admin' || user_role == 'survey-reader')) {
-                        res.json({ message: "Department name cannot be empty for this role" });
-                    }
-                    else {
-                        department = await departmentModel.find({ department_name: department_name })
-                            .populate({
-                                path: 'company_id',
-                                match: { company_name: company_name },
-                                select: 'company_name'
-                            });
-
-                        const filteredData = department.filter(entry => entry.company_id !== null);
-
-                        if (filteredData.length > 0) {
-                            department_id = filteredData[0]._id.toString();
-                            company_id = filteredData[0].company_id._id.toString();
-                        } else {
-                            // Handle the case where the department is empty or not found
-                            res.json({ message: "Department name cannot be empty" });
-                        }
-                    }
-
-                    hashPassword(password, async (hashedPassword) => {
-                        password = hashedPassword;
-                        let token = jwt.sign({ email: email_address }, process.env.TOKEN_KEY);
-                        let user = await userModels.create({
-                            user_name: user_name,
-                            password: password,
-                            email_address: email_address,
-                            company_id: company_id,
-                            user_role: user_role,
-                            token: token,
-                        });
-
-                        let response = {
-                            message: "Successfully added",
-                            token: user.token,
-                            user_role: user.user_role,
-                            email_address: user.email_address,
-                        };
-                        res.json({ response });
-                    });
-                }
-
-*/

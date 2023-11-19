@@ -1,10 +1,10 @@
 const { Schema, model } = require('mongoose')
 
-const surveySchema = new Schema({
-    survey_title: {
+const questionsSchema = new Schema({
+    question_title: {
         type: String
     },
-    company_id: {
+    question_id: {
         type: Schema.Types.ObjectId,
         ref: 'company'
     },
@@ -30,4 +30,4 @@ const surveySchema = new Schema({
 
 }, { timestamps: true })
 
-module.exports = model('survey', surveySchema)
+module.exports = model('question', questionsSchema)

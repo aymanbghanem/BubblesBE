@@ -9,7 +9,7 @@ require('dotenv').config()
 
 router.post('/api/v1/addCompany',auth,async(req,res)=>{
     try {
-        let {company_name} = req.body
+        let {company_name,company_logo} = req.body
         company_name = company_name.toLowerCase()
         if(req.user.user_role=='superadmin'){
             let existingCompany = await companyModel.findOne({company_name:company_name})
@@ -19,7 +19,8 @@ router.post('/api/v1/addCompany',auth,async(req,res)=>{
             }
             else{
                 let company = await companyModel.create({
-                    company_name:company_name
+                    company_name:company_name,
+                    company_logo
                 })
                 res.json({message:"successfully added",company})
             }
