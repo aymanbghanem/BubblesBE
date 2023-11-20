@@ -23,6 +23,9 @@ const questionsSchema = new Schema({
 
     required_question:{
         type:Boolean
+    },
+    question_description:{
+        type:String
     }
 
 

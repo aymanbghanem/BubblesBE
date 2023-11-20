@@ -57,7 +57,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         const { user_name, password, email_address, user_role, company_name, department_name } = req.body;
 
         if (!config.roles.includes(role)) {
-            return res.json({ message: "Sorry, you are unauthorized" });
+            return res.json({ message: "sorry, you are unauthorized" });
         }
 
         let company = await companyModel.findOne({
@@ -141,7 +141,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
         } 
         else {
-            return res.json({ message: "Sorry, you are unauthorized" });
+            return res.json({ message: "sorry, you are unauthorized" });
         }
     } catch (error) {
         return res.json({ message:error.message });
