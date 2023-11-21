@@ -26,7 +26,8 @@ const userSchema = new Schema({
     department_id:{
         type:Schema.Types.ObjectId,
         ref:'department'
-    }
+    },
+    image:String
     
     
 }, { timestamps: true })

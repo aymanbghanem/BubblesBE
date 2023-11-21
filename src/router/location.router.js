@@ -4,6 +4,7 @@ const userModels = require("../models/user.models");
 const departmentModel = require('../models/department.models')
 const companyModel = require('../models/company.models')
 const Location = require('../../src/models/location.models')
+const surveyModel = require('../models/survey.models')
 const { hashPassword } = require('../helper/hashPass.helper')
 const config = require('../../config')
 const auth = require('../middleware/auth')
@@ -12,44 +13,60 @@ require('dotenv').config()
 
 router.post('/api/v1/addLocation', auth, async (req, res) => {
     try {
-        const { location_tree } = req.body;
-        const idToLocationMap = new Map();
+        const { location_tree, survey_title } = req.body;
         const role = req.user.user_role;
+        const department = req.user.department_id;
 
         if (role == 'admin') {
-            // Store the MongoDB-generated IDs for each location
-            for (const locationData of location_tree) {
-                const { id, name, parentId } = locationData;
+            let existingSurvey = await surveyModel.findOne({
+                survey_title: survey_title,
+                department_id: department,
+                active: 1
+            });
 
-                const location = new Location({
-                    location_name: name,
-                    id: id,
-                });
+            if (!existingSurvey) {
+                res.json({ message: "No survey exists for this department" });
+            } else {
+                const idToLocationMap = new Map();
 
-                await location.save();
+                // Iterate through each set of locations for a survey
+                for (const locationsSet of location_tree) {
+                    // Store the MongoDB-generated IDs for each location in the set
+                    for (const locationData of locationsSet) {
+                        const { id, name, parentId } = locationData;
 
-                // Store the MongoDB-generated ID for later reference
-                locationData.mongoId = String(location._id);
+                        const location = new Location({
+                            location_name: name,
+                            id: id,
+                            survey_id: existingSurvey._id
+                        });
 
-                // Store the location in the map for potential parent references
-                // Store the whole object, use 'id' as the key consistently
-                idToLocationMap.set(id, location);
-            }
+                        await location.save();
 
-            // Assign parent references based on the provided parent IDs
-            for (const locationData of location_tree) {
-                const { id, parentId } = locationData;
+                        // Store the MongoDB-generated ID for later reference
+                        locationData.mongoId = String(location._id);
 
-                const location = idToLocationMap.get(id);
-                const parent = parentId !== null ? idToLocationMap.get(parentId) : null;
+                        // Store the location in the map for potential parent references
+                        // Store the whole object, use 'id' as the key consistently
+                        idToLocationMap.set(id, location);
+                    }
 
-                // Check if location and parent exist before updating the parent reference
-                if (location) {
-                    await Location.updateOne({ _id: location._id }, {  parent_id: parent ? parent._id : null });
+                    // Assign parent references based on the provided parent IDs for the current set
+                    for (const locationData of locationsSet) {
+                        const { id, parentId } = locationData;
+
+                        const location = idToLocationMap.get(id);
+                        const parent = parentId !== null ? idToLocationMap.get(parentId) : null;
+
+                        // Check if location and parent exist before updating the parent reference
+                        if (location) {
+                            await Location.updateOne({ _id: location._id }, { parent_id: parent ? parent._id : null });
+                        }
+                    }
                 }
-            }
 
-            res.status(200).json({ message: 'Locations stored and parent references assigned successfully!' });
+                res.status(200).json({ message: 'Locations stored and parent references assigned successfully!' });
+            }
         } else {
             res.json({ message: "Sorry, you are unauthorized." });
         }
@@ -59,21 +76,34 @@ router.post('/api/v1/addLocation', auth, async (req, res) => {
 });
 
 
-
-
-// router.post('/api/v1/addLocation',auth,async(req,res)=>{
-//     try {
-//         const role = req.user.user_role;
-//         const {location_tree} = req.body
-//         if(role=='admin'){
-
-//         }
-//         else{
-//             res.json({ message: "Sorry, you are unauthorized." });
-//         }
-//     } catch (error) {
-//         res.status(500).json({message:"catch error "})
-//     }
-// })
-
 module.exports = router
+/*
+
+ 
+/*
+ 
+{
+  "location_tree": [
+    [
+      { "id": "1", "name": "A", "parentId": null },
+      { "id": "2", "name": "B", "parentId": "1" },
+      { "id": "3", "name": "C", "parentId": "1" },
+      { "id": "4", "name": "D", "parentId": "2" },
+      { "id": "5", "name": "E", "parentId": "2" },
+      { "id": "6", "name": "F", "parentId": "3" },
+      { "id": "7", "name": "G", "parentId": "3" }
+    ],
+    [
+      { "id": "1", "name": "A", "parentId": null },
+      { "id": "2", "name": "B", "parentId": "1" },
+      { "id": "3", "name": "C", "parentId": "1" },
+      { "id": "4", "name": "D", "parentId": "2" },
+      { "id": "5", "name": "E", "parentId": "2" },
+      { "id": "6", "name": "F", "parentId": "3" },
+      { "id": "7", "name": "G", "parentId": "3" }
+    ]
+  ]
+}
+ 
+
+*/

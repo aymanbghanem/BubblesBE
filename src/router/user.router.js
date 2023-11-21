@@ -4,6 +4,8 @@ const userModels = require("../models/user.models");
 const departmentModel = require('../models/department.models')
 const companyModel = require('../models/company.models')
 const { hashPassword } = require('../helper/hashPass.helper')
+const generateMixedID = require('../helper/passwordGenerator.helper')
+const sendEmail = require('../middleware/email')
 const config = require('../../config')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
@@ -54,11 +56,13 @@ const addDepartmentAndUser = async (userParams, company_id, department_name) => 
 router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
         const role = req.user.user_role.toLowerCase();
-        const { user_name, password, email_address, user_role, company_name, department_name } = req.body;
-
-        if (!config.roles.includes(role)) {
-            return res.json({ message: "sorry, you are unauthorized" });
-        }
+        const { user_name, password,email_address, user_role, company_name, department_name } = req.body;
+    //     let password = generateMixedID()
+    //    let info =  await sendEmail(password)
+    //     res.json({message:password,info})
+        // if (!config.roles.includes(role)) {
+        //     return res.json({ message: "sorry, you are unauthorized" });
+        // }
 
         let company = await companyModel.findOne({
             company_name: company_name.toLowerCase(),
@@ -143,11 +147,11 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         else {
             return res.json({ message: "sorry, you are unauthorized" });
         }
-    } catch (error) {
+    } 
+    catch (error) {
         return res.json({ message:error.message });
     }
 });
-
 
 router.post('/api/v1/addSuperadmin', async (req, res) => {
     try {
@@ -185,6 +189,37 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         res.status(500).json({ message: "catch error " + error });
     }
 });
+
+router.get('/api/v1/userInfo', auth, async (req, res) => {
+    try {
+        let id = req.user._id
+        let user = await userModels.findById({ _id: id, active: 1 }).populate([
+            {
+                path: 'company_id',
+                select: 'company_name -_id',
+            },
+            {
+                path: 'department_id',
+                select: 'department_name',
+            },
+        ]);
+        if (user) {
+            let response = {
+                user_name: user.user_name,
+                user_role: user.user_role,
+                token: user.token,
+                email_address: user.email_address,
+                company_name: user.company_id.company_name || " ", // Add a check here
+                department_name: user.department_id ? user.department_id.department_name || " " : " " // Add a check here
+            }
+            res.json({ message: response })
+        } else {
+            res.json({ message: "The user is not in the system" })
+        }
+    } catch (error) {
+        res.status(500).json({ message: "catch error " + error })
+    }
+})
 
 module.exports = router
 
