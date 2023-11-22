@@ -27,7 +27,10 @@ const userSchema = new Schema({
         type:Schema.Types.ObjectId,
         ref:'department'
     },
-    image:String
+    image:{
+        type:String,
+        default:''
+    }
     
     
 }, { timestamps: true })

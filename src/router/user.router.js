@@ -60,9 +60,9 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
     //     let password = generateMixedID()
     //    let info =  await sendEmail(password)
     //     res.json({message:password,info})
-        // if (!config.roles.includes(role)) {
-        //     return res.json({ message: "sorry, you are unauthorized" });
-        // }
+        if (!config.roles.includes(role)) {
+            return res.json({ message: "sorry, you are unauthorized" });
+        }
 
         let company = await companyModel.findOne({
             company_name: company_name.toLowerCase(),
@@ -100,6 +100,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 company_id: company._id,
                 user_role: user_role,
                 token: token,
+                
             });
 
             return res.json({
@@ -107,6 +108,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 token: user.token,
                 user_role: user.user_role,
                 email_address: user.email_address,
+                image:user.image
             });
         } 
         
@@ -117,6 +119,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 email_address: email_address,
                 user_role: user_role,
                 token: token,
+           
             };
             const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
 
@@ -125,6 +128,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 token: user.token,
                 user_role: user.user_role,
                 email_address: user.email_address,
+                image:user.image
             });
         } 
         else if (department_name && (user_role.toLowerCase() === 'survey-reader') && role == 'admin') {
@@ -134,6 +138,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 email_address: email_address,
                 user_role: user_role,
                 token: token,
+                
             };
             const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
 
@@ -142,6 +147,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 token: user.token,
                 user_role: user.user_role,
                 email_address: user.email_address,
+                image:user.image
             });
         } 
         else {
@@ -221,5 +227,70 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
     }
 })
 
+router.put('/api/v1/updateUserInfo',auth,async(req,res)=>{
+    try {
+        let {user_name} = req.body
+        let role = req.user.user_role
+        let company_id = req.user.company_id
+        
+        if(config.roles.includes(role)){
+           let existingUser = await userModels.findOne({
+            user_name:user_name,
+            active:1,
+            company_id:company_id
+           })
+        }
+        else{
+           res.json({message:"sorry, you are unauthorized"})
+        }
+        
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
+
+router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
+    try {
+        const role = req.user.user_role;
+
+        if (!config.roles.includes(role)) {
+            return res.json({ message: "Sorry, you are unauthorized" });
+        }
+
+        const roleQueries = {
+            superadmin: {
+                userQuery: { user_role: 'owner' },
+                populate: { path: 'company_id', select: 'company_name -_id' }
+            },
+            owner: {
+                userQuery: { user_role: 'admin', company_id: req.user.company_id },
+                populate: null
+            },
+            admin: {
+                userQuery: { user_role: 'survey-reader', department_id: req.user.department_id },
+                populate: null
+            }
+        };
+
+        const { userQuery, populate } = roleQueries[role] || {};
+        if (!userQuery) {
+            return res.json({ message: "Invalid user role" });
+        }
+
+        const users = await userModels.find({ ...userQuery, active: 1 })
+            .populate(populate)
+            .select('-_id -password');
+
+        if (users.length !== 0) {
+            res.json({ message: users });
+        } else {
+            res.json({ message: "Sorry, there are no users under your role" });
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
 module.exports = router
 
