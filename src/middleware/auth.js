@@ -17,7 +17,7 @@ const auth = async (req, res, next) => {
       } else {
         
         const user = await User.findOne({
-          email_address: decode.email,
+          user_name: decode.user_name,
           active: 1,
         });
         if (!user) {

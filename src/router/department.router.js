@@ -7,32 +7,41 @@ const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 require('dotenv').config()
 
-router.post('/api/v1/addDepartment',auth,async(req,res)=>{
+router.post('/api/v1/addDepartment', auth, async (req, res) => {
     try {
-        let {department_name} = req.body
-        department_name = department_name.toLowerCase()
-        let company_id = req.user.company_id
-        if(req.user.user_role=='owner'){
-            let existingDepartment = await departmentModel.findOne({department_name:department_name,company_id:company_id,active:1})
-            if(existingDepartment){
-                let department = existingDepartment
-                res.json({ message: "The department name already exists for your company",department});
+        const company_id = req.user.company_id;
+
+        if (req.user.user_role === 'owner') {
+            const departmentsData = req.body.department.map(department => {
+                return { department_name: department.department_name.toLowerCase() };
+            });
+
+            const existingDepartments = await Promise.all(departmentsData.map(async (department) => {
+                const { department_name } = department;
+                return departmentModel.findOne({ department_name, company_id, active: 1 });
+            }));
+
+            if (existingDepartments.some(existingDepartment => existingDepartment)) {
+                res.json({ message: "One or more department names already exist for your company", departments: existingDepartments });
+            } else {
+                const createdDepartments = await Promise.all(departmentsData.map(async (department) => {
+                    const createdDepartment = await departmentModel.create({
+                        ...department,
+                        company_id,
+                    });
+                    return createdDepartment;
+                }));
+
+                res.json({ message: "Successfully added", departments: createdDepartments });
             }
-            else{
-                let department = await departmentModel.create({
-                    department_name:department_name,
-                    company_id : company_id
-                })
-                res.json({message:"successfully added",department})
-            }
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
         }
-        else{
-            res.json({ message: "sorry you are unauthorized" })
-        }
-       
     } catch (error) {
-        res.status(500).json({message:"catch error "+error})
+        console.error(error);
+        res.status(500).json({ message: "Catch error: " + error });
     }
-})
+});
+
 
 module.exports = router

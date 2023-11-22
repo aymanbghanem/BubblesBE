@@ -19,8 +19,8 @@ router.post('/api/v1/login',async(req,res)=>{
                   console.error(error);
                   res.json({message:"incorrect password"});
                 } else {
-                    let token = jwt.sign({ email: existingUser.email_address }, process.env.TOKEN_KEY);
-                    let user = await userModels.findOneAndUpdate({ email_address: existingUser.email_address }, { token }, { new: true });
+                    let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
+                    let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name }, { token }, { new: true });
                     let response = {
                       message: "successfully added",
                       token: user.token,

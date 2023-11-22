@@ -30,6 +30,10 @@ const userSchema = new Schema({
     image:{
         type:String,
         default:''
+    },
+    created_by:{
+        type:Schema.Types.ObjectId,
+        ref:'user'
     }
     
     

@@ -1,6 +1,6 @@
 const { Schema, model } = require('mongoose')
 
-const surveySchema = new Schema({
+const surveyReaderSchema = new Schema({
     survey_title: {
         type: String
     },
@@ -12,7 +12,7 @@ const surveySchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'department'
     },
-    created_by: {
+    reader_id: {
         type: Schema.Types.ObjectId,
         ref: 'user'
     },
@@ -22,15 +22,7 @@ const surveySchema = new Schema({
         type: Number,
         default: 1
     },
-    survey_description:String,
-    logo:{
-        type:String
-    },
-    submission_pwd:{
-        type:Number,
-        default:1
-    },
 
 }, { timestamps: true })
 
-module.exports = model('survey', surveySchema)
+module.exports = model('survey_reader', surveyReaderSchema)

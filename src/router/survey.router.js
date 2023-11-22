@@ -15,7 +15,7 @@ router.post('/api/v1/createSurvey',auth,async(req,res)=>{
     
         let role = req.user.user_role
         
-        let {survey_title,survey_description,company_id,logo} = req.body
+        let {survey_title,survey_description,company_id,logo,submission_pwd} = req.body
         survey_title = survey_title.toLowerCase()
         if (role=='admin'){
             let department_id = req.user.department_id
@@ -28,7 +28,10 @@ router.post('/api/v1/createSurvey',auth,async(req,res)=>{
                 survey_title : survey_title,
                 survey_description:survey_description,
                 logo:logo,
-                department_id:department_id
+                department_id:department_id,
+                submission_pwd:submission_pwd,
+                created_by:req.user._id,
+                company_id:req.user.company_id
               })
               res.json({message:"successfully added",survey})
            }
@@ -40,31 +43,31 @@ router.post('/api/v1/createSurvey',auth,async(req,res)=>{
         res.json({message:"catch error "+error})
       }
 })
-router.post('/api/v1/uploadImage',auth,myMulter().single('image'),async(req,res)=>{
-    try {
-        let logo=req.file.filename;
-        if (req.file) {
-          if (req.file.mimetype.startsWith("image/")) {
-            res.json(logo);
-          } 
-          else {
-            try {
-              const filePath = path.resolve(__dirname, '..', '..', 'logo', req.file.filename);
-              fs.unlink(filePath, (error) => {
-                if (error) {
-                  res.json(`An error occurred while trying to delete the file: ${error}`);
-                } else {
-                  res.json(`wrong image type 1`);
-                }
-              });
-            } catch (error) {
-              res.json({ message: "catch error " + error });
-            }
-          }
-        }
-      } catch (error) {
-        res.json("wrong image type "+error);
-      }
+
+router.get('/api/v1/getSurvey',auth,async(req,res)=>{
+  try {
+    let role = req.user.user_role
+    if(role=='admin'||role =='owner'){
+       let existingSurvey = await surveyModel.find({
+        company_id:req.user.company_id,
+        active:1
+       })
+       if(existingSurvey.length!=0){
+        res.json({message:existingSurvey})
+       }
+       else{
+        res.json({message:"sorry , there is no survey"})
+       }
+    }
+    else if(role=='survey-reader'){
+           
+    }
+    else{
+      res.json({message:"sorry you are unauthorized"})
+    }
+  } catch (error) {
+    res.json({message:"catch error "+error})
+  }
 })
 
 module.exports = router
