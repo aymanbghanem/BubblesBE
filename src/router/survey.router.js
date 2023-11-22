@@ -6,6 +6,7 @@ const {myMulter} = require('../middleware/upload');
 const config = require('../../config')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
+const surveyReaderModel = require("../models/surveyReader.model");
 require('dotenv').config()
 
 
@@ -47,6 +48,7 @@ router.post('/api/v1/createSurvey',auth,async(req,res)=>{
 router.get('/api/v1/getSurvey',auth,async(req,res)=>{
   try {
     let role = req.user.user_role
+    let id = req.user._id
     if(role=='admin'||role =='owner'){
        let existingSurvey = await surveyModel.find({
         company_id:req.user.company_id,
@@ -60,7 +62,25 @@ router.get('/api/v1/getSurvey',auth,async(req,res)=>{
        }
     }
     else if(role=='survey-reader'){
-           
+           let surveys = await surveyReaderModel.find({
+            reader_id:id,
+            active:1
+           }).populate([
+            {
+              path:'department_id',
+              select :'department_name -_id'
+            },
+            {
+              path:'reader_id',
+              select :'user_name -_id'
+            }
+           ])
+          if(surveys.length!=0){
+            res.json({message:surveys})
+          }
+          else{
+            res.json({message:"sorry, there are no surveys for you"})
+          }
     }
     else{
       res.json({message:"sorry you are unauthorized"})
