@@ -30,6 +30,13 @@ const surveySchema = new Schema({
         type:Number,
         default:1
     },
+    background_color:{
+        type:String
+    }
+    ,
+    question_text_color:{
+        type:String
+    }
 
 }, { timestamps: true })
 
