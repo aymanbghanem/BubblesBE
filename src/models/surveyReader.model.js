@@ -22,6 +22,10 @@ const surveyReaderSchema = new Schema({
         type: Number,
         default: 1
     },
+    created_by:{
+        type: Schema.Types.ObjectId,
+        ref: 'user'
+    }
 
 }, { timestamps: true })
 
