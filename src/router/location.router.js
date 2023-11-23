@@ -9,6 +9,7 @@ const { hashPassword } = require('../helper/hashPass.helper')
 const config = require('../../config')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
+const locationModels = require("../../src/models/location.models");
 require('dotenv').config()
 
 router.post('/api/v1/addLocation', auth, async (req, res) => {
@@ -37,6 +38,7 @@ router.post('/api/v1/addLocation', auth, async (req, res) => {
 
                         const location = new Location({
                             location_name: name,
+                            department_id: department,
                             id: id,
                             survey_id: existingSurvey._id
                         });
@@ -75,7 +77,29 @@ router.post('/api/v1/addLocation', auth, async (req, res) => {
     }
 });
 
-
+router.get('/api/v1/getLocation',auth,async(req,res)=>{
+    try {
+        let role = req.user.user_role
+        if(role=="admin"){
+          let locations = await locationModels.find({
+            department_id:req.user.department_id,
+            active:1,
+            parent_id:null
+          }).select('location_name -_id')
+          if(locations.length!=0){
+            res.json({message:locations})
+          }
+          else{
+            res.json({message:'no data found'})
+          }
+        }
+        else{
+            res.json({ message: "Sorry, you are unauthorized." });
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 module.exports = router
 /*
 

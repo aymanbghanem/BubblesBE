@@ -17,7 +17,11 @@ const locationsSchema = new Schema({
         type: Number,
         default: 1
     },
-    id:String
+    id:String,
+    department_id:{
+        type: Schema.Types.ObjectId,
+        ref: 'department'
+    }
 
 }, { timestamps: true })
 
