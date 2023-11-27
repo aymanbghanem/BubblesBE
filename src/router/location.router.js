@@ -28,13 +28,14 @@ router.post('/api/v1/addLocation', auth, async (req, res) => {
                 const idToLocationMap = new Map();
 
                 for (const locationData of flattenLocationTree(location_tree)) {
-                    const { id, name, parentId } = locationData;
+                    const { id, name, parentId,description } = locationData;
 
                     const location = new Location({
                         location_name: name,
                         department_id: department,
                         id: id,
-                        survey_id: existingSurvey._id
+                        survey_id: existingSurvey._id,
+                        location_description :description
                     });
 
                     await location.save();
@@ -68,12 +69,9 @@ router.post('/api/v1/addLocation', auth, async (req, res) => {
         res.status(500).json({ message: "Catch error " + error });
     }
 });
-
-// Function to flatten the location tree
 function flattenLocationTree(locationTree) {
     return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
 }
-
 router.get('/api/v1/getRootLocation', auth, async (req, res) => {
     try {
         let role = req.user.user_role
@@ -81,7 +79,8 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
             let locations = await locationModels.find({
                 department_id: req.user.department_id,
                 active: 1,
-                parent_id: null
+                parent_id: null,
+                clone:0
             }).select('location_name ')
             if (locations.length != 0) {
                 res.json({ message: locations })
@@ -97,7 +96,6 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
         res.json({ message: "catch error " + error })
     }
 })
-
 router.get('/api/v1/getLocationInfo', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
@@ -115,7 +113,6 @@ router.get('/api/v1/getLocationInfo', auth, async (req, res) => {
         res.json({ message: "catch error " + error });
     }
 });
-
 const getLocationsTree = async (parentId) => {
     const stack = [];
     const result = [];
@@ -124,57 +121,60 @@ const getLocationsTree = async (parentId) => {
 
     while (stack.length > 0) {
         const currentLocationId = stack.pop();
-        const location = await locationModels.findOne({ _id: currentLocationId });
+        const location = await locationModels.findOne({ _id: currentLocationId,active:1});
 
         if (location) {
             result.push({
                 id: location._id,
                 name: location.location_name,
                 parentId: location.parent_id,
+                active:location.active,
+                description : location.location_description
             });
 
-            const subLocations = await locationModels.find({ parent_id: currentLocationId });
+            const subLocations = await locationModels.find({ parent_id: currentLocationId,active:1});
             stack.push(...subLocations.map(subLocation => subLocation._id));
         }
     }
 
     return result;
 };
-
-router.post('/api/v1/cloneRootLocation', auth, async (req, res) => {
+router.put('/api/v1/updateLocation', auth, async(req, res) => {
     try {
-        let role = req.user.user_role
-        let { root_id, survey_title } = req.body
-        const department = req.user.department_id;
-        if (role == "admin") {
-            let existingSurvey = await surveyModel.findOne({ survey_title: survey_title, department_id: department, active: 1 })
-            if (!existingSurvey) {
-                res.json({ message: "sorry there is no survey in this name" })
-            }
-            else {
-                let existingRoot = await locationModels.findOne({ _id: root_id, active: 1 })
-                if (existingRoot) {
-                    let cloneRoot = await locationModels.create({
-                        location_name: existingRoot.location_name,
-                        survey_id: existingSurvey._id,
-                        department_id:existingRoot.existingRoot,
-                        parent_id:existingRoot._id
-                    })
-                    res.json({message:cloneRoot})
-                }
-                else {
-                    res.json({ message: "sorry, the location you are looking for does not exist" })
-                }
-            }
-        }
-        else {
-            res.json({ message: "sorry, you are unauthorized" })
-        }
+        let role = req.user.user_role;
+        
+        if (role === 'admin') {
+            const { location_updates } = req.body;
 
+            // Check if location_updates is an array
+            if (!Array.isArray(location_updates)) {
+                return res.status(400).json({ message: 'Invalid input. location_updates must be an array.' });
+            }
+
+            // Iterate through each location update
+            for (const update of location_updates) {
+                const {id, name,active } = update;
+
+                // Check if the provided location_id exists
+                const existingLocation = await locationModels.findOne({ _id:id, active: 1 });
+
+                if (!existingLocation) {
+                    return res.status(404).json({ message: `Location with ID ${id} not found` });
+                }
+
+                // Update the location name
+                await locationModels.updateOne({ _id:id }, { location_name: name,active:active,location_description:description });
+            }
+
+            res.status(200).json({ message: 'Locations updated successfully!' });
+        } else {
+            res.status(403).json({ message: 'Unauthorized access' });
+        }
     } catch (error) {
-        res.json({ message: "catch error " + error })
+        res.status(500).json({ message: 'Catch error ' + error });
     }
-})
+});
+
 
 module.exports = router
 

@@ -21,6 +21,13 @@ const locationsSchema = new Schema({
     department_id:{
         type: Schema.Types.ObjectId,
         ref: 'department'
+    },
+    clone:{
+        type:Number,
+        default:0
+    },
+    location_description:{
+        type:String
     }
 
 }, { timestamps: true })
