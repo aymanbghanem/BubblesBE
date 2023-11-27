@@ -16,7 +16,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
 
     let role = req.user.user_role
 
-    let { survey_title, survey_description, company_id, logo, submission_pwd,background_color,question_text_color } = req.body
+    let { survey_title, survey_description, company_id, logo, submission_pwd,background_color,question_text_color,location_id } = req.body
     survey_title = survey_title.toLowerCase()
     if (role == 'admin') {
       let department_id = req.user.department_id
@@ -34,7 +34,8 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
           created_by: req.user._id,
           company_id: req.user.company_id,
           background_color:background_color,
-          question_text_color:question_text_color
+          question_text_color:question_text_color,
+          location_id:location_id
         })
         res.json({ message: "successfully added", survey })
       }

@@ -36,6 +36,10 @@ const surveySchema = new Schema({
     ,
     question_text_color:{
         type:String
+    },
+    location_id:{
+        type: Schema.Types.ObjectId,
+        ref: 'location'
     }
 
 }, { timestamps: true })
