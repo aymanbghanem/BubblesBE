@@ -130,4 +130,29 @@ router.get('/api/v1/getSurvey', auth, async (req, res) => {
 })
 
 
+router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
+  try {
+      let role = req.user.user_role;
+      let department_id = req.user.department_id;
+      let survey_title = req.body.survey_title.toLowerCase(); 
+
+      if (role === 'admin') {
+          let existingSurvey = await surveyModel.findOne({ survey_title, department_id, active: 1 });
+
+          if (existingSurvey) {
+              // Soft delete by updating the 'active' field to 0
+              await surveyModel.updateOne({ _id: existingSurvey._id }, { active: 0 });
+
+              res.json({ message: "Survey deleted successfully" });
+          } else {
+              res.json({ message: "The survey you are looking for does not exist" });
+          }
+      } else {
+          res.json({ message: "Sorry, you are unauthorized" });
+      }
+  } catch (error) {
+      res.json({ message: "Catch error " + error });
+  }
+});
+
 module.exports = router
