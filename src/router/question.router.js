@@ -12,7 +12,7 @@ router.post('/api/v1/addQuestion',auth,async(req,res)=>{
     try {
         let role = req.user.user_id
         let department_id = req.user.department_id
-        let {question_title,question_description}= req.body
+        let {questions}= req.body
         if(role=='admin'){
            
         }
