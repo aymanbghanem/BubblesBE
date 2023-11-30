@@ -1,6 +1,7 @@
 const { Schema, model } = require('mongoose')
 
 const questionsSchema = new Schema({
+    id:Number,
     question_title: {
         type: String
     },
@@ -28,6 +29,23 @@ const questionsSchema = new Schema({
     },
     question_type: {
         type: String
+    },
+    question_dependency: [{
+        id: {
+            type: Schema.Types.ObjectId,
+            ref: 'question'
+        },
+        text: String,
+        answer_id: {
+            type: Schema.Types.ObjectId,
+            ref: 'answer'
+        },
+        answer_text:String
+
+    }],
+    have_child:{
+        type:Number , 
+        default : 0
     }
 }, { timestamps: true })
 
