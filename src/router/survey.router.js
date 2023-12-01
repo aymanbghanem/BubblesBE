@@ -11,6 +11,7 @@ const Question = require("../models/questions.models");
 const Answer = require("../models/answers.model")
 const QuestionController = require('../models/questions_controller.models')
 const Location = require("../../src/models/location.models");
+const questionsModels = require("../models/questions.models");
 require('dotenv').config()
 
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
@@ -45,8 +46,6 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
       res.status(500).json({ message:' '+error });
   }
 });
-
-
 async function processAndStoreSurvey(surveyData, user) {
   try {
       // Ensure survey name is unique within the department
@@ -69,6 +68,7 @@ async function processAndStoreSurvey(surveyData, user) {
               company_id: user.company_id,
               background_color: surveyData.background_color,
               question_text_color: surveyData.question_text_color,
+              submission_pwd:surveyData.submission_pwd
           });
 
           return survey;
@@ -77,8 +77,6 @@ async function processAndStoreSurvey(surveyData, user) {
       throw error;
   }
 }
-
-
 async function processAndStoreLocation(locationData, survey, user) {
   try {
       const idToLocationMap = new Map();
@@ -121,7 +119,6 @@ async function processAndStoreLocation(locationData, survey, user) {
       throw error;
   }
 }
-
 async function processAndStoreAnswers(answerArray, questionId) {
   const answerIdsAndTexts = [];
 
@@ -133,7 +130,6 @@ async function processAndStoreAnswers(answerArray, questionId) {
 
   return answerIdsAndTexts;
 }
-
 async function processAndStoreQuestions(questions, surveyId) {
   const storedQuestions = [];
 
@@ -189,9 +185,96 @@ async function processAndStoreQuestions(questions, surveyId) {
 
   return storedQuestions;
 }
-
 function flattenLocationTree(locationTree) {
   return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
 }
+//////////////////////////////////
+
+const findMatchingQuestion = async (survey_id, currentPhase, answeredQuestion) => {
+  // Search for the answer in the answer table
+  const answerInTable = await Answer.findOne({
+    question_id: answeredQuestion.question_id,
+    answer: answeredQuestion.question_answer
+  });
+
+  if (answerInTable) {
+    // Search for questions in the next phases
+    const nextPhasesQuestions = await questionsModels.find({
+      survey_id: survey_id,
+      active: 1,
+      phase: { $gt: currentPhase }
+    });
+
+    // Check if there are questions with and without dependencies in future phases
+    const questionsWithDependency = nextPhasesQuestions.filter(q => q.question_dependency.length > 0);
+    const questionsWithoutDependency = nextPhasesQuestions.filter(q => q.question_dependency.length === 0);
+
+    if (questionsWithDependency.length > 0) {
+      return { message: "Questions with dependency found in a future phase", questions: questionsWithDependency,questionsWithoutDependency };
+    } else if (questionsWithoutDependency.length > 0) {
+      return { message: "Question without dependency found in a future phase", question: questionsWithoutDependency[0] };
+    } else {
+      // Store the answer as there is no matching question
+      // Your logic to store the response, for example:
+      // responseModel.create({ survey_id, answeredQuestion });
+      return { message: "No matching question found in future phases. Response stored.", question: answeredQuestion };
+    }
+  } else {
+    // Store the answer as the answer text does not match
+    // Your logic to store the response, for example:
+    // responseModel.create({ survey_id, answeredQuestion });
+    return { message: "Answer text does not match. Response stored.", question: answeredQuestion };
+  }
+};
+
+router.post('/api/v1/getQuestions', async (req, res) => {
+  try {
+    let { survey_id, answers } = req.body;
+    let existingSurvey = await surveyModel.findOne({
+      _id: survey_id,
+      active: 1
+    });
+
+    if (existingSurvey) {
+      let questions = await questionsModels.find({
+        survey_id: survey_id,
+        active: 1,
+        phase: 1
+      });
+
+      if (questions.length > 0) {
+        // Check if there are answers
+        if (answers && answers.length > 0) {
+          // Initialize an array to store responses
+          let responses = [];
+
+          for (const answeredQuestion of answers) {
+            const matchingQuestionResponse = await findMatchingQuestion(
+              survey_id,
+              questions[0].phase,
+              answeredQuestion
+            );
+
+            responses.push(matchingQuestionResponse);
+          }
+
+          res.json({ responses });
+        } else {
+          res.json({ message: "No answers provided", questions });
+        }
+      } else {
+        res.json({ message: "No data found" });
+      }
+    } else {
+      res.json({ message: "The survey that you are looking for does not exist" });
+    }
+  } catch (error) {
+    res.json({ message: "catch error " + error });
+  }
+});
+
+
+
+
 
 module.exports = router

@@ -11,6 +11,13 @@ const answerSchema = new Schema({
     },
     answer:{
         type:String
+    },
+    priority:{
+        type:Number,
+        default:0
+    },
+    image:{
+        type:String
     }
     
 }, { timestamps: true })
