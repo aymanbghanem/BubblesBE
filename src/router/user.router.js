@@ -58,10 +58,11 @@ const addDepartmentAndUser = async (userParams, company_id, department_name) => 
 router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
         const role = req.user.user_role.toLowerCase();
-        const { user_name, password, email_address, user_role, company_name, department_name, survey } = req.body;
+        let newPassword = await generateMixedID()
+        const { user_name, email_address, user_role, company_name, department_name, survey } = req.body;
 
         if (!config.roles.includes(role)) {
-            return res.json({ message: "sorry, you are unauthorized"});
+            return res.json({ message: "sorry, you are unauthorized" });
         }
 
         let company = await companyModel.findOne({
@@ -93,15 +94,16 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
 
         if (user_role.toLowerCase() === 'owner' && role == "superadmin") {
+            
             const user = await userModels.create({
                 user_name: user_name,
-                password: password,
+                password: newPassword,
                 email_address: email_address,
                 company_id: company._id,
                 user_role: user_role,
                 token: token,
             });
-
+            await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
             return res.json({
                 message: "Successfully added",
                 token: user.token,
@@ -110,15 +112,16 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 image: user.image
             });
         } else if (department_name && (user_role.toLowerCase() === 'admin') && role == 'owner') {
+            
             const userParams = {
                 user_name: user_name,
-                password: password,
+                password: newPassword,
                 email_address: email_address,
                 user_role: user_role,
                 token: token,
             };
             const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
-
+            await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
             return res.json({
                 message: "Successfully added",
                 token: user.token,
@@ -129,17 +132,17 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         } else if (department_name && (user_role.toLowerCase() === 'survey-reader') && role == 'admin') {
             const userParams = {
                 user_name: user_name,
-                password: password,
+                password: newPassword,
                 email_address: email_address,
                 user_role: user_role,
                 token: token,
             };
             const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
-        
+            await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
             for (let i = 0; i < survey.length; i++) {
                 // Get the survey information
-                const surveyInfo = await surveyModel.findOne({ survey_title: survey[i], company_id: req.user.company_id,active :1});
-        
+                const surveyInfo = await surveyModel.findOne({ survey_title: survey[i], company_id: req.user.company_id, active: 1 });
+
                 if (surveyInfo) {
                     let survey_reader = await surveyReaderModel.create({
                         survey_title: survey[i],
@@ -155,7 +158,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                     console.error(`Survey not found: ${survey[i]}`);
                 }
             }
-        
+
             return res.json({
                 message: "Successfully added",
                 token: user.token,
@@ -164,14 +167,13 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 image: user.image
             })
         }
-            else {
+        else {
             return res.json({ message: "sorry, you are unauthorized" });
         }
     } catch (error) {
         return res.json({ message: error.message });
     }
 });
-
 
 router.post('/api/v1/addSuperadmin', async (req, res) => {
     try {
@@ -230,10 +232,10 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 token: user.token,
                 email_address: user.email_address,
                 company_name: user.company_id.company_name || " ", // Add a check here
-                department_name: user.department_id ? user.department_id.department_name || " " : " " ,// Add a check here
+                department_name: user.department_id ? user.department_id.department_name || " " : " ",// Add a check here
                 image: `${user.company_id.company_name}/${user.image}`
             }
-            res.json({ message: response})
+            res.json({ message: response })
         } else {
             res.json({ message: "The user is not in the system" })
         }
@@ -242,35 +244,35 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
     }
 })
 
-router.put('/api/v1/updateUserInfo',auth,async(req,res)=>{
+router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
     try {
-        let {user_name,email_address,image} = req.body
+        let { user_name, email_address, image } = req.body
         let role = req.user.user_role
         let company_id = req.user.company_id
-        
-        if(config.roles.includes(role)){
-           let existingUser = await userModels.findOne({
-            user_name:user_name,
-            active:1,
-            company_id:company_id
-           })
-           if(existingUser){
-               let updateUser = await userModels.findByIdAndUpdate({_id:existingUser._id},{
-                  email_address : email_address ? email_address : existingUser.email_address,
-                  image : image ? image : existingUser.image
-               },{new:true})
-               res.json({message:"successfully updated",updateUser})
-           }
-           else{
-            res.json({ message: "The user is not in the system"})
-           }
+
+        if (config.roles.includes(role)) {
+            let existingUser = await userModels.findOne({
+                user_name: user_name,
+                active: 1,
+                company_id: company_id
+            })
+            if (existingUser) {
+                let updateUser = await userModels.findByIdAndUpdate({ _id: existingUser._id }, {
+                    email_address: email_address ? email_address : existingUser.email_address,
+                    image: image ? image : existingUser.image
+                }, { new: true })
+                res.json({ message: "successfully updated", updateUser })
+            }
+            else {
+                res.json({ message: "The user is not in the system" })
+            }
         }
-        else{
-           res.json({message:"sorry, you are unauthorized"})
+        else {
+            res.json({ message: "sorry, you are unauthorized" })
         }
-        
+
     } catch (error) {
-        res.json({message:"catch error "+error})
+        res.json({ message: "catch error " + error })
     }
 })
 
@@ -317,5 +319,27 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+router.post('/api/v1/resetPassword', async (req, res) => {
+    try {
+        let { email_address } = req.body
+        let newPassword = await generateMixedID()
+        let response;
+        let existingUser = await userModels.findOne({
+            email_address:email_address
+        })
+        if(existingUser){
+            existingUser = await userModels.findOneAndUpdate({email_address:email_address},{password:newPassword},{new:true})
+            let user_name = existingUser.user_name
+            response = await sendEmail(user_name,email_address, "Reset password", newPassword,"reset your password")
+            res.json({ message: response,existingUser })
+        }
+        else{
+            res.json({message:"The user does not exist"})
+        }
+    } catch (error) {
+        res.json({ message: "catch error " + error })
+    }
+})
 module.exports = router
 

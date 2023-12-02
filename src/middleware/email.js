@@ -1,30 +1,48 @@
 "use strict";
-var nodemailer = require("nodemailer");
-require('dotenv').config();
+const nodemailer = require("nodemailer");
+//reset your password
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "misksawallha@gmail.com",
+    pass: "fmyl ixbz pcik qsdb", 
+  },
+});
 
-function sendEmail(password, dest, subject, message) {
-    return nodemailer.createTestAccount().then(function (testAccount) {
-        var transporter = nodemailer.createTransport({
-            host: "misk.sawalha@jawwal.ps", // Replace with your company's SMTP server
-            port: 25, // Replace with the appropriate port for your company's SMTP server
-            secure: false, // Set to true if your company's server requires a secure connection (SSL/TLS)
-            auth: {
-                user: "misk.sawalha@jawwal.ps", // Replace with your company's email address
-                pass: "11821074Mesho2000", // Replace with your company's email password
-            },
-        });
+async function sendEmail(user_name,to, subject,password,message) {
+  const info = await transporter.sendMail({
+    from: `"Digital FeedBack 👻" <misksawallha@gmail.com>`,
+    to: to,
+    subject: subject,
+    // text: password,
+   html: `
+   <!DOCTYPE html>
+   <html lang="en">
 
-        return transporter.sendMail({
-            from: "misk.sawalha@jawwal.com", // Replace with your company's email address
-            to: "misksawallha@gmail.com",
-            subject: "subject",
-            text: "message",
-            html: `<b>"{message}"${password}</b>`,
-        }).then(function (info) {
-            console.log(info);
-            return info;
-        });
-    });
+   <head>
+     <meta charset="UTF-8">
+     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Email Template</title>
+   </head>
+
+   <body>
+     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
+       <h1 style="color: #333;">Digital Feed Back 👋</h1>
+       <p style="color: #555;">Dear ${user_name},</p>
+       <p style="color: #555;">This is an email to ${message}.</p>
+       <p style="color: #555;">Your new password : <strong>${password}</strong></p>
+       <p style="color: #555;">Thank you for your attention!</p>
+       <p style="color: #555;">Best regards,</p>
+       <p style="color: #333;">Digital support</p>
+     </div>
+   </body>
+
+   </html>
+ `,
+  });
+
+  return(info.messageId);
 }
 
-module.exports = sendEmail;
+module.exports = sendEmail
