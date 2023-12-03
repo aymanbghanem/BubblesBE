@@ -190,7 +190,26 @@ function flattenLocationTree(locationTree) {
 }
 //////////////////////////////////
 
-const findMatchingQuestion = async (survey_id, currentPhase, answeredQuestion) => {
+router.get('/api/v1/getInitialQuestions',async(req,res)=>{
+  try {
+    let { survey_id} = req.body;
+    let question = await questionsModels.find({
+      active:1,
+      survey_id:survey_id,
+      phase:1
+    })
+    if(question.length>0){
+      res.json({message:question})
+    }
+    else{
+      res.json({message:"No data found"})
+    }
+  } catch (error) {
+    res.json({message:"catch error "+error})
+  }
+})
+
+const findMatchingQuestion = async (survey_id, currentPhase, answeredQuestion, nextPhasesQuestions) => {
   // Search for the answer in the answer table
   const answerInTable = await Answer.findOne({
     question_id: answeredQuestion.question_id,
@@ -198,27 +217,27 @@ const findMatchingQuestion = async (survey_id, currentPhase, answeredQuestion) =
   });
 
   if (answerInTable) {
-    // Search for questions in the next phases
-    const nextPhasesQuestions = await questionsModels.find({
-      survey_id: survey_id,
-      active: 1,
-      phase: { $gt: currentPhase }
-    });
+    // Iterate over all phases and find a matching question
+    for (const nextPhaseQuestion of nextPhasesQuestions) {
+      const matchingQuestion = nextPhaseQuestion.question_dependency.find(dep =>
+        dep.id == answeredQuestion.question_id && dep.answer_text == answerInTable.answer
+      );
 
-    // Check if there are questions with and without dependencies in future phases
-    const questionsWithDependency = nextPhasesQuestions.filter(q => q.question_dependency.length > 0);
-    const questionsWithoutDependency = nextPhasesQuestions.filter(q => q.question_dependency.length === 0);
-
-    if (questionsWithDependency.length > 0) {
-      return { message: "Questions with dependency found in a future phase", questions: questionsWithDependency,questionsWithoutDependency };
-    } else if (questionsWithoutDependency.length > 0) {
-      return { message: "Question without dependency found in a future phase", question: questionsWithoutDependency[0] };
-    } else {
-      // Store the answer as there is no matching question
-      // Your logic to store the response, for example:
-      // responseModel.create({ survey_id, answeredQuestion });
-      return { message: "No matching question found in future phases. Response stored.", question: answeredQuestion };
+      if (matchingQuestion) {
+        return { message: "Matching question found in a future phase", question: nextPhaseQuestion };
+      }
     }
+
+    // Check if there are questions without dependencies in future phases
+    const questionsWithoutDependency = nextPhasesQuestions.filter(q => q.question_dependency.length === 0);
+    if (questionsWithoutDependency.length > 0) {
+      return { message: "Question without dependency found in a future phase", question: questionsWithoutDependency[0] };
+    }
+
+    // Store the answer as there is no matching question
+    // Your logic to store the response, for example:
+    // responseModel.create({ survey_id, answeredQuestion });
+    return { message: "No matching question found in future phases. Response stored.", question: answeredQuestion };
   } else {
     // Store the answer as the answer text does not match
     // Your logic to store the response, for example:
@@ -229,41 +248,39 @@ const findMatchingQuestion = async (survey_id, currentPhase, answeredQuestion) =
 
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
-    let { survey_id, answers } = req.body;
+    let { survey_id, answers, phase } = req.body;
     let existingSurvey = await surveyModel.findOne({
       _id: survey_id,
       active: 1
     });
 
     if (existingSurvey) {
-      let questions = await questionsModels.find({
-        survey_id: survey_id,
-        active: 1,
-        phase: 1
-      });
+      // Initialize an array to store responses
+      let responses = [];
 
-      if (questions.length > 0) {
-        // Check if there are answers
-        if (answers && answers.length > 0) {
-          // Initialize an array to store responses
-          let responses = [];
+      // Check if there are answers
+      if (answers && answers.length > 0) {
+        for (const answeredQuestion of answers) {
+          // Search for questions in the next phases
+          const nextPhasesQuestions = await questionsModels.find({
+            survey_id: survey_id,
+            active: 1,
+            phase: phase + 1,
+          });
 
-          for (const answeredQuestion of answers) {
-            const matchingQuestionResponse = await findMatchingQuestion(
-              survey_id,
-              questions[0].phase,
-              answeredQuestion
-            );
+          const matchingQuestionResponse = await findMatchingQuestion(
+            survey_id,
+            phase,
+            answeredQuestion,
+            nextPhasesQuestions
+          );
 
-            responses.push(matchingQuestionResponse);
-          }
-
-          res.json({ responses });
-        } else {
-          res.json({ message: "No answers provided", questions });
+          responses.push(matchingQuestionResponse);
         }
+
+        res.json({ responses, nextPhase: phase + 1 });
       } else {
-        res.json({ message: "No data found" });
+        res.json({ message: "No answers provided" });
       }
     } else {
       res.json({ message: "The survey that you are looking for does not exist" });

@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 
 async function sendEmail(user_name,to, subject,password,message) {
   const info = await transporter.sendMail({
-    from: `"Digital FeedBack 👻" <misksawallha@gmail.com>`,
+    from: `"Digital Feed Back "`,
     to: to,
     subject: subject,
     // text: password,
