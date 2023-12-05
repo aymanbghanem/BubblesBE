@@ -13,91 +13,126 @@ const QuestionController = require('../models/questions_controller.models')
 require('dotenv').config()
 
 
-// router.post('/api/v1/addQuestion', auth, async (req, res) => {
-//     try {
-//         let role = req.user.user_role;
-//         const { questions } = req.body;
+router.post('/api/v1/addQuestion', auth, async (req, res) => {
+  try {
+    const role = req.user.user_role;
+    const { questions } = req.body;
 
-//         if (role === "admin") {
-//             // Process and store questions
-//             const storedQuestions = await processAndStoreQuestions(questions);
+    if (role === "admin") {
+      // Process and store questions
+      const storedQuestions = await processAndStoreQuestions(questions);
 
-//             // Respond with the stored questions
-//             res.json({ message: "Questions added successfully", questions: storedQuestions });
-//         } else {
-//             res.json({ message: "Sorry, you are unauthorized" });
-//         }
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: 'Internal Server Error' });
-//     }
-// });
+      // Respond with the stored questions
+      res.json({ message: "Questions added successfully", questions: storedQuestions });
+    } else {
+      res.json({ message: "Sorry, you are unauthorized" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
 
-// async function processAndStoreAnswers(answerArray, questionId) {
-//     const answerIdsAndTexts = [];
+async function processAndStoreAnswers(answerArray, questionId) {
+  const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
+    const newAnswer = new Answer({ answer: answerText, question_id: questionId });
+    const savedAnswer = await newAnswer.save();
+    return { id: savedAnswer._id, text: answerText, answer_id: savedAnswer._id };
+  }));
 
-//     for (const answerText of answerArray) {
-//         const newAnswer = new Answer({ answer: answerText, question_id: questionId });
-//         const savedAnswer = await newAnswer.save();
-//         answerIdsAndTexts.push({ id: savedAnswer._id, text: answerText, answer_id: savedAnswer._id });
-//     }
+  return answerIdsAndTexts;
+}
 
-//     return answerIdsAndTexts;
-// }
+async function processAndStoreQuestions(questions) {
+  const storedQuestions = [];
 
-// async function processAndStoreQuestions(questions) {
-//     const storedQuestions = [];
+  // Save questions without dependencies and child questions
+  for (const questionData of questions) {
+    const { id, question_title, answers, child_questions, question_dependency, ...otherFields } = questionData;
 
-//     for (const questionData of questions) {
-//         const { id, question_title, answers, question_dependency, ...otherFields } = questionData;
+    const newQuestion = new Question({
+      id,
+      question_title,
+      ...otherFields,
+    });
 
-//         // Create the question
-//         const newQuestion = new Question({
-//             id,
-//             question_title,
-//             ...otherFields,
-//         });
+    const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id);
+    newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
 
-//         // Process and store answers
-//         const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id);
+    // Save the question
+    const savedQuestion = await newQuestion.save();
+    storedQuestions.push(savedQuestion);
+  }
 
-//         // Set answer IDs in the question
-//         newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
+  // Process child questions and dependencies after all questions are saved
+  for (const savedQuestion of storedQuestions) {
+    const { id, child_questions, question_dependency } = questions.find(q => q.id === savedQuestion.id);
 
-//         // Check if there is a dependency
-//         if (question_dependency && Array.isArray(question_dependency)) {
-//             const dependencies = [];
+    if (child_questions && Array.isArray(child_questions)) {
+      savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
+      await savedQuestion.save(); // Save the updated question with child questions
+    }
 
-//             for (const dep of question_dependency) {
-//                 const { parent_id, text, answer_id, answer_text } = dep;
-                
-//                 // Find the parent question by ID
-//                 const parentQuestion = await Question.findOne({ id: parent_id });
+    if (question_dependency && Array.isArray(question_dependency)) {
+      savedQuestion.question_dependency = await processAndStoreQuestionDependencies(question_dependency, storedQuestions);
+      await savedQuestion.save(); // Save the updated question with dependencies
+    }
+  }
 
-//                 // Find the correct answer ID from the processed answers
-//                 const correspondingAnswer = answerIdsAndTexts.find(answerData => answerData.text === answer_text);
+  return storedQuestions;
+}
 
-//                 // Add dependency to the new question
-//                 const dependency = {
-//                     id: parentQuestion._id, // Assuming MongoDB ObjectId is used
-//                     text,
-//                     answer_id: correspondingAnswer && correspondingAnswer.id,
-//                     answer_text,
-//                 };
+async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
+  const updatedChildQuestions = [];
 
-//                 dependencies.push(dependency);
-//             }
+  for (const childQuestionData of childQuestions) {
+    const { child_questions, ...parentFields } = childQuestionData;
 
-//             newQuestion.question_dependency = dependencies;
-//         }
+    const correspondingParent = storedQuestions.find(question => question.id == parentFields.parent_id);
 
-//         // Save the question
-//         const savedQuestion = await newQuestion.save();
-//         storedQuestions.push(savedQuestion);
-//     }
+    if (correspondingParent) {
+      if (child_questions && Array.isArray(child_questions)) {
+        // Process and store child questions recursively
+        const processedChildQuestions = await processAndStoreChildQuestions(child_questions, storedQuestions);
+        parentFields.child_questions = processedChildQuestions;
+      }
 
-//     return storedQuestions;
-// }
+      const newChildQuestion = { ...parentFields, child_id: correspondingParent._id };
+      updatedChildQuestions.push(newChildQuestion);
+
+      // Update parent question with child information
+      correspondingParent.child_questions.push(newChildQuestion);
+      await correspondingParent.save();
+    } else {
+      console.error(`Parent question with dummy id ${parentFields.parent_id} not found.`);
+    }
+  }
+
+  return updatedChildQuestions;
+}
+
+
+async function processAndStoreQuestionDependencies(dependencies, storedQuestions) {
+  const updatedDependencies = [];
+
+  for (const dependencyData of dependencies) {
+    const { parent_dummy_id, ...otherFields } = dependencyData;
+
+    const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
+
+    if (correspondingQuestion) {
+      const newDependency = {
+        ...otherFields,
+        parent_id: correspondingQuestion._id,
+      };
+      updatedDependencies.push(newDependency);
+    } else {
+      console.error(`Parent question with dummy id ${parent_dummy_id} not found.`);
+    }
+  }
+
+  return updatedDependencies;
+}
 
 module.exports = router;
 

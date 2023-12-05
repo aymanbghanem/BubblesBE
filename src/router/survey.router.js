@@ -12,6 +12,7 @@ const Answer = require("../models/answers.model")
 const QuestionController = require('../models/questions_controller.models')
 const Location = require("../../src/models/location.models");
 const questionsModels = require("../models/questions.models");
+const Response = require("../models/response.model")
 require('dotenv').config()
 
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
@@ -188,110 +189,242 @@ async function processAndStoreQuestions(questions, surveyId) {
 function flattenLocationTree(locationTree) {
   return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
 }
+
 //////////////////////////////////
 
-router.get('/api/v1/getInitialQuestions',async(req,res)=>{
+router.post('/api/v1/getInitialQuestions', async (req, res) => {
   try {
-    let { survey_id} = req.body;
-    let question = await questionsModels.find({
-      active:1,
-      survey_id:survey_id,
-      phase:1
-    })
-    if(question.length>0){
-      res.json({message:question})
-    }
-    else{
-      res.json({message:"No data found"})
-    }
-  } catch (error) {
-    res.json({message:"catch error "+error})
-  }
-})
+    const { survey_id, phase, answers } = req.body;
 
-const findMatchingQuestion = async (survey_id, currentPhase, answeredQuestion, nextPhasesQuestions) => {
-  // Search for the answer in the answer table
-  const answerInTable = await Answer.findOne({
-    question_id: answeredQuestion.question_id,
-    answer: answeredQuestion.question_answer
-  });
-
-  if (answerInTable) {
-    // Iterate over all phases and find a matching question
-    for (const nextPhaseQuestion of nextPhasesQuestions) {
-      const matchingQuestion = nextPhaseQuestion.question_dependency.find(dep =>
-        dep.id == answeredQuestion.question_id && dep.answer_text == answerInTable.answer
-      );
-
-      if (matchingQuestion) {
-        return { message: "Matching question found in a future phase", question: nextPhaseQuestion };
-      }
-    }
-
-    // Check if there are questions without dependencies in future phases
-    const questionsWithoutDependency = nextPhasesQuestions.filter(q => q.question_dependency.length === 0);
-    if (questionsWithoutDependency.length > 0) {
-      return { message: "Question without dependency found in a future phase", question: questionsWithoutDependency[0] };
-    }
-
-    // Store the answer as there is no matching question
-    // Your logic to store the response, for example:
-    // responseModel.create({ survey_id, answeredQuestion });
-    return { message: "No matching question found in future phases. Response stored.", question: answeredQuestion };
-  } else {
-    // Store the answer as the answer text does not match
-    // Your logic to store the response, for example:
-    // responseModel.create({ survey_id, answeredQuestion });
-    return { message: "Answer text does not match. Response stored.", question: answeredQuestion };
-  }
-};
-
-router.post('/api/v1/getQuestions', async (req, res) => {
-  try {
-    let { survey_id, answers, phase } = req.body;
-    let existingSurvey = await surveyModel.findOne({
+    // Validate survey existence and active status
+    const existingSurvey = await surveyModel.findOne({
       _id: survey_id,
       active: 1
     });
 
-    if (existingSurvey) {
-      // Initialize an array to store responses
-      let responses = [];
-
-      // Check if there are answers
-      if (answers && answers.length > 0) {
-        for (const answeredQuestion of answers) {
-          // Search for questions in the next phases
-          const nextPhasesQuestions = await questionsModels.find({
-            survey_id: survey_id,
-            active: 1,
-            phase: phase + 1,
-          });
-
-          const matchingQuestionResponse = await findMatchingQuestion(
-            survey_id,
-            phase,
-            answeredQuestion,
-            nextPhasesQuestions
-          );
-
-          responses.push(matchingQuestionResponse);
-        }
-
-        res.json({ responses, nextPhase: phase + 1 });
-      } else {
-        res.json({ message: "No answers provided" });
-      }
-    } else {
-      res.json({ message: "The survey that you are looking for does not exist" });
+    if (!existingSurvey) {
+      return res.status(404).json({ message: "The survey does not exist or is not active." });
     }
+
+    // Fetch questions for the first phase
+    const firstPhaseQuestions = await Question.find({
+      survey_id: survey_id,
+      active: 1,
+      phase: 1,
+    });
+
+    if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
+      return res.status(404).json({ message: "No questions found for the first phase." });
+    }
+
+    // You can implement your logic to handle answers and find matching questions here
+    // For now, let's assume all questions in the first phase should be returned
+
+    res.json({ questions: firstPhaseQuestions, nextPhase: 2 });
   } catch (error) {
-    res.json({ message: "catch error " + error });
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+router.post('/api/v1/getNextPhaseQuestions', async (req, res) => {
+  try {
+    const { survey_id, phase, answers } = req.body;
+
+    // Validate survey existence and active status
+    const existingSurvey = await surveyModel.findOne({
+      _id: survey_id,
+      active: 1
+    });
+
+    if (!existingSurvey) {
+      return res.status(404).json({ message: "The survey does not exist or is not active." });
+    }
+
+    // Fetch questions for the next phase
+    const nextPhaseQuestions = await Question.find({
+      survey_id: survey_id,
+      active: 1,
+      phase: phase + 1,
+    });
+
+    if (!nextPhaseQuestions || nextPhaseQuestions.length === 0) {
+      return res.status(404).json({ message: "No questions found for the next phase." });
+    }
+
+    // You can implement your logic to handle answers and find matching questions here
+    // For now, let's assume all questions in the next phase should be returned
+
+    res.json({ questions: nextPhaseQuestions, nextPhase: phase + 1 });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
 
 
+//////////////////////////////////
+
+// router.get('/api/v1/getInitialQuestions',async(req,res)=>{
+//   try {
+//     let { survey_id} = req.body;
+//     let question = await questionsModels.find({
+//       active:1,
+//       survey_id:survey_id,
+//       phase:1
+//     })
+//     if(question.length>0){
+//       res.json({message:question})
+//     }
+//     else{
+//       res.json({message:"No data found"})
+//     }
+//   } catch (error) {
+//     res.json({message:"catch error "+error})
+//   }
+// })
+
+// const findMatchingQuestion = async (survey_id, currentPhase, answeredQuestion, nextPhasesQuestions) => {
+//   try {
+//     // Check if answeredQuestion is a valid object
+//     if (!answeredQuestion || typeof answeredQuestion !== 'object' || !answeredQuestion.question_id || !answeredQuestion.question_answer) {
+//       return { message: 'Invalid or incomplete answered question.' };
+//     }
+
+//     // Search for the answer in the answer table
+//     const answerInTable = await Answer.findOne({
+//       question_id: answeredQuestion.question_id,
+//       answer: answeredQuestion.question_answer
+//     });
+
+//     let matchingQuestionResponse = null;
+
+//     if (answerInTable) {
+//       for (const nextPhaseQuestion of nextPhasesQuestions) {
+//         const matchingQuestion = nextPhaseQuestion.question_dependency.find(dep =>
+//           dep.id == answeredQuestion.question_id && dep.answer_text == answerInTable.answer
+//         );
+
+//         if (matchingQuestion) {
+//           matchingQuestionResponse = {
+//             message: "Matching question found in a future phase",
+//             question: nextPhaseQuestion
+//           };
+//           break;
+//         }
+//       }
+
+//       if (!matchingQuestionResponse) {
+//         // Check if there are questions without dependencies in future phases
+//         const questionsWithoutDependency = nextPhasesQuestions.filter(q => q.question_dependency.length === 0);
+
+//         if (questionsWithoutDependency.length > 0) {
+//           matchingQuestionResponse = {
+//             message: "Question without dependency found in a future phase",
+//             question: questionsWithoutDependency[0]
+//           };
+//         } else {
+//           // Store the answer as there is no matching question
+//           const response = new Response({
+//             answer: answerInTable.answer,
+//             question_id: answeredQuestion.question_id,
+//             survey_id: survey_id,
+//             user_answer: answeredQuestion.question_answer
+//           });
+
+//           await response.save();
+
+//           matchingQuestionResponse = {
+//             message: "No matching question found in future phases. Response stored.",
+//             question: answeredQuestion
+//           };
+//         }
+//       }
+//     } else {
+//       // Store the answer as the answer text does not match
+//       const response = new Response({
+//         answer: answeredQuestion.question_answer,
+//         question_id: answeredQuestion.question_id,
+//         survey_id: survey_id,
+//         user_answer: answeredQuestion.question_answer
+//       });
+
+//       await response.save();
+
+//       matchingQuestionResponse = {
+//         message: "Answer text does not match. Response stored.",
+//         question: answeredQuestion
+//       };
+//     }
+
+//     return matchingQuestionResponse;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
+
+// router.post('/api/v1/getQuestions', async (req, res) => {
+//   try {
+//     let { survey_id, answers, phase } = req.body;
+//     let existingSurvey = await surveyModel.findOne({
+//       _id: survey_id,
+//       active: 1
+//     });
+
+//     if (existingSurvey) {
+//       // Initialize an array to store responses
+//       let responses = [];
+
+//       // Check if there are answers
+//       if (answers && answers.length > 0) {
+//         // Search for questions in the next phases
+//         const nextPhasesQuestions = await questionsModels.find({
+//           survey_id: survey_id,
+//           active: 1,
+//           phase: phase + 1,
+//         });
+
+//         for (const answeredQuestion of answers) {
+//           // Find matching question response
+//           const matchingQuestionResponse = await findMatchingQuestion(
+//             survey_id,
+//             phase,
+//             answeredQuestion,
+//             nextPhasesQuestions
+//           );
+
+//           // Check if the dependent question is in the same phase
+//           if (matchingQuestionResponse.question.phase === phase + 1) {
+//             responses.push({
+//               answer: matchingQuestionResponse.answer,
+//               question_id: matchingQuestionResponse.question.question_id,
+//               survey_id: survey_id,
+//               question_type: matchingQuestionResponse.question.question_type,
+//               user_answer: answeredQuestion.question_answer
+//             });
+
+//             // Check if the last question in the phase
+//             const lastQuestionInPhase = nextPhasesQuestions.slice(-1)[0];
+//             if (matchingQuestionResponse.question._id.equals(lastQuestionInPhase._id)) {
+//               // If the last question in the phase, store the responses
+//               await Response.create(responses);
+
+//               // Clear the responses array for the next phase
+//               responses = [];
+//             }
+//           }
+//         }
+//       }
+
+//       res.json({ responses, nextPhase: phase + 1 });
+//     } else {
+//       res.json({ message: "The survey that you are looking for does not exist" });
+//     }
+//   } catch (error) {
+//     res.json({ message: "catch error " + error });
+//   }
+// });
 
 
 module.exports = router
