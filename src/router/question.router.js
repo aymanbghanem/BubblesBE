@@ -48,7 +48,7 @@ async function processAndStoreQuestions(questions) {
 
   // Save questions without dependencies and child questions
   for (const questionData of questions) {
-    const { id, question_title, answers, child_questions, question_dependency, ...otherFields } = questionData;
+    const { id, question_title, answers, ...otherFields } = questionData;
 
     const newQuestion = new Question({
       id,
@@ -68,14 +68,19 @@ async function processAndStoreQuestions(questions) {
   for (const savedQuestion of storedQuestions) {
     const { id, child_questions, question_dependency } = questions.find(q => q.id === savedQuestion.id);
 
-    if (child_questions && Array.isArray(child_questions)) {
-      savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
-      await savedQuestion.save(); // Save the updated question with child questions
-    }
-
     if (question_dependency && Array.isArray(question_dependency)) {
       savedQuestion.question_dependency = await processAndStoreQuestionDependencies(question_dependency, storedQuestions);
       await savedQuestion.save(); // Save the updated question with dependencies
+    }
+  }
+
+  // Process child questions after all questions and dependencies are saved
+  for (const savedQuestion of storedQuestions) {
+    const { id, child_questions } = questions.find(q => q.id === savedQuestion.id);
+
+    if (child_questions && Array.isArray(child_questions)) {
+      savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
+      await savedQuestion.save(); // Save the updated question with child questions
     }
   }
 
@@ -86,7 +91,7 @@ async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
   const updatedChildQuestions = [];
 
   for (const childQuestionData of childQuestions) {
-    const { child_questions, ...parentFields } = childQuestionData;
+    const { child_questions, related_answer, ...parentFields } = childQuestionData; // Added related_answer field
 
     const correspondingParent = storedQuestions.find(question => question.id == parentFields.parent_id);
 
@@ -97,12 +102,8 @@ async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
         parentFields.child_questions = processedChildQuestions;
       }
 
-      const newChildQuestion = { ...parentFields, child_id: correspondingParent._id };
+      const newChildQuestion = { ...parentFields, child_id: correspondingParent._id, related_answer }; // Added related_answer
       updatedChildQuestions.push(newChildQuestion);
-
-      // Update parent question with child information
-      correspondingParent.child_questions.push(newChildQuestion);
-      await correspondingParent.save();
     } else {
       console.error(`Parent question with dummy id ${parentFields.parent_id} not found.`);
     }
@@ -111,12 +112,11 @@ async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
   return updatedChildQuestions;
 }
 
-
 async function processAndStoreQuestionDependencies(dependencies, storedQuestions) {
   const updatedDependencies = [];
 
   for (const dependencyData of dependencies) {
-    const { parent_dummy_id, ...otherFields } = dependencyData;
+    const { parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
 
     const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
 
@@ -124,6 +124,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
       const newDependency = {
         ...otherFields,
         parent_id: correspondingQuestion._id,
+        related_answer,
       };
       updatedDependencies.push(newDependency);
     } else {
@@ -133,7 +134,6 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 
   return updatedDependencies;
 }
-
 module.exports = router;
 
 
