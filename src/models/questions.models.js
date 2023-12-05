@@ -3,13 +3,21 @@ const { Schema, model } = require('mongoose');
 const questionsSchema = new Schema({
     id: Number,
     question_title: String,
-    
+    phase: Number,
+    active:{
+        type:Number,
+        default:1
+    },
+    answers: [String],
+
+    survey_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'survey',
+    },
     have_child: {
         type: Number,
         default: 0,
     },
-
-    answers: [String],
 
     child_questions: [{
         child_id: {
@@ -20,7 +28,6 @@ const questionsSchema = new Schema({
         child_phase: Number,
         question_title: String,
     }],
- 
 
     question_dependency: [{
         parent_id: {
@@ -31,6 +38,7 @@ const questionsSchema = new Schema({
         text: String,
         question_title: String,
     }],
+
 
 }, { timestamps: true });
 

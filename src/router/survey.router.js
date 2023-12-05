@@ -120,72 +120,123 @@ async function processAndStoreLocation(locationData, survey, user) {
       throw error;
   }
 }
-async function processAndStoreAnswers(answerArray, questionId) {
-  const answerIdsAndTexts = [];
 
-  for (const answerText of answerArray) {
+
+async function processAndStoreAnswers(answerArray, questionId) {
+  const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
     const newAnswer = new Answer({ answer: answerText, question_id: questionId });
     const savedAnswer = await newAnswer.save();
-    answerIdsAndTexts.push({ id: savedAnswer._id, text: answerText, answer_id: savedAnswer._id });
-  }
+    return { id: savedAnswer._id, text: answerText, answer_id: savedAnswer._id };
+  }));
 
   return answerIdsAndTexts;
 }
-async function processAndStoreQuestions(questions, surveyId) {
+
+async function processAndStoreQuestions(questions,survey) {
   const storedQuestions = [];
 
+  // Save questions without dependencies and child questions
   for (const questionData of questions) {
-      const { id, question_title,have_child, answers, question_dependency, ...otherFields } = questionData;
+    const { id, question_title, answers, ...otherFields } = questionData;
 
-      // Create the question with the associated survey ID
-      const newQuestion = new Question({
-          id,
-          question_title,
-          survey_id: surveyId,
-          have_child:have_child,
-          ...otherFields,
-      });
+    const newQuestion = new Question({
+      id,
+      survey_id:survey,
+      question_title,
+      ...otherFields,
+    });
 
-      // Process and store answers
-      const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id);
+    const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id);
+    newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
 
-      // Set answer IDs in the question
-      newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
+    // Save the question
+    const savedQuestion = await newQuestion.save();
+    storedQuestions.push(savedQuestion);
+  }
 
-      // Check if there is a dependency
-      if (question_dependency && Array.isArray(question_dependency)) {
-          const dependencies = [];
+  // Process child questions and dependencies after all questions are saved
+  for (const savedQuestion of storedQuestions) {
+    const { id, child_questions, question_dependency } = questions.find(q => q.id === savedQuestion.id);
 
-          for (const dep of question_dependency) {
-              const { parent_id, text, answer_id, answer_text } = dep;
+    if (question_dependency && Array.isArray(question_dependency)) {
+      savedQuestion.question_dependency = await processAndStoreQuestionDependencies(question_dependency, storedQuestions);
+      await savedQuestion.save(); // Save the updated question with dependencies
+    }
+  }
 
-              // Find the parent question by ID
-              const parentQuestion = await Question.findOne({ id: parent_id, survey_id: surveyId });
+  // Process child questions after all questions and dependencies are saved
+  for (const savedQuestion of storedQuestions) {
+    const { id, child_questions } = questions.find(q => q.id === savedQuestion.id);
 
-              // Find the correct answer ID from the processed answers
-              const correspondingAnswer = answerIdsAndTexts.find(answerData => answerData.text === answer_text);
-
-              // Add dependency to the new question
-              const dependency = {
-                  id: parentQuestion._id, // Assuming MongoDB ObjectId is used
-                  text,
-                  answer_id: correspondingAnswer && correspondingAnswer.id,
-                  answer_text,
-              };
-
-              dependencies.push(dependency);
-          }
-
-          newQuestion.question_dependency = dependencies;
-      }
-
-      // Save the question
-      const savedQuestion = await newQuestion.save();
-      storedQuestions.push(savedQuestion);
+    if (child_questions && Array.isArray(child_questions)) {
+      savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
+      await savedQuestion.save(); // Save the updated question with child questions
+    }
   }
 
   return storedQuestions;
 }
+
+async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
+  const updatedChildQuestions = [];
+
+  for (const childQuestionData of childQuestions) {
+    const { child_dummy_id, child_questions, related_answer, ...parentFields } = childQuestionData; // Added related_answer field
+
+    const correspondingParent = storedQuestions.find(question => question.id == parentFields.parent_id);
+    const correspondingChild = storedQuestions.find(question => question.id == child_dummy_id);
+
+    if (correspondingParent && correspondingChild) {
+      if (child_questions && Array.isArray(child_questions)) {
+        // Process and store child questions recursively
+        const processedChildQuestions = await processAndStoreChildQuestions(child_questions, storedQuestions);
+        parentFields.child_questions = processedChildQuestions;
+      }
+
+      // Create a new child question with the correct child_id
+      const newChildQuestion = { ...parentFields, child_id: correspondingChild._id, related_answer };
+      updatedChildQuestions.push(newChildQuestion);
+
+      // Save the new child question
+      const savedChildQuestion = new Question(newChildQuestion);
+      await savedChildQuestion.save();
+
+      // Update parent question with child information
+      correspondingParent.child_questions = correspondingParent.child_questions || [];
+      correspondingParent.child_questions.push(savedChildQuestion);
+      await correspondingParent.save(); // Save the updated parent question
+    } else {
+      console.error(`Parent question with dummy id ${parentFields.parent_id} or child question with dummy id ${child_dummy_id} not found.`);
+    }
+  }
+
+  return updatedChildQuestions;
+}
+
+async function processAndStoreQuestionDependencies(dependencies, storedQuestions) {
+  const updatedDependencies = [];
+
+  for (const dependencyData of dependencies) {
+    const { parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
+
+    const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
+
+    if (correspondingQuestion) {
+      const newDependency = {
+        ...otherFields,
+        parent_id: correspondingQuestion._id,
+        related_answer,
+      };
+      updatedDependencies.push(newDependency);
+    } else {
+      console.error(`Parent question with dummy id ${parent_dummy_id} not found.`);
+    }
+  }
+
+  return updatedDependencies;
+}
+
+
 function flattenLocationTree(locationTree) {
   return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
 }
@@ -199,7 +250,7 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
     // Validate survey existence and active status
     const existingSurvey = await surveyModel.findOne({
       _id: survey_id,
-      active: 1
+      active: 1,
     });
 
     if (!existingSurvey) {

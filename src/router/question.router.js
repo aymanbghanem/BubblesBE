@@ -91,21 +91,32 @@ async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
   const updatedChildQuestions = [];
 
   for (const childQuestionData of childQuestions) {
-    const { child_questions, related_answer, ...parentFields } = childQuestionData; // Added related_answer field
+    const { child_dummy_id, child_questions, related_answer, ...parentFields } = childQuestionData; // Added related_answer field
 
     const correspondingParent = storedQuestions.find(question => question.id == parentFields.parent_id);
+    const correspondingChild = storedQuestions.find(question => question.id == child_dummy_id);
 
-    if (correspondingParent) {
+    if (correspondingParent && correspondingChild) {
       if (child_questions && Array.isArray(child_questions)) {
         // Process and store child questions recursively
         const processedChildQuestions = await processAndStoreChildQuestions(child_questions, storedQuestions);
         parentFields.child_questions = processedChildQuestions;
       }
 
-      const newChildQuestion = { ...parentFields, child_id: correspondingParent._id, related_answer }; // Added related_answer
+      // Create a new child question with the correct child_id
+      const newChildQuestion = { ...parentFields, child_id: correspondingChild._id, related_answer };
       updatedChildQuestions.push(newChildQuestion);
+
+      // Save the new child question
+      const savedChildQuestion = new Question(newChildQuestion);
+      await savedChildQuestion.save();
+
+      // Update parent question with child information
+      correspondingParent.child_questions = correspondingParent.child_questions || [];
+      correspondingParent.child_questions.push(savedChildQuestion);
+      await correspondingParent.save(); // Save the updated parent question
     } else {
-      console.error(`Parent question with dummy id ${parentFields.parent_id} not found.`);
+      console.error(`Parent question with dummy id ${parentFields.parent_id} or child question with dummy id ${child_dummy_id} not found.`);
     }
   }
 
