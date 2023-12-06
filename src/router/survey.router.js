@@ -183,34 +183,45 @@ async function processAndStoreQuestions(questions, survey) {
 
   return storedQuestions;
 }
+
 async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
   const updatedChildQuestions = [];
 
   for (const childQuestionData of childQuestions) {
-    const { child_dummy_id, child_questions, related_answer, ...parentFields } = childQuestionData; // Added related_answer field
+    const { child_dummy_id, child_questions, related_answer, ...parentFields } = childQuestionData;
 
     const correspondingParent = storedQuestions.find(question => question.id == parentFields.parent_id);
     const correspondingChild = storedQuestions.find(question => question.id == child_dummy_id);
 
     if (correspondingParent && correspondingChild) {
-      if (child_questions && Array.isArray(child_questions)) {
-        // Process and store child questions recursively
-        const processedChildQuestions = await processAndStoreChildQuestions(child_questions, storedQuestions);
-        parentFields.child_questions = processedChildQuestions;
+      // Check if the child question already exists
+      const existingChildQuestion = await Question.findOne({ id: child_dummy_id });
+
+      if (existingChildQuestion) {
+        // Update the existing child question with the correct child_id
+        const updatedChildQuestion = { ...parentFields, child_id: correspondingChild._id, related_answer };
+        updatedChildQuestions.push(updatedChildQuestion);
+
+        await Question.updateOne({ _id: existingChildQuestion._id }, updatedChildQuestion);
+      } else {
+        if (child_questions && Array.isArray(child_questions)) {
+          const processedChildQuestions = await processAndStoreChildQuestions(child_questions, storedQuestions);
+          parentFields.child_questions = processedChildQuestions;
+        }
+
+        // Create a new child question with the correct child_id
+        const newChildQuestion = { ...parentFields, child_id: correspondingChild._id, related_answer };
+        updatedChildQuestions.push(newChildQuestion);
+
+        // Save the new child question
+        const savedChildQuestion = new Question(newChildQuestion);
+        await savedChildQuestion.save();
+
+        // Update parent question with child information
+        correspondingParent.child_questions = correspondingParent.child_questions || [];
+        correspondingParent.child_questions.push(savedChildQuestion);
+        await correspondingParent.save(); // Save the updated parent question
       }
-
-      // Create a new child question with the correct child_id
-      const newChildQuestion = { ...parentFields, child_id: correspondingChild._id, related_answer };
-      updatedChildQuestions.push(newChildQuestion);
-
-      // Save the new child question
-      const savedChildQuestion = new Question(newChildQuestion);
-      await savedChildQuestion.save();
-
-      // Update parent question with child information
-      correspondingParent.child_questions = correspondingParent.child_questions || [];
-      correspondingParent.child_questions.push(savedChildQuestion);
-      await correspondingParent.save(); // Save the updated parent question
     } else {
       console.error(`Parent question with dummy id ${parentFields.parent_id} or child question with dummy id ${child_dummy_id} not found.`);
     }
@@ -218,6 +229,10 @@ async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
 
   return updatedChildQuestions;
 }
+
+// Similarly, modify processAndStoreQuestionDependencies function using a similar approach.
+
+
 async function processAndStoreQuestionDependencies(dependencies, storedQuestions) {
   const updatedDependencies = [];
 
