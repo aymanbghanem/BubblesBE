@@ -18,7 +18,10 @@ const questionsSchema = new Schema({
         type: Number,
         default: 0,
     },
-
+    question_type:{
+        type: Schema.Types.ObjectId,
+        ref: 'question_controller',
+    },
     child_questions: [{
         child_id: {
             type: Schema.Types.ObjectId,

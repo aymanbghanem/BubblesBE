@@ -5,9 +5,7 @@ const responseSchema = new Schema({
          type: Number,
          default: 1
      },
-     answer: {
-         type: String
-     },
+
      question_id: {
          type: Schema.Types.ObjectId,
          ref: 'question'
@@ -26,6 +24,9 @@ const responseSchema = new Schema({
      },
      user_answer: {
          type: String
+     },
+     user_number : {
+        type: String
      }
  }, { timestamps: true });
 
