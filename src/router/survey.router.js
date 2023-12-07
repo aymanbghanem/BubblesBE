@@ -183,7 +183,6 @@ async function processAndStoreQuestions(questions, survey) {
 
   return storedQuestions;
 }
-
 async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
   const updatedChildQuestions = [];
 
@@ -229,10 +228,6 @@ async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
 
   return updatedChildQuestions;
 }
-
-// Similarly, modify processAndStoreQuestionDependencies function using a similar approach.
-
-
 async function processAndStoreQuestionDependencies(dependencies, storedQuestions) {
   const updatedDependencies = [];
 
@@ -258,6 +253,8 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 function flattenLocationTree(locationTree) {
   return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
 }
+
+
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
   try {
     const { survey_id, phase, answers } = req.body;
