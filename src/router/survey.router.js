@@ -16,6 +16,8 @@ const Response = require("../models/response.model")
 const mongoose = require('mongoose')
 require('dotenv').config()
 
+// Create new survey 
+
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role;
@@ -255,6 +257,53 @@ function flattenLocationTree(locationTree) {
 }
 
 
+// Update the existing survey
+
+///api/v1/updateSurvey/:surveyId
+router.put('/api/v1/updateSurvey', auth, async (req, res) => {
+  try {
+    let role = req.user.user_role;
+    let surveyId = req.headers['survey_id']
+    if (role === 'admin') {
+      const {updatedSurveyData, locationUpdates, questionUpdates } = req.body;
+
+      // Update survey information
+      const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
+
+      if (!existingSurvey) {
+        return res.status(404).json({ message: `Survey with ID ${surveyId} not found` });
+      }
+
+      // Update the survey information
+      await surveyModel.updateOne({ _id: surveyId }, updatedSurveyData);
+
+      // Update locations
+      for (const update of locationUpdates) {
+        const { id, name, active, location_description } = update;
+
+        // Check if the provided location_id exists
+        const existingLocation = await Location.findOne({ _id: id, active: 1 });
+
+        if (!existingLocation) {
+          return res.status(404).json({ message: `Location with ID ${id} not found` });
+        }
+
+        // Update the location information
+        await Location.updateOne({ _id: id }, { location_name: name, active: active, location_description: location_description });
+      }
+
+
+      res.status(200).json({ message: 'Survey, locations,updated successfully!' });
+    } else {
+      res.status(403).json({ message: 'Unauthorized access' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
+  }
+});
+
+
+//Get the questions which is in the first phase
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
   try {
     const { survey_id, phase, answers } = req.body;
@@ -274,7 +323,11 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
       survey_id: survey_id,
       active: 1,
       phase: 1,
-    });
+    }).populate({
+      path: 'answers',  
+      model: 'answer', 
+      select:'answer'
+    }).select('question_title answers');
 
     if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
       return res.status(404).json({ message: "No questions found for the first phase." });
@@ -290,6 +343,7 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
   }
 });
 
+//Get the questions according  
 router.post('/api/v1/getQuestions', async (req, res) => {
   const { currentQuestion } = req.body;
 
