@@ -52,10 +52,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
 });
 async function processAndStoreSurvey(surveyData, user) {
   try {
-    // Ensure survey name is unique within the department
-    if (surveyData.survey_title.toLowerCase() === "seemiller") {
-      return { message: "Seemiller is a reserved survey name. Please choose a different name." };
-    }
+   
 
     let existingSurvey = await surveyModel.findOne({ survey_title: surveyData.survey_title, department_id: user.department_id, active: 1 });
 
@@ -260,12 +257,14 @@ function flattenLocationTree(locationTree) {
 // Update the existing survey
 
 ///api/v1/updateSurvey/:surveyId
+
 router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role;
-    let surveyId = req.headers['survey_id']
+    let surveyId = req.headers['survey_id'];
+
     if (role === 'admin') {
-      const {updatedSurveyData, locationUpdates, questionUpdates } = req.body;
+      const { updatedSurveyData, locationUpdates, questionsUpdates } = req.body;
 
       // Update survey information
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
@@ -292,8 +291,97 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         await Location.updateOne({ _id: id }, { location_name: name, active: active, location_description: location_description });
       }
 
+      // Update questions
+      for (const questionUpdate of questionsUpdates) {
+        const { _id, question_title,active,} = questionUpdate;
 
-      res.status(200).json({ message: 'Survey, locations,updated successfully!' });
+        // Check if the provided question_id exists
+        const existingQuestion = await Question.findOne({ _id:_id, active: 1 });
+
+        if (!existingQuestion) {
+          return res.status(404).json({ message: `Question with ID ${id} not found` });
+        }
+
+        // Update the question information
+        await Question.updateOne({ _id: _id }, { question_title: question_title });
+
+        // Update answers for the question
+        if (answers && Array.isArray(answers)) {
+          for (const answerUpdate of answers) {
+            const { answer_id, text } = answerUpdate;
+
+            // Check if the provided answer_id exists
+            const existingAnswer = await Answer.findOne({ _id: answer_id, question_id: _id });
+
+            if (!existingAnswer) {
+              return res.status(404).json({ message: `Answer with ID ${answer_id} for question ${id} not found` });
+            }
+
+            // Update the answer text
+            await Answer.updateOne({ _id: answer_id }, { answer: text });
+          }
+        }
+
+        // Update child questions
+        if (child_questions && Array.isArray(child_questions)) {
+          for (const childQuestionUpdate of child_questions) {
+            const { child_dummy_id, child_id, child_question_title, child_phase, parent_id, related_answer } = childQuestionUpdate;
+
+            // Check if the provided child_dummy_id exists
+            const existingChildQuestion = await Question.findOne({ id: child_dummy_id });
+
+            if (!existingChildQuestion) {
+              // Create a new child question
+              const newChildQuestion = new Question({
+                id: child_dummy_id,
+                question_title: child_question_title,
+                phase: child_phase,
+                parent_id: parent_id,
+                related_answer: related_answer
+              });
+
+              await newChildQuestion.save();
+            } else {
+              // Update the existing child question
+              await Question.updateOne({ _id: existingChildQuestion._id }, {
+                question_title: child_question_title,
+                phase: child_phase,
+                parent_id: parent_id,
+                related_answer: related_answer
+              });
+            }
+          }
+        }
+
+        // Update question dependencies
+        if (question_dependency && Array.isArray(question_dependency)) {
+          for (const dependencyUpdate of question_dependency) {
+            const { parent_dummy_id, parent_id, related_answer } = dependencyUpdate;
+
+            // Check if the provided parent_dummy_id exists
+            const existingDependency = await Question.findOne({ id: parent_dummy_id });
+
+            if (!existingDependency) {
+              // Create a new question dependency
+              const newDependency = new Question({
+                id: parent_dummy_id,
+                parent_id: parent_id,
+                related_answer: related_answer
+              });
+
+              await newDependency.save();
+            } else {
+              // Update the existing question dependency
+              await Question.updateOne({ _id: existingDependency._id }, {
+                parent_id: parent_id,
+                related_answer: related_answer
+              });
+            }
+          }
+        }
+      }
+
+      res.status(200).json({ message: 'Survey, locations, and questions updated successfully!' });
     } else {
       res.status(403).json({ message: 'Unauthorized access' });
     }
@@ -301,6 +389,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
     res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
   }
 });
+
 
 
 //Get the questions which is in the first phase

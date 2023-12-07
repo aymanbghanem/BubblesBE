@@ -4,6 +4,10 @@ const questionsSchema = new Schema({
     id: Number,
     question_title: String,
     phase: Number,
+    required:{
+       type:Number,
+       default:0
+    },
     active:{
         type:Number,
         default:1
