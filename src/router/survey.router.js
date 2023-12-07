@@ -120,13 +120,13 @@ async function processAndStoreLocation(locationData, survey, user) {
     throw error;
   }
 }
-async function processAndStoreAnswers(answerArray, questionId, questionType) {
+async function processAndStoreAnswers(answerArray, questionId, questionType,survey) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ type: questionType });
   const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
   const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
-    const newAnswer = new Answer({ answer: answerText, question_id: questionId, question_type: questionTypeId });
+    const newAnswer = new Answer({ answer: answerText, question_id: questionId, question_type: questionTypeId,survey_id:survey });
     const savedAnswer = await newAnswer.save();
     return { id: savedAnswer._id, text: answerText, answer_id: savedAnswer._id };
   }));
@@ -152,7 +152,7 @@ async function processAndStoreQuestions(questions, survey) {
       ...otherFields,
     });
 
-    const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type);
+    const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type,survey);
     newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
 
     // Save the question
@@ -293,7 +293,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
 
       // Update questions
       for (const questionUpdate of questionsUpdates) {
-        const { _id, question_title,active,} = questionUpdate;
+        const { _id, question_title,active,required} = questionUpdate;
 
         // Check if the provided question_id exists
         const existingQuestion = await Question.findOne({ _id:_id, active: 1 });
@@ -303,82 +303,8 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         }
 
         // Update the question information
-        await Question.updateOne({ _id: _id }, { question_title: question_title });
+        await Question.updateOne({ _id: _id }, { question_title: question_title,active:active,required:required });
 
-        // Update answers for the question
-        if (answers && Array.isArray(answers)) {
-          for (const answerUpdate of answers) {
-            const { answer_id, text } = answerUpdate;
-
-            // Check if the provided answer_id exists
-            const existingAnswer = await Answer.findOne({ _id: answer_id, question_id: _id });
-
-            if (!existingAnswer) {
-              return res.status(404).json({ message: `Answer with ID ${answer_id} for question ${id} not found` });
-            }
-
-            // Update the answer text
-            await Answer.updateOne({ _id: answer_id }, { answer: text });
-          }
-        }
-
-        // Update child questions
-        if (child_questions && Array.isArray(child_questions)) {
-          for (const childQuestionUpdate of child_questions) {
-            const { child_dummy_id, child_id, child_question_title, child_phase, parent_id, related_answer } = childQuestionUpdate;
-
-            // Check if the provided child_dummy_id exists
-            const existingChildQuestion = await Question.findOne({ id: child_dummy_id });
-
-            if (!existingChildQuestion) {
-              // Create a new child question
-              const newChildQuestion = new Question({
-                id: child_dummy_id,
-                question_title: child_question_title,
-                phase: child_phase,
-                parent_id: parent_id,
-                related_answer: related_answer
-              });
-
-              await newChildQuestion.save();
-            } else {
-              // Update the existing child question
-              await Question.updateOne({ _id: existingChildQuestion._id }, {
-                question_title: child_question_title,
-                phase: child_phase,
-                parent_id: parent_id,
-                related_answer: related_answer
-              });
-            }
-          }
-        }
-
-        // Update question dependencies
-        if (question_dependency && Array.isArray(question_dependency)) {
-          for (const dependencyUpdate of question_dependency) {
-            const { parent_dummy_id, parent_id, related_answer } = dependencyUpdate;
-
-            // Check if the provided parent_dummy_id exists
-            const existingDependency = await Question.findOne({ id: parent_dummy_id });
-
-            if (!existingDependency) {
-              // Create a new question dependency
-              const newDependency = new Question({
-                id: parent_dummy_id,
-                parent_id: parent_id,
-                related_answer: related_answer
-              });
-
-              await newDependency.save();
-            } else {
-              // Update the existing question dependency
-              await Question.updateOne({ _id: existingDependency._id }, {
-                parent_id: parent_id,
-                related_answer: related_answer
-              });
-            }
-          }
-        }
       }
 
       res.status(200).json({ message: 'Survey, locations, and questions updated successfully!' });
@@ -389,7 +315,6 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
     res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
   }
 });
-
 
 
 //Get the questions which is in the first phase
@@ -432,7 +357,7 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
   }
 });
 
-//Get the questions according  
+//Get the questions according to the answers
 router.post('/api/v1/getQuestions', async (req, res) => {
   const { currentQuestion } = req.body;
 
@@ -482,6 +407,23 @@ router.post('/api/v1/getQuestions', async (req, res) => {
   }
 });
 
+router.delete('/api/v1/deleteSurvey',auth,async(req,res)=>{
+  try {
+    let role = req.user.user_role
+    let survey_id = req.headers['survey_id']
+    if(role=="admin"){
+       let deleteSurvey = await surveyModel.findOneAndUpdate({_id:survey_id,active:1},{active:0})
+       let deleteLocations = await Location.updateMany({survey_id:survey_id,active:1},{active:0})
+       let deleteQuestions = await Question.updateMany({survey_id:survey_id,active:1},{active:0})
+       res.json({message:"The survey deleted successfully"})
+    }
+    else{
+      res.json({message:"sorry, you are unauthorized"})
+    }
+  } catch (error) {
+    res.json({message:"catch error "+error})
+  }
+})
 
 
 module.exports = router

@@ -13,65 +13,65 @@ const locationModels = require("../../src/models/location.models");
 require('dotenv').config()
 
 
-router.post('/api/v1/addLocation', auth, async (req, res) => {
-    try {
-        const { location_tree, survey_title } = req.body;
-        const role = req.user.user_role;
-        const department = req.user.department_id;
+// router.post('/api/v1/addLocation', auth, async (req, res) => {
+//     try {
+//         const { location_tree, survey_title } = req.body;
+//         const role = req.user.user_role;
+//         const department = req.user.department_id;
 
-        if (role === 'admin') {
-            let existingSurvey = await surveyModel.findOne({ survey_title: survey_title, department_id: department, active: 1 })
-            if (!existingSurvey) {
-                res.json({ message: "sorry there is no survey in this name" })
-            }
-            else {
-                const idToLocationMap = new Map();
+//         if (role === 'admin') {
+//             let existingSurvey = await surveyModel.findOne({ survey_title: survey_title, department_id: department, active: 1 })
+//             if (!existingSurvey) {
+//                 res.json({ message: "sorry there is no survey in this name" })
+//             }
+//             else {
+//                 const idToLocationMap = new Map();
 
-                for (const locationData of flattenLocationTree(location_tree)) {
-                    const { id, name, parentId,description } = locationData;
+//                 for (const locationData of flattenLocationTree(location_tree)) {
+//                     const { id, name, parentId,description } = locationData;
 
-                    const location = new Location({
-                        location_name: name,
-                        department_id: department,
-                        id: id,
-                        survey_id: existingSurvey._id,
-                        location_description :description
-                    });
+//                     const location = new Location({
+//                         location_name: name,
+//                         department_id: department,
+//                         id: id,
+//                         survey_id: existingSurvey._id,
+//                         location_description :description
+//                     });
 
-                    await location.save();
+//                     await location.save();
 
-                    // Store the MongoDB-generated ID for later reference
-                    locationData.mongoId = String(location._id);
+//                     // Store the MongoDB-generated ID for later reference
+//                     locationData.mongoId = String(location._id);
 
-                    // Store the location in the map for potential parent references
-                    idToLocationMap.set(id, location);
-                }
+//                     // Store the location in the map for potential parent references
+//                     idToLocationMap.set(id, location);
+//                 }
 
-                // Assign parent references based on the provided parent IDs
-                for (const locationData of flattenLocationTree(location_tree)) {
-                    const { id, parentId } = locationData;
+//                 // Assign parent references based on the provided parent IDs
+//                 for (const locationData of flattenLocationTree(location_tree)) {
+//                     const { id, parentId } = locationData;
 
-                    const location = idToLocationMap.get(id);
-                    const parent = parentId !== null ? idToLocationMap.get(parentId) : null;
+//                     const location = idToLocationMap.get(id);
+//                     const parent = parentId !== null ? idToLocationMap.get(parentId) : null;
 
-                    // Check if location and parent exist before updating the parent reference
-                    if (location) {
-                        await Location.updateOne({ _id: location._id }, { parent_id: parent ? parent._id : null });
-                    }
-                }
+//                     // Check if location and parent exist before updating the parent reference
+//                     if (location) {
+//                         await Location.updateOne({ _id: location._id }, { parent_id: parent ? parent._id : null });
+//                     }
+//                 }
 
-                res.status(200).json({ message: 'Locations stored and parent references assigned successfully!' });
-            }
-        } else {
-            res.json({ message: "Sorry, you are unauthorized." });
-        }
-    } catch (error) {
-        res.status(500).json({ message: "Catch error " + error });
-    }
-});
-function flattenLocationTree(locationTree) {
-    return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
-}
+//                 res.status(200).json({ message: 'Locations stored and parent references assigned successfully!' });
+//             }
+//         } else {
+//             res.json({ message: "Sorry, you are unauthorized." });
+//         }
+//     } catch (error) {
+//         res.status(500).json({ message: "Catch error " + error });
+//     }
+// });
+// function flattenLocationTree(locationTree) {
+//     return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
+// }
 router.get('/api/v1/getRootLocation', auth, async (req, res) => {
     try {
         let role = req.user.user_role

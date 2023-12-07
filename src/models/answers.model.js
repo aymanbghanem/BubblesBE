@@ -18,6 +18,10 @@ const answerSchema = new Schema({
     },
     image:{
         type:String
+    },
+    survey_id:{
+        type:Schema.Types.ObjectId,
+        ref : 'survey'
     }
     
 }, { timestamps: true })
