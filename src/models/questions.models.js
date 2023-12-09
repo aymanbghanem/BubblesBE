@@ -18,10 +18,6 @@ const questionsSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'survey',
     },
-    have_child: {
-        type: Number,
-        default: 0,
-    },
     question_type:{
         type: Schema.Types.ObjectId,
         ref: 'question_controller',

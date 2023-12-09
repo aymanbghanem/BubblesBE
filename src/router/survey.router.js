@@ -340,7 +340,7 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
     }).populate({
       path: 'answers',  
       model: 'answer', 
-      select:'answer'
+      select:'answer image'
     }).select('question_title answers');
 
     if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
@@ -389,13 +389,15 @@ router.post('/api/v1/getQuestions', async (req, res) => {
 
     if (eligibleQuestions.length > 0) {
       // Create an array of responses for all eligible questions
-      const responses = eligibleQuestions.map((eligibleQuestion) => {
+      const responses = await Promise.all(eligibleQuestions.map(async (eligibleQuestion) => {
+        const answer = await Answer.findOne({ question_id: eligibleQuestion._id }).select('image');
         return {
           child_id: eligibleQuestion._id,
           question_text: eligibleQuestion.question_title,
           phase: eligibleQuestion.phase,
+          image: answer ? answer.image : null,
         };
-      });
+      }));
 
       return res.json(responses);
     } else {
@@ -406,6 +408,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
 
 router.delete('/api/v1/deleteSurvey',auth,async(req,res)=>{
   try {
@@ -424,6 +427,5 @@ router.delete('/api/v1/deleteSurvey',auth,async(req,res)=>{
     res.json({message:"catch error "+error})
   }
 })
-
 
 module.exports = router
