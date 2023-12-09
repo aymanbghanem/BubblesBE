@@ -1,9 +1,7 @@
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 
-// Your plain-text password
-
-// Generate a salt to use for hashing (the higher the rounds, the more secure but slower)
+ 
 const saltRounds = parseInt(process.env.SALT_ROUND);
 
 function hashPassword(password, callback) {

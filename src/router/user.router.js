@@ -103,6 +103,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 user_role: user_role,
                 token: token,
             });
+
             await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
             return res.json({
                 message: "Successfully added",
@@ -179,7 +180,8 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
     try {
         let { user_name, email_address, password } = req.body;
         user_name = user_name.toLowerCase();
-
+        let newPassword = await generateMixedID()
+        let hashedPassword;
         // Check if either the email_address or user_name already exists
         const existingUser = await userModels.findOne({
             $or: [{ email_address: email_address }, { user_name: user_name }],
@@ -188,16 +190,19 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         if (existingUser) {
             res.json({ message: "The email address or username already exists" });
         } else {
-            hashPassword(password, async (hashedPassword) => {
-                // password = hashedPassword;
+            
+            await hashPassword(newPassword, (hash) => {
+              hashedPassword = hash;
+            });
                 let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
                 let new_user = await userModels.create({
                     user_name: user_name,
                     user_role: 'superadmin',
                     email_address: email_address,
-                    password: password,
+                    password: hashedPassword,
                     token: token,
                 });
+                await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
                 let response = {
                     message: "successfully added",
                     token: new_user.token,
@@ -205,7 +210,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     email_address: new_user.email_address,
                 };
                 res.json({ response });
-            });
+         
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });
