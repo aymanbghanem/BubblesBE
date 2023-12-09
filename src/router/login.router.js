@@ -13,30 +13,34 @@ router.post('/api/v1/login', async (req, res) => {
     const existingUser = await userModels.findOne({
       user_name: user_name
     })
-    if (existingUser) {
-      if (existingUser.password == password) {
-        let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
-        let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name }, { token }, { new: true });
-        let response = {
-          message: "successfully added",
-          token: user.token,
-          user_role: user.user_role,
-          email_address: user.email_address,
-        };
-        res.json({ response });
-      }
-      else {
-        res.json({ message: "Incorrect password" })
-      }
 
-    }
-    else {
-      res.json({ message: "Incorrect user name" })
+    if (existingUser) {
+      compareHashedPassword(password, existingUser.password,async (err, result) => {
+        if (err) {
+          res.json({ message: "Incorrect password" });
+        } else if (result) {
+          let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
+          let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name }, { token }, { new: true });
+          let response = {
+            message: "successfully added",
+            token: user.token,
+            user_role: user.user_role,
+            email_address: user.email_address,
+          };
+          res.json({ response });
+        } else {
+          res.json({ message: "Incorrect password" });
+        }
+      });
+    } else {
+      res.json({ message: "Incorrect user name" });
     }
   } catch (error) {
-
+    // Handle errors
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
-})
+});
 
 router.patch("/api/v1/logout", auth, async (req, res) => {
   try {

@@ -30,7 +30,7 @@ async function sendEmail(user_name,to, subject,password,message) {
      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
        <h1 style="color: #333;">Digital Feed Back 👋</h1>
        <p style="color: #555;">Dear ${user_name},</p>
-       <p style="color: #555;">This is an email to ${message}.</p>
+       <p style="color: #555;">This is an email ${message}.</p>
        <p style="color: #555;">Your new password : <strong>${password}</strong></p>
        <p style="color: #555;">Thank you for your attention!</p>
        <p style="color: #555;">Best regards,</p>
