@@ -120,15 +120,19 @@ async function processAndStoreLocation(locationData, survey, user) {
     throw error;
   }
 }
+function flattenLocationTree(locationTree) {
+  return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
+}
+
 async function processAndStoreAnswers(answerArray, questionId, questionType,survey) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ type: questionType });
   const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
   const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
-    const newAnswer = new Answer({ answer: answerText, question_id: questionId, question_type: questionTypeId,survey_id:survey });
+    const newAnswer = new Answer({ answer: answerText.text,image:answerText.image, question_id: questionId, question_type: questionTypeId,survey_id:survey });
     const savedAnswer = await newAnswer.save();
-    return { id: savedAnswer._id, text: answerText, answer_id: savedAnswer._id };
+    return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
   }));
 
   return answerIdsAndTexts;
@@ -249,10 +253,6 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 
   return updatedDependencies;
 }
-function flattenLocationTree(locationTree) {
-  return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
-}
-
 
 // Update the existing survey
 
