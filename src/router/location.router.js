@@ -9,10 +9,82 @@ const { hashPassword } = require('../helper/hashPass.helper')
 const config = require('../../config')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 const locationModels = require("../../src/models/location.models");
 require('dotenv').config()
 
 
+
+router.post('/api/v1/addLocation', auth, async (req, res) => {
+    try {
+        const { location_data, survey_title } = req.body;
+        const role = req.user.user_role;
+        const department = req.user.department_id;
+
+        if (role === 'admin') {
+            
+                const idToLocationMap = new Map();
+
+                for (const locationData of flattenLocationData(location_data)) {
+                    const { id, location_name, location_description, parentId } = locationData;
+
+                    const location = new Location({
+                        location_name: location_name,
+                        department_id: department,
+                        id: id,
+                       // survey_id: existingSurvey._id,
+                        location_description: location_description
+                    });
+
+                    await location.save();
+
+                    // Store the MongoDB-generated ID for later reference
+                    locationData.mongoId = String(location._id);
+
+                    // Store the location in the map for potential parent references
+                    idToLocationMap.set(id, location);
+                }
+
+                // Assign parent references based on the provided parent IDs
+                for (const locationData of flattenLocationData(location_data)) {
+                    const { id, parentId } = locationData;
+
+                    const location = idToLocationMap.get(id);
+                    const parent = parentId !== null ? idToLocationMap.get(parentId) : null;
+
+                    // Check if location and parent exist before updating the parent reference
+                    if (location) {
+                        await Location.updateOne({ _id: location._id }, { parent_id: parent ? parent._id : null });
+                    }
+                }
+
+                res.status(200).json({ message: 'Locations stored and parent references assigned successfully!' });
+           
+        } else {
+            res.json({ message: "Sorry, you are unauthorized." });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Catch error " + error });
+    }
+});
+
+function flattenLocationData(locationData, parentId = null) {
+    let result = [];
+    for (const item of locationData) {
+        result.push({
+            id: item.id,
+            location_name: item.location_name,
+            location_description: item.location_description || "",
+            parentId: parentId !== null ? parentId : null,
+        });
+        if (item.subLocations && item.subLocations.length > 0) {
+            result = result.concat(flattenLocationData(item.subLocations, item.id));
+        }
+    }
+    return result;
+}
+
+/* *************************************** */
 // router.post('/api/v1/addLocation', auth, async (req, res) => {
 //     try {
 //         const { location_tree, survey_title } = req.body;

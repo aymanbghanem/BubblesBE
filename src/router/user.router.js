@@ -60,6 +60,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         let hashedPassword;
         const role = req.user.user_role.toLowerCase();
         let newPassword = await generateMixedID()
+        console.log(newPassword)
         const { user_name, email_address, user_role, company_name, department_name, survey } = req.body;
 
         if (!config.roles.includes(role)) {
@@ -107,7 +108,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 token: token,
             });
 
-            await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
+          //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
             return res.json({
                 message: "Successfully added",
                 token: user.token,
@@ -127,7 +128,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 token: token,
             };
             const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
-            await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
+           // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
             return res.json({
                 message: "Successfully added",
                 token: user.token,
@@ -214,7 +215,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     password: hashedPassword,
                     token: token,
                 });
-                await sendEmail(user_name,email_address, "Account password", newPassword,"for your account password")
+               // await sendEmail(user_name,email_address, "Account password", newPassword,"for your account password")
                 let response = {
                     message: "successfully added",
                     token: new_user.token,
@@ -339,20 +340,21 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
 
 router.post('/api/v1/resetPassword', async (req, res) => {
     try {
-        let { email_address } = req.body
+        let { user_name } = req.body
         let newPassword = await generateMixedID()
+        console.log(newPassword)
         let response;
         let existingUser = await userModels.findOne({
-            email_address:email_address
+            user_name:user_name
         })
         if(existingUser){
             await hashPassword(newPassword,async (hash) => {
                 hashedPassword = hash;
-                existingUser = await userModels.findOneAndUpdate({email_address:email_address},{password:hashedPassword},{new:true})
+                existingUser = await userModels.findOneAndUpdate({user_name:user_name},{password:hashedPassword},{new:true})
             })
            
-            let user_name = existingUser.user_name
-            response = await sendEmail(user_name,email_address, "Reset password", newPassword,"to reset your password")
+            //let user_name = existingUser.user_name
+          //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
             res.json({ message: response,existingUser })
         }
         else{
