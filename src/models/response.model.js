@@ -27,6 +27,10 @@ const responseSchema = new Schema({
      },
      user_number : {
         type: String
+     },
+     answer_id:{
+        type: Schema.Types.ObjectId,
+        ref: 'answer'
      }
  }, { timestamps: true });
 

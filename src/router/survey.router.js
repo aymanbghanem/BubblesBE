@@ -52,7 +52,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
 });
 async function processAndStoreSurvey(surveyData, user) {
   try {
-   
+
 
     let existingSurvey = await surveyModel.findOne({ survey_title: surveyData.survey_title, department_id: user.department_id, active: 1 });
 
@@ -123,14 +123,13 @@ async function processAndStoreLocation(locationData, survey, user) {
 function flattenLocationTree(locationTree) {
   return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
 }
-
-async function processAndStoreAnswers(answerArray, questionId, questionType,survey) {
+async function processAndStoreAnswers(answerArray, questionId, questionType, survey) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ type: questionType });
   const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
   const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
-    const newAnswer = new Answer({ answer: answerText.text,image:answerText.image, question_id: questionId, question_type: questionTypeId,survey_id:survey });
+    const newAnswer = new Answer({ answer: answerText.text, image: answerText.image, question_id: questionId, question_type: questionTypeId, survey_id: survey });
     const savedAnswer = await newAnswer.save();
     return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
   }));
@@ -156,7 +155,7 @@ async function processAndStoreQuestions(questions, survey) {
       ...otherFields,
     });
 
-    const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type,survey);
+    const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type, survey);
     newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
 
     // Save the question
@@ -293,17 +292,17 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
 
       // Update questions
       for (const questionUpdate of questionsUpdates) {
-        const { _id, question_title,active,required} = questionUpdate;
+        const { _id, question_title, active, required } = questionUpdate;
 
         // Check if the provided question_id exists
-        const existingQuestion = await Question.findOne({ _id:_id, active: 1 });
+        const existingQuestion = await Question.findOne({ _id: _id, active: 1 });
 
         if (!existingQuestion) {
           return res.status(404).json({ message: `Question with ID ${id} not found` });
         }
 
         // Update the question information
-        await Question.updateOne({ _id: _id }, { question_title: question_title,active:active,required:required });
+        await Question.updateOne({ _id: _id }, { question_title: question_title, active: active, required: required });
 
       }
 
@@ -315,7 +314,6 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
     res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
   }
 });
-
 
 //Get the questions which is in the first phase
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
@@ -338,9 +336,9 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
       active: 1,
       phase: 1,
     }).populate({
-      path: 'answers',  
-      model: 'answer', 
-      select:'answer image'
+      path: 'answers',
+      model: 'answer',
+      select: 'answer image'
     }).select('question_title answers');
 
     if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
@@ -409,22 +407,22 @@ router.post('/api/v1/getQuestions', async (req, res) => {
   }
 });
 
-
-router.delete('/api/v1/deleteSurvey',auth,async(req,res)=>{
+router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role
     let survey_id = req.headers['survey_id']
-    if(role=="admin"){
-       let deleteSurvey = await surveyModel.findOneAndUpdate({_id:survey_id,active:1},{active:0})
-       let deleteLocations = await Location.updateMany({survey_id:survey_id,active:1},{active:0})
-       let deleteQuestions = await Question.updateMany({survey_id:survey_id,active:1},{active:0})
-       res.json({message:"The survey deleted successfully"})
+    if (role == "admin") {
+      let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, active: 1 }, { active: 0 })
+      let deleteLocations = await Location.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
+      let deleteQuestions = await Question.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
+      let deleteAnswers = await Answer.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
+      res.json({ message: "The survey and it is data deleted successfully" })
     }
-    else{
-      res.json({message:"sorry, you are unauthorized"})
+    else {
+      res.json({ message: "sorry, you are unauthorized" })
     }
   } catch (error) {
-    res.json({message:"catch error "+error})
+    res.json({ message: "catch error " + error })
   }
 })
 
