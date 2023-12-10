@@ -168,6 +168,7 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
         res.json({ message: "catch error " + error })
     }
 })
+
 router.get('/api/v1/getLocationInfo', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
@@ -185,32 +186,29 @@ router.get('/api/v1/getLocationInfo', auth, async (req, res) => {
         res.json({ message: "catch error " + error });
     }
 });
+
 const getLocationsTree = async (parentId) => {
-    const stack = [];
-    const result = [];
+    const location = await locationModels.findOne({ _id: parentId, active: 1 });
 
-    stack.push(parentId);
-
-    while (stack.length > 0) {
-        const currentLocationId = stack.pop();
-        const location = await locationModels.findOne({ _id: currentLocationId,active:1});
-
-        if (location) {
-            result.push({
-                id: location._id,
-                name: location.location_name,
-                parentId: location.parent_id,
-                active:location.active,
-                description : location.location_description
-            });
-
-            const subLocations = await locationModels.find({ parent_id: currentLocationId,active:1});
-            stack.push(...subLocations.map(subLocation => subLocation._id));
-        }
+    if (!location) {
+        return null; // Return null if location is not found
     }
 
-    return result;
+    const subLocations = await locationModels.find({ parent_id: parentId, active: 1 });
+    const subTrees = await Promise.all(subLocations.map(async (subLocation) => {
+        return await getLocationsTree(subLocation._id);
+    }));
+
+    return {
+        id: location._id,
+        name: location.location_name,
+        parentId: location.parent_id,
+        active: location.active,
+        description: location.location_description,
+        children: subTrees.filter(Boolean), // Remove null values
+    };
 };
+
 router.put('/api/v1/updateLocation', auth, async(req, res) => {
     try {
         let role = req.user.user_role;
