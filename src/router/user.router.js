@@ -150,27 +150,6 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             };
              user= await addDepartmentAndUser(userParams, req.user.company_id, department_name);
            // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-            for (let i = 0; i < survey.length; i++) {
-                // Get the survey information
-                const surveyInfo = await surveyModel.findOne({ survey_title: survey[i], company_id: req.user.company_id, active: 1 });
-
-                if (surveyInfo) {
-                    let survey_reader = await surveyReaderModel.create({
-                        survey_title: survey[i],
-                        survey_id : surveyInfo._id,
-                        company_id: req.user.company_id,
-                        department_id: user.department_id,
-                        reader_id: user._id,
-                        company_logo: user.company_logo,
-                        created_by: surveyInfo.created_by, // Assign the survey creator
-                        active: 1,
-                    });
-                } else {
-                    // Handle the case when the survey is not found
-                    console.error(`Survey not found: ${survey[i]}`);
-                }
-            }
-
             return res.json({
                 message: "Successfully added",
                 token: user.token,

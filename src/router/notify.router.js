@@ -13,7 +13,8 @@ const QuestionController = require('../models/questions_controller.models')
 const Location = require("../../src/models/location.models");
 const questionsModels = require("../models/questions.models");
 const Response = require("../models/response.model")
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const userModels = require("../models/user.models");
 require('dotenv').config()
 
 router.get('/api/v1/getNotifyData', auth, async (req, res) => {
@@ -25,17 +26,8 @@ router.get('/api/v1/getNotifyData', auth, async (req, res) => {
                 .select('survey_title');
 
             // Find survey readers created by the logged-in user
-            let surveyReaders = await surveyReaderModel.find({ created_by: req.user._id })
-                .populate({
-                    path: 'reader_id',
-                    model: 'user',
-                    select: '_id user_name',
-                }).select('reader_id');
-
-            surveyReaders = surveyReaders.map(reader => ({
-                _id: reader.reader_id._id,
-                user_name: reader.reader_id.user_name,
-            }));
+            let surveyReaders = await userModels.find({ department_id: req.user.department_id})
+            .select('user_name ');
 
             let locations = await Location.find({ department_id: req.user.department_id, active: 1 })
                 .populate({

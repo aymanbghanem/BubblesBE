@@ -20,36 +20,93 @@ require('dotenv').config()
 
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
   try {
-    let role = req.user.user_role;
-    let department_id = req.user.department_id;
-    let user = req.user
-    const { survey, location, questions } = req.body;
+    const { location_data, survey, location, questions } = req.body;
+    const role = req.user.user_role;
+    const department = req.user.department_id;
 
-    if (role === "admin") {
+    if (role === 'admin') {
       // Process and store survey
-      const storedSurvey = await processAndStoreSurvey(survey, user);
+     const storedSurvey = await processAndStoreSurvey(survey, req.user);
 
       // Process and store questions with the survey ID
-      const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id,department_id);
+   const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department);
 
       // Process and store location
-      const storedLocation = await processAndStoreLocation(location, storedSurvey, req.user);
+      const storedLocation = await processAndStoreLocation(req.body.location_data, storedSurvey, req.user);
 
-      // Respond with the stored data
-      res.json({
-        message: "Survey, location, and questions added successfully",
-        survey: storedSurvey,
+      res.status(200).json({
+        message: 'Survey, location, and questions added successfully',
+     survey: storedSurvey,
         location: storedLocation,
-        questions: storedQuestions
+     questions: storedQuestions,
       });
     } else {
-      res.json({ message: "Sorry, you are unauthorized" });
+      res.json({ message: 'Sorry, you are unauthorized' });
     }
   } catch (error) {
-    //console.error(error);
     res.status(500).json({ message: ' ' + error });
   }
 });
+async function processAndStoreLocation(locationData, survey, user) {
+  try {
+    const department = user.department_id;
+
+    const idToLocationMap = new Map();
+
+    for (const flattenedLocation of flattenLocationData(locationData)) {
+      const { id, location_name, location_description, parentId } = flattenedLocation;
+
+      const location = new Location({
+        location_name,
+        department_id: department,
+        id,
+        location_description,
+        survey_id: survey._id, // Link the location to the survey
+      });
+
+      await location.save();
+
+      // Store the MongoDB-generated ID for later reference
+      flattenedLocation.mongoId = String(location._id);
+
+      // Store the location in the map for potential parent references
+      idToLocationMap.set(id, location);
+    }
+
+    // Assign parent references based on the provided parent IDs
+    for (const flattenedLocation of flattenLocationData(locationData)) {
+      const { id, parentId } = flattenedLocation;
+
+      const location = idToLocationMap.get(id);
+      const parent = parentId !== null ? idToLocationMap.get(parentId) : null;
+
+      // Check if location and parent exist before updating the parent reference
+      if (location) {
+        await Location.updateOne({ _id: location._id }, { parent_id: parent ? parent._id : null });
+      }
+    }
+
+    return  "Locations stored and parent references assigned successfully!";;
+  } catch (error) {
+    throw error;
+  }
+}
+
+function flattenLocationData(locationData, parentId = null) {
+  let result = [];
+  for (const item of locationData) {
+      result.push({
+          id: item.id,
+          location_name: item.location_name,
+          location_description: item.location_description || "",
+          parentId: parentId !== null ? parentId : null,
+      });
+      if (item.subLocations && item.subLocations.length > 0) {
+          result = result.concat(flattenLocationData(item.subLocations, item.id));
+      }
+  }
+  return result;
+}
 async function processAndStoreSurvey(surveyData, user) {
   try {
 
@@ -77,51 +134,6 @@ async function processAndStoreSurvey(surveyData, user) {
   } catch (error) {
     throw error;
   }
-}
-async function processAndStoreLocation(locationData, survey, user) {
-  try {
-    const idToLocationMap = new Map();
-
-    for (const locData of flattenLocationTree(locationData.location_tree)) {
-      const { id, name, parentId, description } = locData;
-
-      const location = new Location({
-        location_name: name,
-        department_id: user.department_id,
-        id: id,
-        survey_id: survey._id,
-        location_description: description
-      });
-
-      await location.save();
-
-      // Store the MongoDB-generated ID for later reference
-      locData.mongoId = String(location._id);
-
-      // Store the location in the map for potential parent references
-      idToLocationMap.set(id, location);
-    }
-
-    // Assign parent references based on the provided parent IDs
-    for (const locData of flattenLocationTree(locationData.location_tree)) {
-      const { id, parentId } = locData;
-
-      const location = idToLocationMap.get(id);
-      const parent = parentId !== null ? idToLocationMap.get(parentId) : null;
-
-      // Check if location and parent exist before updating the parent reference
-      if (location) {
-        await Location.updateOne({ _id: location._id }, { parent_id: parent ? parent._id : null });
-      }
-    }
-
-    return "Locations stored and parent references assigned successfully!";
-  } catch (error) {
-    throw error;
-  }
-}
-function flattenLocationTree(locationTree) {
-  return Array.isArray(locationTree[0]) ? locationTree.flat() : locationTree;
 }
 async function processAndStoreAnswers(answerArray, questionId, questionType, survey) {
   // Fetch question type ID from QuestionController table based on the provided question type
