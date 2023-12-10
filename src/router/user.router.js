@@ -137,18 +137,18 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
         })
         } else if (department_name && (user_role.toLowerCase() === 'survey-reader') && role == 'admin') {
+            let user;
             await hashPassword(newPassword,async (hash) => {
                 hashedPassword = hash;
             const userParams = {
                 user_name: user_name,
-                password: newPassword,
+                password: hashedPassword,
                 email_address: email_address,
                 user_role: user_role,
                 token: token,
             };
-            const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
-            await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-        })
+             user= await addDepartmentAndUser(userParams, req.user.company_id, department_name);
+           // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
             for (let i = 0; i < survey.length; i++) {
                 // Get the survey information
                 const surveyInfo = await surveyModel.findOne({ survey_title: survey[i], company_id: req.user.company_id, active: 1 });
@@ -156,6 +156,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 if (surveyInfo) {
                     let survey_reader = await surveyReaderModel.create({
                         survey_title: survey[i],
+                        survey_id : surveyInfo._id,
                         company_id: req.user.company_id,
                         department_id: user.department_id,
                         reader_id: user._id,
@@ -176,6 +177,8 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 email_address: user.email_address,
                 image: user.image
             })
+        })
+           
         }
         else {
             return res.json({ message: "sorry, you are unauthorized" });
@@ -359,5 +362,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
         res.json({ message: "catch error " + error })
     }
 })
+
+
 module.exports = router
 

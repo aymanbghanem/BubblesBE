@@ -27,7 +27,8 @@ const locationsSchema = new Schema({
         default:0
     },
     location_description:{
-        type:String
+        type:String,
+        default:''
     }
 
 }, { timestamps: true })

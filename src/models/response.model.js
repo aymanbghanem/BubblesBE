@@ -31,6 +31,10 @@ const responseSchema = new Schema({
      answer_id:{
         type: Schema.Types.ObjectId,
         ref: 'answer'
+     },
+     response_flag:{
+        type:Number,
+        default:0
      }
  }, { timestamps: true });
 

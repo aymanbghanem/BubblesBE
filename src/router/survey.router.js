@@ -30,7 +30,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
       const storedSurvey = await processAndStoreSurvey(survey, user);
 
       // Process and store questions with the survey ID
-      const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id);
+      const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id,department_id);
 
       // Process and store location
       const storedLocation = await processAndStoreLocation(location, storedSurvey, req.user);
@@ -136,7 +136,7 @@ async function processAndStoreAnswers(answerArray, questionId, questionType, sur
 
   return answerIdsAndTexts;
 }
-async function processAndStoreQuestions(questions, survey) {
+async function processAndStoreQuestions(questions, survey,department_id) {
   const storedQuestions = [];
 
   // Save questions without dependencies and child questions
@@ -149,6 +149,7 @@ async function processAndStoreQuestions(questions, survey) {
 
     const newQuestion = new Question({
       id,
+      department_id:department_id,
       survey_id: survey,
       question_title,
       question_type: questionTypeId,
