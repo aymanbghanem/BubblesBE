@@ -11,6 +11,7 @@ const Question = require("../models/questions.models");
 const Answer = require("../models/answers.model")
 const QuestionController = require('../models/questions_controller.models')
 const Location = require("../../src/models/location.models");
+const locationModel = require("../../src/models/location.models");
 const questionsModels = require("../models/questions.models");
 const Response = require("../models/response.model")
 const mongoose = require('mongoose')
@@ -450,6 +451,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   }
 })
 
+
 router.get('/api/v1/getSurveyById', auth, async (req, res) => {
   try {
     const survey_id = req.headers['survey_id'];
@@ -457,25 +459,27 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
 
     if (userRole === "admin") {
       const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
-        path:"company_id",
-        select:"company_name"
+        path: "company_id",
+        select: "company_name"
       })
-      .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
-       let company_name = survey.company_id.company_name
-       let questions = await questionsModels.find({
-        survey_id:survey_id,
-        active:1
-       })
+        .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
+      let company_name = survey.company_id.company_name;
+
       if (survey) {
+        // Fetch locations
+        const locations = await fetchLocations(survey_id);
+
         let response = {
-          survey_title:survey.survey_title,
-          survey_description:survey.survey_description,
-          submission_pwd:survey.submission_pwd,
-          background_color:survey.background_color,
-          question_text_color:survey.question_text_color,
-          logo :`${company_name}/${survey.logo}`
-        }
-        res.json({ message: response,questions});
+          survey_title: survey.survey_title,
+          survey_description: survey.survey_description,
+          submission_pwd: survey.submission_pwd,
+          background_color: survey.background_color,
+          question_text_color: survey.question_text_color,
+          logo: `${company_name}/${survey.logo}`,
+          locations: buildTree(locations, null)
+        };
+
+        res.json({ message: response });
       } else {
         res.json({ message: "The survey you are looking for does not exist" });
       }
@@ -486,5 +490,36 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     res.status(500).json({ message: "Internal server error", error: error.message });
   }
 });
+
+// Helper function to fetch locations
+async function fetchLocations(survey_id) {
+  const locations = await locationModel.find({
+    survey_id: survey_id,
+    active: 1
+  }).lean();
+  return locations;
+}
+
+// Helper function to build the entire tree structure
+function buildTree(locations, parentId) {
+  const tree = [];
+
+  locations.forEach(location => {
+    if ((parentId === null && !location.parent_id) || (location.parent_id && location.parent_id.toString() === parentId)) {
+      const children = buildTree(locations, location._id.toString());
+      const node = { ...location }; // Use spread operator to create a new object
+      
+      if (children.length > 0) {
+        node.children = children;
+      }
+
+      tree.push(node);
+    }
+  });
+
+  return tree;
+}
+
+
 
 module.exports = router
