@@ -26,19 +26,19 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
 
     if (role === 'admin') {
       // Process and store survey
-     const storedSurvey = await processAndStoreSurvey(survey, req.user);
+      const storedSurvey = await processAndStoreSurvey(survey, req.user);
 
       // Process and store questions with the survey ID
-   const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department);
+      const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department);
 
       // Process and store location
       const storedLocation = await processAndStoreLocation(req.body.location_data, storedSurvey, req.user);
 
       res.status(200).json({
         message: 'Survey, location, and questions added successfully',
-     survey: storedSurvey,
+        survey: storedSurvey,
         location: storedLocation,
-     questions: storedQuestions,
+        questions: storedQuestions,
       });
     } else {
       res.json({ message: 'Sorry, you are unauthorized' });
@@ -86,7 +86,7 @@ async function processAndStoreLocation(locationData, survey, user) {
       }
     }
 
-    return  "Locations stored and parent references assigned successfully!";;
+    return "Locations stored and parent references assigned successfully!";;
   } catch (error) {
     throw error;
   }
@@ -95,15 +95,15 @@ async function processAndStoreLocation(locationData, survey, user) {
 function flattenLocationData(locationData, parentId = null) {
   let result = [];
   for (const item of locationData) {
-      result.push({
-          id: item.id,
-          location_name: item.location_name,
-          location_description: item.location_description || "",
-          parentId: parentId !== null ? parentId : null,
-      });
-      if (item.subLocations && item.subLocations.length > 0) {
-          result = result.concat(flattenLocationData(item.subLocations, item.id));
-      }
+    result.push({
+      id: item.id,
+      location_name: item.location_name,
+      location_description: item.location_description || "",
+      parentId: parentId !== null ? parentId : null,
+    });
+    if (item.subLocations && item.subLocations.length > 0) {
+      result = result.concat(flattenLocationData(item.subLocations, item.id));
+    }
   }
   return result;
 }
@@ -148,7 +148,7 @@ async function processAndStoreAnswers(answerArray, questionId, questionType, sur
 
   return answerIdsAndTexts;
 }
-async function processAndStoreQuestions(questions, survey,department_id) {
+async function processAndStoreQuestions(questions, survey, department_id) {
   const storedQuestions = [];
 
   // Save questions without dependencies and child questions
@@ -161,7 +161,7 @@ async function processAndStoreQuestions(questions, survey,department_id) {
 
     const newQuestion = new Question({
       id,
-      department_id:department_id,
+      department_id: department_id,
       survey_id: survey,
       question_title,
       question_type: questionTypeId,
@@ -339,7 +339,6 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   }
 });
 
-
 //Get the questions which is in the first phase
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
   try {
@@ -450,5 +449,42 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
     res.json({ message: "catch error " + error })
   }
 })
+
+router.get('/api/v1/getSurveyById', auth, async (req, res) => {
+  try {
+    const survey_id = req.headers['survey_id'];
+    const userRole = req.user.user_role;
+
+    if (userRole === "admin") {
+      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
+        path:"company_id",
+        select:"company_name"
+      })
+      .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
+       let company_name = survey.company_id.company_name
+       let questions = await questionsModels.find({
+        survey_id:survey_id,
+        active:1
+       })
+      if (survey) {
+        let response = {
+          survey_title:survey.survey_title,
+          survey_description:survey.survey_description,
+          submission_pwd:survey.submission_pwd,
+          background_color:survey.background_color,
+          question_text_color:survey.question_text_color,
+          logo :`${company_name}/${survey.logo}`
+        }
+        res.json({ message: response,questions});
+      } else {
+        res.json({ message: "The survey you are looking for does not exist" });
+      }
+    } else {
+      res.status(403).json({ message: "Sorry, you are unauthorized" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+});
 
 module.exports = router
