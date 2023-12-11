@@ -268,15 +268,13 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 
 // Update the existing survey
 
-///api/v1/updateSurvey/:surveyId
-
 router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role;
     let surveyId = req.headers['survey_id'];
 
     if (role === 'admin') {
-      const { updatedSurveyData, locationUpdates, questionsUpdates } = req.body;
+      const { updatedSurveyData, locationData, questionsUpdates } = req.body;
 
       // Update survey information
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
@@ -289,19 +287,33 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       await surveyModel.updateOne({ _id: surveyId }, updatedSurveyData);
 
       // Update locations
-      for (const update of locationUpdates) {
-        const { id, name, active, location_description } = update;
+      const updateLocations = async (locations, parentId = null) => {
+        for (const location of locations) {
+          const { id, location_name, description, children } = location;
 
-        // Check if the provided location_id exists
-        const existingLocation = await Location.findOne({ _id: id, active: 1 });
+          // Check if the provided location_id exists
+          const existingLocation = await Location.findOne({ _id: id, active: 1, survey_id: surveyId });
 
-        if (!existingLocation) {
-          return res.status(404).json({ message: `Location with ID ${id} not found` });
+          if (!existingLocation) {
+            return res.status(404).json({ message: `Location with ID ${id} not found` });
+          }
+
+          // Update the location information
+          await Location.updateOne({ _id: id }, {
+            location_name,
+            active: 1,
+            location_description: description,
+            parentId,
+          });
+
+          // Recursively update sub-locations
+          if (children && children.length > 0) {
+            await updateLocations(children, id);
+          }
         }
+      };
 
-        // Update the location information
-        await Location.updateOne({ _id: id }, { location_name: name, active: active, location_description: location_description });
-      }
+      await updateLocations(locationData);
 
       // Update questions
       for (const questionUpdate of questionsUpdates) {
@@ -311,12 +323,11 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         const existingQuestion = await Question.findOne({ _id: _id, active: 1 });
 
         if (!existingQuestion) {
-          return res.status(404).json({ message: `Question with ID ${id} not found` });
+          return res.status(404).json({ message: `Question with ID ${_id} not found` });
         }
 
         // Update the question information
-        await Question.updateOne({ _id: _id }, { question_title: question_title, active: active, required: required });
-
+        await Question.updateOne({ _id: _id }, { question_title, active, required });
       }
 
       res.status(200).json({ message: 'Survey, locations, and questions updated successfully!' });
@@ -327,6 +338,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
     res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
   }
 });
+
 
 //Get the questions which is in the first phase
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
