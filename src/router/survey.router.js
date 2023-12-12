@@ -365,83 +365,101 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
 
 
 router.post('/api/v1/getQuestions', async (req, res) => {
-  const { currentQuestion } = req.body;
-  const currentQuestionId = currentQuestion._id;
-  const selectedAnswer = currentQuestion.answers[0]; // Assuming you want the first answer
-
   try {
-    const question = await Question.findById(currentQuestionId);
-    let type = await QuestionController.findOne({ _id: question.question_type }).select('question_type -_id')
-    let questionType = type.question_type
+    const { phase, currentQuestion } = req.body;
 
-    const nextPhaseQuestions = await Question.find({ phase: question.phase + 1 }); //phase 2 
-
-    if (questionType === "single choice") {
-      const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
-        if (!nextQuestion.question_dependency || nextQuestion.question_dependency.length === 0) {
-          return true; // Include questions without dependencies
-        } else {
-          // Include questions with dependencies if the dependency matches
-          const hasMatchingDependency = nextQuestion.question_dependency.some((dependency) => {
-            const isMatchingParentId = dependency.parent_id.toString() === currentQuestionId.toString();
-            const isMatchingAnswer = dependency.related_answer === selectedAnswer;
-            return isMatchingParentId && isMatchingAnswer;
-          });
-          return hasMatchingDependency;
-        }
-      });
-
-      if (eligibleQuestions.length > 0) {
-        const responses = await Promise.all(eligibleQuestions.map(async (eligibleQuestion) => {
-          const answer = await Answer.findOne({ question_id: eligibleQuestion._id }).select('image');
-          return {
-            child_id: eligibleQuestion._id,
-            question_text: eligibleQuestion.question_title,
-            phase: eligibleQuestion.phase,
-            image: answer ? answer.image : null,
-          };
-        }));
-
-        return res.json(responses);
-      } else {
-        return res.json({ message: 'No child questions found.' });
-      }
-    } else if (questionType === "Range") {
-      // Check if the current question has dependencies from previous phases
-      const hasDependencies = question.dependencies && question.dependencies.length > 0;
-
-      // If there are dependencies, filter questions based on the selected answer
-      const eligibleQuestions = hasDependencies
-        ? nextPhaseQuestions.filter((nextQuestion) => {
-            const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
-              const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
-              const isMatchingAnswer = dependency.related_answer === selectedAnswer;
-              return isMatchingParentId && isMatchingAnswer;
-            });
-            return hasMatchingDependency;
-          })
-        : nextPhaseQuestions;
-
-      if (eligibleQuestions.length > 0) {
-        const responses = eligibleQuestions.map((eligibleQuestion) => ({
-          child_id: eligibleQuestion._id,
-          question_text: eligibleQuestion.question_title,
-          phase: eligibleQuestion.phase,
-          // Add other necessary fields
-        }));
-
-        return res.json(responses);
-      } else {
-        return res.json({ message: 'No eligible child questions found.' });
-      }
+    // Check if 'currentQuestion' is defined and is an array
+    if (!Array.isArray(currentQuestion)) {
+      return res.status(400).json({ message: 'Invalid request format: "currentQuestion" must be an array.' });
     }
+
+    const responses = await Promise.all(
+      currentQuestion.map(async (question) => {
+        const currentQuestionId = question._id;
+        const selectedAnswer = question.answers && question.answers.length > 0 ? question.answers[0] : null;
+
+        const foundQuestion = await Question.findById(currentQuestionId);
+        if (!foundQuestion) {
+          return { message: 'Question not found.' };
+        }
+
+        const type = await QuestionController.findOne({ _id: foundQuestion.question_type }).select('question_type -_id');
+        const questionType = type.question_type;
+
+        const nextPhaseQuestions = await Question.find({ phase });
+
+        if (questionType === 'single choice') {
+          const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
+            if (!nextQuestion.question_dependency || nextQuestion.question_dependency.length === 0) {
+              return true; // Include questions without dependencies
+            } else {
+              const hasMatchingDependency = nextQuestion.question_dependency.some((dependency) => {
+                const isMatchingParentId = dependency.parent_id.toString() === currentQuestionId.toString();
+                const isMatchingAnswer = dependency.related_answer === selectedAnswer;
+                return isMatchingParentId && isMatchingAnswer;
+              });
+              return hasMatchingDependency;
+            }
+          });
+
+          if (eligibleQuestions.length > 0) {
+            const responses = await Promise.all(
+              eligibleQuestions.map(async (eligibleQuestion) => {
+                const answer = await Answer.findOne({ question_id: eligibleQuestion._id }).select('image');
+                return {
+                  child_id: eligibleQuestion._id,
+                  question_text: eligibleQuestion.question_title,
+                  phase: eligibleQuestion.phase,
+                  image: answer ? answer.image : null,
+                };
+              })
+            );
+
+            return {
+              child_questions: responses,
+            };
+          } else {
+            return { message: 'No child questions found.' };
+          }
+        } else if (questionType === 'Range') {
+          const hasDependencies = foundQuestion.dependencies && foundQuestion.dependencies.length > 0;
+
+          const eligibleQuestions = hasDependencies
+            ? nextPhaseQuestions.filter((nextQuestion) => {
+                const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
+                  const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
+                  const isMatchingAnswer = dependency.related_answer === selectedAnswer;
+                  return isMatchingParentId && isMatchingAnswer;
+                });
+                return hasMatchingDependency;
+              })
+            : nextPhaseQuestions;
+
+          if (eligibleQuestions.length > 0) {
+            const responses = eligibleQuestions.map((eligibleQuestion) => ({
+              child_id: eligibleQuestion._id,
+              question_text: eligibleQuestion.question_title,
+              phase: eligibleQuestion.phase,
+              // Add other necessary fields
+            }));
+
+            return {
+              child_questions: responses,
+            };
+          } else {
+            return { message: 'No eligible child questions found.' };
+          }
+        }
+      })
+    );
+
+    return res.json(responses);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
-
-
+ 
 // // Get the questions according to the answers
 // router.post('/api/v1/getQuestions', async (req, res) => {
 //   const { currentQuestion } = req.body;
