@@ -448,50 +448,65 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       } else {
         return res.json({ message: 'No child questions found.' });
       }
-    }
+    } else if (questionType == "Range") {
+      let answer = await Answer.findOne({ question_id: currentQuestionId, active: 1 }).select('answer -_id')
+      console.log(answer.answer)
+      const answerThreshold = answer.answer; // Set your threshold value here
+      const receivedAnswer = parseFloat(selectedAnswer);
 
-      else if (questionType == "Range") {
-        const answerThreshold = 2.5; // Set your threshold value here
-        const receivedAnswer = parseFloat(selectedAnswer);
-  
-        if (isNaN(receivedAnswer)) {
-          return res.json({ message: 'Invalid answer format.' });
-        }
-  
-        // Find the child questions in the database
-        const childQuestions = await Question.find({ _id: { $in: question.child_questions.map(child => child.child_id) } });
-  
-        if (!childQuestions || childQuestions.length === 0) {
-          return res.json({ message: 'Child questions not found.' });
-        }
-  
-        const eligibleChildQuestions = childQuestions.filter(child => {
-          const flag = child.flag; // Assuming the flag is a property of the child question
-          return receivedAnswer > answerThreshold ? flag === 1 : flag === -1;
-        });
-  
-        if (eligibleChildQuestions.length > 0) {
-          const responses = eligibleChildQuestions.map(child => ({
-            child_id: child._id,
-            question_text: child.question_title,
-            phase: child.phase,
-            // Add other necessary fields
-          }));
-  
-          return res.json(responses);
-        } else {
-          return res.json({ message: 'No eligible child questions found for the received answer.' });
-        }
+      if (isNaN(receivedAnswer)) {
+        return res.json({ message: 'Invalid answer format.' });
       }
+
+      // Find the child questions in the database
+      const childQuestions = await Question.find({ _id: { $in: question.child_questions.map(child => child.child_id) } });
+
+      if (!childQuestions || childQuestions.length === 0) {
+        return res.json({ message: 'Child questions not found.' });
+      }
+
+      const eligibleChildQuestions = childQuestions.filter(child => {
+        const flag = child.flag; // Assuming the flag is a property of the child question
+        const flagValue = parseFloat(flag);
+
+        if (isNaN(flagValue)) {
+          return false; // Skip if the flag is not a valid number
+        }
+
+        switch (flagValue) {
+          case 0:
+            return receivedAnswer === answerThreshold;
+          case 1:
+            return receivedAnswer > answerThreshold;
+          case -1:
+            return receivedAnswer < answerThreshold;
+          case 2:
+            return receivedAnswer >= answerThreshold;
+          case -2:
+            return receivedAnswer <= answerThreshold;
+          default:
+            return false; // Skip for other flag values
+        }
+      });
+
+      if (eligibleChildQuestions.length > 0) {
+        const responses = eligibleChildQuestions.map(child => ({
+          child_id: child._id,
+          question_text: child.question_title,
+          phase: child.phase,
+          // Add other necessary fields
+        }));
+
+        return res.json(responses);
+      } else {
+        return res.json({ message: 'No eligible child questions found for the received answer.' });
+      }
+    }
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
-
-
-
-
 
 // router.post('/api/v1/getQuestions', async (req, res) => {
 //   const { currentQuestion } = req.body;
@@ -586,8 +601,6 @@ router.post('/api/v1/getQuestions', async (req, res) => {
 //   }
 // });
 
-
-
 router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role
@@ -606,7 +619,6 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
     res.json({ message: "catch error " + error })
   }
 })
-
 
 router.get('/api/v1/getSurveyById', auth, async (req, res) => {
   try {
@@ -646,7 +658,6 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     res.status(500).json({ message: "Internal server error", error: error.message });
   }
 });
-
 // Helper function to fetch locations
 async function fetchLocations(survey_id) {
   const locations = await locationModel.find({
@@ -655,7 +666,6 @@ async function fetchLocations(survey_id) {
   }).lean();
   return locations;
 }
-
 // Helper function to build the entire tree structure
 function buildTree(locations, parentId) {
   const tree = [];
