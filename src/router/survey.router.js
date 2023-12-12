@@ -363,7 +363,7 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
   }
 });
 
-// Get the questions according to the answers
+
 router.post('/api/v1/getQuestions', async (req, res) => {
   const { currentQuestion } = req.body;
   const currentQuestionId = currentQuestion._id;
@@ -373,18 +373,17 @@ router.post('/api/v1/getQuestions', async (req, res) => {
     const question = await Question.findById(currentQuestionId);
     let type = await QuestionController.findOne({ _id: question.question_type }).select('question_type -_id')
     let questionType = type.question_type
-    console.log(questionType)
 
-    const nextPhaseQuestions = await Question.find({ phase: question.phase + 1 });
+    const nextPhaseQuestions = await Question.find({ phase: question.phase + 1 }); //phase 2 
 
-    if (questionType == "single choice") {
+    if (questionType === "single choice") {
       const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
-        if (!nextQuestion.dependencies || nextQuestion.dependencies.length === 0) {
+        if (!nextQuestion.question_dependency || nextQuestion.question_dependency.length === 0) {
           return true; // Include questions without dependencies
         } else {
           // Include questions with dependencies if the dependency matches
-          const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
-            const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
+          const hasMatchingDependency = nextQuestion.question_dependency.some((dependency) => {
+            const isMatchingParentId = dependency.parent_id.toString() === currentQuestionId.toString();
             const isMatchingAnswer = dependency.related_answer === selectedAnswer;
             return isMatchingParentId && isMatchingAnswer;
           });
@@ -407,58 +406,33 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       } else {
         return res.json({ message: 'No child questions found.' });
       }
-    } else if (questionType == "Range") {
-      let answer = await Answer.findOne({ question_id: currentQuestionId, active: 1 }).select('answer -_id')
-      console.log(answer.answer)
-      const answerThreshold = answer.answer; // Set your threshold value here
-      const receivedAnswer = parseFloat(selectedAnswer);
+    } else if (questionType === "Range") {
+      // Check if the current question has dependencies from previous phases
+      const hasDependencies = question.dependencies && question.dependencies.length > 0;
 
-      if (isNaN(receivedAnswer)) {
-        return res.json({ message: 'Invalid answer format.' });
-      }
+      // If there are dependencies, filter questions based on the selected answer
+      const eligibleQuestions = hasDependencies
+        ? nextPhaseQuestions.filter((nextQuestion) => {
+            const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
+              const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
+              const isMatchingAnswer = dependency.related_answer === selectedAnswer;
+              return isMatchingParentId && isMatchingAnswer;
+            });
+            return hasMatchingDependency;
+          })
+        : nextPhaseQuestions;
 
-      // Find the child questions in the database
-      const childQuestions = await Question.find({ _id: { $in: question.child_questions.map(child => child.child_id) } });
-
-      if (!childQuestions || childQuestions.length === 0) {
-        return res.json({ message: 'Child questions not found.' });
-      }
-
-      const eligibleChildQuestions = childQuestions.filter(child => {
-        const flag = child.flag; // Assuming the flag is a property of the child question
-        const flagValue = parseFloat(flag);
-
-        if (isNaN(flagValue)) {
-          return false; // Skip if the flag is not a valid number
-        }
-
-        switch (flagValue) {
-          case 0:
-            return receivedAnswer === answerThreshold;
-          case 1:
-            return receivedAnswer > answerThreshold;
-          case -1:
-            return receivedAnswer < answerThreshold;
-          case 2:
-            return receivedAnswer >= answerThreshold;
-          case -2:
-            return receivedAnswer <= answerThreshold;
-          default:
-            return false; // Skip for other flag values
-        }
-      });
-
-      if (eligibleChildQuestions.length > 0) {
-        const responses = eligibleChildQuestions.map(child => ({
-          child_id: child._id,
-          question_text: child.question_title,
-          phase: child.phase,
+      if (eligibleQuestions.length > 0) {
+        const responses = eligibleQuestions.map((eligibleQuestion) => ({
+          child_id: eligibleQuestion._id,
+          question_text: eligibleQuestion.question_title,
+          phase: eligibleQuestion.phase,
           // Add other necessary fields
         }));
 
         return res.json(responses);
       } else {
-        return res.json({ message: 'No eligible child questions found for the received answer.' });
+        return res.json({ message: 'No eligible child questions found.' });
       }
     }
   } catch (error) {
@@ -466,6 +440,111 @@ router.post('/api/v1/getQuestions', async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+
+// // Get the questions according to the answers
+// router.post('/api/v1/getQuestions', async (req, res) => {
+//   const { currentQuestion } = req.body;
+//   const currentQuestionId = currentQuestion._id;
+//   const selectedAnswer = currentQuestion.answers[0]; // Assuming you want the first answer
+
+//   try {
+//     const question = await Question.findById(currentQuestionId);
+//     let type = await QuestionController.findOne({ _id: question.question_type }).select('question_type -_id')
+//     let questionType = type.question_type
+//     console.log(questionType)
+
+//     const nextPhaseQuestions = await Question.find({ phase: question.phase + 1 });
+
+//     if (questionType == "single choice") {
+//       const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
+//         if (!nextQuestion.dependencies || nextQuestion.dependencies.length === 0) {
+//           return true; // Include questions without dependencies
+//         } else {
+//           // Include questions with dependencies if the dependency matches
+//           const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
+//             const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
+//             const isMatchingAnswer = dependency.related_answer === selectedAnswer;
+//             return isMatchingParentId && isMatchingAnswer;
+//           });
+//           return hasMatchingDependency;
+//         }
+//       });
+
+//       if (eligibleQuestions.length > 0) {
+//         const responses = await Promise.all(eligibleQuestions.map(async (eligibleQuestion) => {
+//           const answer = await Answer.findOne({ question_id: eligibleQuestion._id }).select('image');
+//           return {
+//             child_id: eligibleQuestion._id,
+//             question_text: eligibleQuestion.question_title,
+//             phase: eligibleQuestion.phase,
+//             image: answer ? answer.image : null,
+//           };
+//         }));
+
+//         return res.json(responses);
+//       } else {
+//         return res.json({ message: 'No child questions found.' });
+//       }
+//     } else if (questionType == "Range") {
+//       let answer = await Answer.findOne({ question_id: currentQuestionId, active: 1 }).select('answer -_id')
+//       console.log(answer.answer)
+//       const answerThreshold = answer.answer; // Set your threshold value here
+//       const receivedAnswer = parseFloat(selectedAnswer);
+
+//       if (isNaN(receivedAnswer)) {
+//         return res.json({ message: 'Invalid answer format.' });
+//       }
+
+//       // Find the child questions in the database
+//       const childQuestions = await Question.find({ _id: { $in: question.child_questions.map(child => child.child_id) } });
+
+//       if (!childQuestions || childQuestions.length === 0) {
+//         return res.json({ message: 'Child questions not found.' });
+//       }
+
+//       const eligibleChildQuestions = childQuestions.filter(child => {
+//         const flag = child.flag; // Assuming the flag is a property of the child question
+//         const flagValue = parseFloat(flag);
+
+//         if (isNaN(flagValue)) {
+//           return false; // Skip if the flag is not a valid number
+//         }
+
+//         switch (flagValue) {
+//           case 0:
+//             return receivedAnswer === answerThreshold;
+//           case 1:
+//             return receivedAnswer > answerThreshold;
+//           case -1:
+//             return receivedAnswer < answerThreshold;
+//           case 2:
+//             return receivedAnswer >= answerThreshold;
+//           case -2:
+//             return receivedAnswer <= answerThreshold;
+//           default:
+//             return false; // Skip for other flag values
+//         }
+//       });
+
+//       if (eligibleChildQuestions.length > 0) {
+//         const responses = eligibleChildQuestions.map(child => ({
+//           child_id: child._id,
+//           question_text: child.question_title,
+//           phase: child.phase,
+//           // Add other necessary fields
+//         }));
+
+//         return res.json(responses);
+//       } else {
+//         return res.json({ message: 'No eligible child questions found for the received answer.' });
+//       }
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// });
 
 // router.post('/api/v1/getQuestions', async (req, res) => {
 //   const { currentQuestion } = req.body;
