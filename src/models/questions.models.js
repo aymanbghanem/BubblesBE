@@ -4,13 +4,13 @@ const questionsSchema = new Schema({
     id: Number,
     question_title: String,
     phase: Number,
-    required:{
-       type:Number,
-       default:0
+    required: {
+        type: Number,
+        default: 0
     },
-    active:{
-        type:Number,
-        default:1
+    active: {
+        type: Number,
+        default: 1
     },
     answers: [String],
 
@@ -18,23 +18,14 @@ const questionsSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'survey',
     },
-    question_type:{
+    question_type: {
         type: Schema.Types.ObjectId,
         ref: 'question_controller',
     },
-    department_id:{
+    department_id: {
         type: Schema.Types.ObjectId,
         ref: 'department'
     },
-    child_questions: [{
-        child_id: {
-            type: Schema.Types.ObjectId,
-            ref: 'question',
-        },
-        related_answer: String,
-        child_phase: Number,
-        question_title: String,
-    }],
 
     question_dependency: [{
         parent_id: {
@@ -44,9 +35,9 @@ const questionsSchema = new Schema({
         related_answer: String,
         text: String,
         question_title: String,
+        parent_dummy_id: String // Add this field to match your code
     }],
-    flag:Number
-
+    flag: Number
 }, { timestamps: true });
 
 module.exports = model('question', questionsSchema);
