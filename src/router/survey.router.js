@@ -14,7 +14,8 @@ const Location = require("../../src/models/location.models");
 const locationModel = require("../../src/models/location.models");
 const questionsModels = require("../models/questions.models");
 const Response = require("../models/response.model")
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const questions_controllerModels = require("../models/questions_controller.models");
 require('dotenv').config()
 
 // Create new survey 
@@ -33,12 +34,12 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
       const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department);
 
       // Process and store location
-      const storedLocation = await processAndStoreLocation(req.body.location_data, storedSurvey, req.user);
+      //const storedLocation = await processAndStoreLocation(req.body.location_data, storedSurvey, req.user);
 
       res.status(200).json({
         message: 'Survey, location, and questions added successfully',
         survey: storedSurvey,
-        location: storedLocation,
+        // location: storedLocation,
         questions: storedQuestions,
       });
     } else {
@@ -136,25 +137,34 @@ async function processAndStoreSurvey(surveyData, user) {
     throw error;
   }
 }
-async function processAndStoreAnswers(answerArray, questionId, questionType, survey) {
+
+async function processAndStoreAnswers(answerArray, questionId, questionType, survey, flag) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ type: questionType });
   const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
   const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
-    const newAnswer = new Answer({ answer: answerText.text, image: answerText.image, question_id: questionId, question_type: questionTypeId, survey_id: survey });
+    const newAnswer = new Answer({
+      answer: answerText.text,
+      image: answerText.image,
+      question_id: questionId,
+      question_type: questionTypeId,
+      survey_id: survey,
+      flag: flag, // Pass the flag to the answer
+    });
     const savedAnswer = await newAnswer.save();
     return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
   }));
 
   return answerIdsAndTexts;
 }
+
 async function processAndStoreQuestions(questions, survey, department_id) {
   const storedQuestions = [];
 
   // Save questions without dependencies and child questions
   for (const questionData of questions) {
-    const { id, question_title, answers, question_type, ...otherFields } = questionData;
+    const { id, flag, question_title, answers, question_type, ...otherFields } = questionData;
 
     // Fetch question type ID from QuestionController table based on the provided question type
     const questionTypeObject = await QuestionController.findOne({ question_type: question_type });
@@ -162,6 +172,7 @@ async function processAndStoreQuestions(questions, survey, department_id) {
 
     const newQuestion = new Question({
       id,
+      flag: flag,
       department_id: department_id,
       survey_id: survey,
       question_title,
@@ -169,8 +180,20 @@ async function processAndStoreQuestions(questions, survey, department_id) {
       ...otherFields,
     });
 
-    const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type, survey);
-    newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
+    switch (question_type) {
+      case "text":
+        // No answers, dependencies, or child questions for text questions
+        break;
+      case "single-choice":
+      case "Multiple choice":
+      case "Range":
+        // Process and store answers only for single-choice, multiple-choice, and range questions
+        const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type, survey, flag);
+        newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
+        break;
+      default:
+        throw new Error(`Unsupported question type: ${question_type}`);
+    }
 
     // Save the question
     const savedQuestion = await newQuestion.save();
@@ -199,6 +222,7 @@ async function processAndStoreQuestions(questions, survey, department_id) {
 
   return storedQuestions;
 }
+
 async function processAndStoreChildQuestions(childQuestions, storedQuestions) {
   const updatedChildQuestions = [];
 
@@ -380,57 +404,189 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
   }
 });
 
-//Get the questions according to the answers
+// Get the questions according to the answers
 router.post('/api/v1/getQuestions', async (req, res) => {
   const { currentQuestion } = req.body;
-
   const currentQuestionId = currentQuestion._id;
   const selectedAnswer = currentQuestion.answers[0]; // Assuming you want the first answer
 
   try {
     const question = await Question.findById(currentQuestionId);
+    let type = await QuestionController.findOne({ _id: question.question_type }).select('question_type -_id')
+    let questionType = type.question_type
+    console.log(questionType)
 
-    // Fetch the next phase questions from the database
     const nextPhaseQuestions = await Question.find({ phase: question.phase + 1 });
 
-    // Collect all eligible questions (with and without dependencies)
-    const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
-      if (nextQuestion.question_dependency.length === 0) {
-        return true; // Include questions without dependencies
-      } else {
-        // Include questions with dependencies if the dependency matches
-        const hasMatchingDependency = nextQuestion.question_dependency.some(
-          (dependency) => {
-            const isMatchingParentId = dependency.parent_id.toString() === currentQuestionId;
+    if (questionType == "single choice") {
+      const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
+        if (!nextQuestion.dependencies || nextQuestion.dependencies.length === 0) {
+          return true; // Include questions without dependencies
+        } else {
+          // Include questions with dependencies if the dependency matches
+          const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
+            const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
             const isMatchingAnswer = dependency.related_answer === selectedAnswer;
             return isMatchingParentId && isMatchingAnswer;
-          }
-        );
-        return hasMatchingDependency;
+          });
+          return hasMatchingDependency;
+        }
+      });
+
+      if (eligibleQuestions.length > 0) {
+        const responses = await Promise.all(eligibleQuestions.map(async (eligibleQuestion) => {
+          const answer = await Answer.findOne({ question_id: eligibleQuestion._id }).select('image');
+          return {
+            child_id: eligibleQuestion._id,
+            question_text: eligibleQuestion.question_title,
+            phase: eligibleQuestion.phase,
+            image: answer ? answer.image : null,
+          };
+        }));
+
+        return res.json(responses);
+      } else {
+        return res.json({ message: 'No child questions found.' });
       }
-    });
-
-    if (eligibleQuestions.length > 0) {
-      // Create an array of responses for all eligible questions
-      const responses = await Promise.all(eligibleQuestions.map(async (eligibleQuestion) => {
-        const answer = await Answer.findOne({ question_id: eligibleQuestion._id }).select('image');
-        return {
-          child_id: eligibleQuestion._id,
-          question_text: eligibleQuestion.question_title,
-          phase: eligibleQuestion.phase,
-          image: answer ? answer.image : null,
-        };
-      }));
-
-      return res.json(responses);
-    } else {
-      return res.json({ message: 'No child questions found.' });
     }
+
+      else if (questionType == "Range") {
+        const answerThreshold = 2.5; // Set your threshold value here
+        const receivedAnswer = parseFloat(selectedAnswer);
+  
+        if (isNaN(receivedAnswer)) {
+          return res.json({ message: 'Invalid answer format.' });
+        }
+  
+        // Find the child questions in the database
+        const childQuestions = await Question.find({ _id: { $in: question.child_questions.map(child => child.child_id) } });
+  
+        if (!childQuestions || childQuestions.length === 0) {
+          return res.json({ message: 'Child questions not found.' });
+        }
+  
+        const eligibleChildQuestions = childQuestions.filter(child => {
+          const flag = child.flag; // Assuming the flag is a property of the child question
+          return receivedAnswer > answerThreshold ? flag === 1 : flag === -1;
+        });
+  
+        if (eligibleChildQuestions.length > 0) {
+          const responses = eligibleChildQuestions.map(child => ({
+            child_id: child._id,
+            question_text: child.question_title,
+            phase: child.phase,
+            // Add other necessary fields
+          }));
+  
+          return res.json(responses);
+        } else {
+          return res.json({ message: 'No eligible child questions found for the received answer.' });
+        }
+      }
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+
+
+
+
+// router.post('/api/v1/getQuestions', async (req, res) => {
+//   const { currentQuestion } = req.body;
+//   const currentQuestionId = currentQuestion._id;
+//   const selectedAnswer = currentQuestion.answers[0]; // Assuming you want the first answer
+
+//   try {
+//     const question = await Question.findById(currentQuestionId);
+//     const nextPhaseQuestions = await Question.find({ phase: question.phase + 1 });
+
+//     const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
+//       if (!nextQuestion.dependencies || nextQuestion.dependencies.length === 0) {
+//         return true; // Include questions without dependencies
+//       } else {
+//         // Include questions with dependencies if the dependency matches
+//         const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
+//           const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
+//           const isMatchingAnswer = dependency.related_answer === selectedAnswer;
+//           return isMatchingParentId && isMatchingAnswer;
+//         });
+//         return hasMatchingDependency;
+//       }
+//     });
+
+//     if (eligibleQuestions.length > 0) {
+//       // Iterate over eligibleQuestions
+//       const responses = await Promise.all(eligibleQuestions.map(async (eligibleQuestion) => {
+//         const parentQuestion = await Question.findById(eligibleQuestion.parent_id);
+
+//         if (parentQuestion && parentQuestion.question_type) {
+//           // Assuming that question_type is an ObjectId referencing question_controllers table
+//           const questionController = await QuestionController.findOne({ _id: parentQuestion.question_type, active: 1 });
+
+//           if (questionController && questionController.question_type) {
+//             // Use questionController.type for comparison
+//             if (questionController.question_type.toLowerCase() === "range") {
+//               const parentAnswer = // Retrieve the answer value for the parent question
+//                 currentQuestion.answers.find((answerId) =>
+//                   parentQuestion.answers.includes(answerId)
+//                 );
+
+//               const thresholdAnswer = await Answer.findOne({ question_id: parentQuestion._id });
+//               const threshold = thresholdAnswer ? parseFloat(thresholdAnswer.value) : 2.5;
+
+//               if (parseFloat(parentAnswer) > threshold) {
+//                 const flag1ChildQuestion = eligibleQuestion.child_questions.find(
+//                   (child) => child.flag === 1
+//                 );
+
+//                 if (flag1ChildQuestion) {
+//                   const answer = await Answer.findOne({
+//                     question_id: flag1ChildQuestion.child_id,
+//                   }).select('image');
+
+//                   return {
+//                     child_id: flag1ChildQuestion.child_id,
+//                     question_text: flag1ChildQuestion.question_title,
+//                     phase: flag1ChildQuestion.child_phase,
+//                     image: answer ? answer.image : null,
+//                   };
+//                 }
+//               } else if (parseFloat(parentAnswer) < threshold) {
+//                 const flagMinus1ChildQuestion = eligibleQuestion.child_questions.find(
+//                   (child) => child.flag === -1
+//                 );
+
+//                 if (flagMinus1ChildQuestion) {
+//                   const answer = await Answer.findOne({
+//                     question_id: flagMinus1ChildQuestion.child_id,
+//                   }).select('image');
+
+//                   return {
+//                     child_id: flagMinus1ChildQuestion.child_id,
+//                     question_text: flagMinus1ChildQuestion.question_title,
+//                     phase: flagMinus1ChildQuestion.child_phase,
+//                     image: answer ? answer.image : null,
+//                   };
+//                 }
+//               }
+//             }
+//           }
+//         }
+//       }));
+
+//       return res.json(responses);
+//     } else {
+//       return res.json({ message: 'No child questions found.' });
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// });
+
+
 
 router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
@@ -508,7 +664,7 @@ function buildTree(locations, parentId) {
     if ((parentId === null && !location.parent_id) || (location.parent_id && location.parent_id.toString() === parentId)) {
       const children = buildTree(locations, location._id.toString());
       const node = { ...location }; // Use spread operator to create a new object
-      
+
       if (children.length > 0) {
         node.children = children;
       }

@@ -45,7 +45,7 @@ const questionsSchema = new Schema({
         text: String,
         question_title: String,
     }],
-
+    flag:Number
 
 }, { timestamps: true });
 
