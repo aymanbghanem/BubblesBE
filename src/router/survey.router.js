@@ -19,36 +19,133 @@ const questions_controllerModels = require("../models/questions_controller.model
 require('dotenv').config()
 
 // Create new survey 
-
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
+  let session;
+  let storedSurvey, storedLocation, storedQuestions;
+
   try {
     const { location_data, survey, location, questions } = req.body;
     const role = req.user.user_role;
     const department = req.user.department_id;
 
-    if (role === 'admin') {
-      // Process and store survey
-      const storedSurvey = await processAndStoreSurvey(survey, req.user);
-
-      // Process and store questions with the survey ID
-       const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department);
-
-      // Process and store location
-      const storedLocation = await processAndStoreLocation(req.body.location_data, storedSurvey, req.user);
-
-      res.status(200).json({
-        message: 'Survey, location, and questions added successfully',
-        survey: storedSurvey,
-        location: storedLocation,
-        questions : storedQuestions
-      });
-    } else {
-      res.json({ message: 'Sorry, you are unauthorized' });
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Sorry, you are unauthorized' });
     }
+
+    // Start a MongoDB transaction
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    // Process and store survey
+    storedSurvey = await processAndStoreSurvey(survey, req.user, session);
+
+    // Process and store questions with the survey ID
+    storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department, session);
+
+    // Process and store location
+    storedLocation = await processAndStoreLocation(location_data, storedSurvey, req.user, session);
+
+    // Commit the transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({
+      message: 'Survey, location, and questions added successfully',
+      survey: storedSurvey,
+      location: storedLocation,
+      questions:storedQuestions
+    });
   } catch (error) {
-    res.status(500).json({ message: ' ' + error });
+    // Rollback in case of an error
+    try {
+      console.log('Before rollbackQuestions'); // Add this line
+      if (session) {
+        await session.abortTransaction();
+        session.endSession();
+      }
+      if (storedQuestions) {
+        console.log('Before rollbackQuestions function call'); // Add this line
+        await rollbackQuestions(storedQuestions);
+        console.log('After rollbackQuestions function call'); // Add this line
+      }
+      if (storedLocation) {
+
+        await rollbackLocation(storedLocation);
+      }
+      if (storedSurvey) {
+        await rollbackSurvey(storedSurvey);
+      }
+    } catch (rollbackError) {
+      console.error('Rollback error:', rollbackError);
+    }
+
+    res.status(500).json({ message: 'Error: ' + error });
   }
 });
+
+
+async function rollbackQuestions(questions, session) {
+  console.log('Inside rollbackQuestions');
+  console.log('Number of questions in rollbackQuestions:', questions.length);
+
+  if (questions.length === 0) {
+    console.log('No questions to rollback in rollbackQuestions');
+    return;
+  }
+
+  for (const question of questions) {
+    console.log('Processing question in rollbackQuestions:', question._id);
+
+    try {
+      await rollbackQuestion(question, session);
+      console.log('Question rolled back successfully in rollbackQuestions');
+    } catch (error) {
+      console.error('Error during rollbackQuestion in rollbackQuestions:', error);
+    }
+  }
+
+  console.log('After rollbackQuestions');
+}
+async function rollbackQuestion(question, session) {
+  console.log('Before rollbackQuestion');
+  console.log('Question ID:', question._id);
+
+  try {
+    // Fetch the associated answers before deleting the question
+    const answers = await Answer.find({ question_id: question._id }).session(session);
+
+    // Log the answers for debugging purposes
+    console.log('Answers to delete:', answers);
+
+    // Delete the answers
+    await Answer.deleteMany({ question_id: question._id }).session(session);
+
+    // Delete the question
+    await Question.deleteOne({ _id: question._id }).session(session);
+
+    // If the question is associated with a survey, delete the related answers
+    if (question.survey_id) {
+      for (const answer of answers) {
+        await Answer.deleteOne({ _id: answer._id, survey_id: question.survey_id }).session(session);
+      }
+    }
+
+    console.log('After rollbackQuestion');
+  } catch (error) {
+    console.error('Error during rollbackQuestion:', error);
+    throw error; // Re-throw the error to ensure it's captured in the higher-level catch block
+  }
+}
+async function rollbackSurvey(survey, session) {
+  await Question.deleteMany({ survey_id: survey._id }).session(session);
+  await surveyModel.deleteOne({ _id: survey._id }).session(session);
+}
+async function rollbackLocation(location, session) {
+  await Location.deleteOne({ _id: location._id }).session(session);
+}
+
+
+
 async function processAndStoreLocation(locationData, survey, user) {
   try {
     const department = user.department_id;
@@ -143,84 +240,84 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
   const storedQuestions = [];
 
   for (const questionData of questionsData) {
-      const { id, flag, question_title, answers, question_type, ...otherFields } = questionData;
+    const { id, flag, question_title, answers, question_type, ...otherFields } = questionData;
 
-      const questionTypeObject =await QuestionController.findOne({
-        question_type: new RegExp(question_type, 'i'),
+    const questionTypeObject = await QuestionController.findOne({
+      question_type: new RegExp(question_type, 'i'),
     });
-      const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
+    const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
-      const newQuestion = new Question({
-          id,
-          flag: flag,
-          question_title,
-          survey_id: survey_id,
-          department_id: department_id,
-          question_type: questionTypeId,
-          ...otherFields,
-      });
+    const newQuestion = new Question({
+      id,
+      flag: flag,
+      question_title,
+      survey_id: survey_id,
+      department_id: department_id,
+      question_type: questionTypeId,
+      ...otherFields,
+    });
 
-      switch (question_type.toLowerCase()) {
-        case "text":
-        case "single choice":
-        case "multiple choice":
-        case "range":
-          const questionController = await QuestionController.findOne({
-            question_type: new RegExp(question_type, 'i'),
+    switch (question_type.toLowerCase()) {
+      case "text":
+      case "single choice":
+      case "multiple choice":
+      case "range":
+        const questionController = await QuestionController.findOne({
+          question_type: new RegExp(question_type, 'i'),
         });
-    
-            if (!questionController) {
-                throw new Error(`Question type "${question_type}" not found in question_controller`);
-            }
-    
-            const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type, survey_id);
-            newQuestion.answers = answerIdsAndTexts.map((answerData) => answerData.id);
-            break;
-        default:
-            throw new Error(`Unsupported question type: ${question_type}`);
-    }
-    
 
-      const savedQuestion = await newQuestion.save();
-      storedQuestions.push(savedQuestion);
+        if (!questionController) {
+          throw new Error(`Question type "${question_type}" not found in question_controller`);
+        }
+
+        const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type, survey_id);
+        newQuestion.answers = answerIdsAndTexts.map((answerData) => answerData.id);
+        break;
+      default:
+        throw new Error(`Unsupported question type: ${question_type}`);
+    }
+
+
+    const savedQuestion = await newQuestion.save();
+    storedQuestions.push(savedQuestion);
   }
 
   for (const savedQuestion of storedQuestions) {
-      const { id, child_questions, question_dependency } = questionsData.find((q) => q.id === savedQuestion.id);
+    const { id, child_questions, question_dependency } = questionsData.find((q) => q.id === savedQuestion.id);
 
-      if (question_dependency && Array.isArray(question_dependency)) {
-          savedQuestion.question_dependency = await processAndStoreQuestionDependencies(
-              question_dependency,
-              storedQuestions
-          );
-          await savedQuestion.save();
-      }
+    if (question_dependency && Array.isArray(question_dependency)) {
+      savedQuestion.question_dependency = await processAndStoreQuestionDependencies(
+        question_dependency,
+        storedQuestions
+      );
+      await savedQuestion.save();
+    }
 
-      if (child_questions && Array.isArray(child_questions)) {
-          savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
-          await savedQuestion.save();
-      }
+    if (child_questions && Array.isArray(child_questions)) {
+      savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
+      await savedQuestion.save();
+    }
   }
 
   return storedQuestions;
 }
 
 
-async function processAndStoreAnswers(answerArray, questionId, questionType,survey_id) {
+async function processAndStoreAnswers(answerArray, questionId, questionType, survey_id) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
   const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
   const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
-      const newAnswer = new Answer({
-          answer: answerText.text,
-          image: answerText.image,
-          question_id: questionId,
-          survey_id:survey_id,
-          question_type: questionTypeId,
-      });
-      const savedAnswer = await newAnswer.save();
-      return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
+    const newAnswer = new Answer({
+      answer: answerText.text,
+      image: answerText.image,
+      question_id: questionId,
+      survey_id: survey_id,
+      question_type: questionTypeId,
+    });
+    const savedAnswer = await newAnswer.save();
+    return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
   }));
 
   return answerIdsAndTexts;
@@ -230,20 +327,20 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
   const updatedDependencies = [];
 
   for (const dependencyData of dependencies) {
-      const { parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
+    const { parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
 
-      const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
+    const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
 
-      if (correspondingQuestion) {
-          const newDependency = {
-              ...otherFields,
-              parent_id: correspondingQuestion._id,
-              related_answer,
-          };
-          updatedDependencies.push(newDependency);
-      } else {
-          console.error(`Parent question with dummy id ${parent_dummy_id} not found.`);
-      }
+    if (correspondingQuestion) {
+      const newDependency = {
+        ...otherFields,
+        parent_id: correspondingQuestion._id,
+        related_answer,
+      };
+      updatedDependencies.push(newDependency);
+    } else {
+      console.error(`Parent question with dummy id ${parent_dummy_id} not found.`);
+    }
   }
 
   return updatedDependencies;
@@ -375,7 +472,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       if (question.question_dependency && question.question_dependency.length > 0) {
         const isDependencySatisfied = await checkDependencySatisfaction(question, answered_questions);
         console.log(isDependencySatisfied);
-        
+
         if (isDependencySatisfied) {
           responses.push({
             child_id: question._id,
@@ -383,22 +480,22 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             phase: question.phase,
             // Add other necessary fields
           });
-        } 
+        }
+      }
+      else {
+        // This question does not have dependencies
+        responses.push({
+          child_id: question._id,
+          question_text: question.question_title,
+          phase: question.phase,
+          // Add other necessary fields
+        });
+      }
+      // Send the response after processing all questions
+      return res.json(responses);
     }
-    else {
-      // This question does not have dependencies
-      responses.push({
-        child_id: question._id,
-        question_text: question.question_title,
-        phase: question.phase,
-        // Add other necessary fields
-      });
-    }
-    // Send the response after processing all questions
-    return res.json(responses);
   }
-}
-   catch (error) {
+  catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
@@ -427,16 +524,18 @@ async function checkDependencySatisfaction(question, answeredQuestions) {
 
           // Adjust the logic based on the parent question type
           if (parentQuestionType === 'single choice') {
+            //combine
+            
             return matchingAnsweredQuestion.answers.includes(relatedAnswer);
-          } 
+          }
           else if (parentQuestionType === 'Range') {
-            let threshold = await Answer.findOne({_id:parentQuestion.answers[0]}).select('answer -_id');
-            threshold  = threshold.answer
-            const thresholdAnswer = parseFloat(threshold); 
+            let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
+            threshold = threshold.answer
+            const thresholdAnswer = parseFloat(threshold);
             const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]); // Assuming user answer is the first answer as a float
             if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
               const flag = question.flag;
-  
+
               if (flag === 1) {
                 return userAnswer >= parseFloat(thresholdAnswer);
               } else if (flag === -1) {
