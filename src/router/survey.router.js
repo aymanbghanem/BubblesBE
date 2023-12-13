@@ -31,16 +31,16 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
       const storedSurvey = await processAndStoreSurvey(survey, req.user);
 
       // Process and store questions with the survey ID
-      const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department);
+       const storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department);
 
       // Process and store location
-      //const storedLocation = await processAndStoreLocation(req.body.location_data, storedSurvey, req.user);
+      const storedLocation = await processAndStoreLocation(req.body.location_data, storedSurvey, req.user);
 
       res.status(200).json({
         message: 'Survey, location, and questions added successfully',
         survey: storedSurvey,
-        // location: storedLocation,
-        questions: storedQuestions,
+        location: storedLocation,
+        questions : storedQuestions
       });
     } else {
       res.json({ message: 'Sorry, you are unauthorized' });
@@ -139,72 +139,72 @@ async function processAndStoreSurvey(surveyData, user) {
   }
 }
 
-async function processAndStoreQuestions(questions,survey_id,department_id) {
+async function processAndStoreQuestions(questionsData, survey_id, department_id) {
   const storedQuestions = [];
 
-  // Save questions without dependencies and child questions
-  for (const questionData of questions) {
+  for (const questionData of questionsData) {
       const { id, flag, question_title, answers, question_type, ...otherFields } = questionData;
 
-      // Fetch question type ID from QuestionController table based on the provided question type
-      const questionTypeObject = await QuestionController.findOne({ question_type: question_type });
+      const questionTypeObject =await QuestionController.findOne({
+        question_type: new RegExp(question_type, 'i'),
+    });
       const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
       const newQuestion = new Question({
           id,
           flag: flag,
           question_title,
-          survey_id:survey_id,
-          department_id:department_id,
+          survey_id: survey_id,
+          department_id: department_id,
           question_type: questionTypeId,
           ...otherFields,
       });
 
-      switch (question_type) {
+      switch (question_type.toLowerCase()) {
         case "text":
         case "single choice":
-        case "Multiple choice":
-        case "Range":
-            // Check if the question type exists in QuestionController
-            const questionController = await QuestionController.findOne({
-                question_type: question_type.toLowerCase() // Case insensitive
-            });
+        case "multiple choice":
+        case "range":
+          const questionController = await QuestionController.findOne({
+            question_type: new RegExp(question_type, 'i'),
+        });
     
             if (!questionController) {
-                res.json({ message: `Question type "${question_type}" not found in question_controller` });
-                return;
+                throw new Error(`Question type "${question_type}" not found in question_controller`);
             }
     
-            // Process and store answers only for single-choice, multiple-choice, and range questions
             const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type, survey_id);
-            newQuestion.answers = answerIdsAndTexts.map(answerData => answerData.id);
+            newQuestion.answers = answerIdsAndTexts.map((answerData) => answerData.id);
             break;
         default:
             throw new Error(`Unsupported question type: ${question_type}`);
     }
+    
 
-      // Save the question
       const savedQuestion = await newQuestion.save();
       storedQuestions.push(savedQuestion);
   }
 
-  // Process dependencies and child questions after all questions are saved
   for (const savedQuestion of storedQuestions) {
-      const { id, child_questions, question_dependency } = questions.find(q => q.id === savedQuestion.id);
+      const { id, child_questions, question_dependency } = questionsData.find((q) => q.id === savedQuestion.id);
 
       if (question_dependency && Array.isArray(question_dependency)) {
-          savedQuestion.question_dependency = await processAndStoreQuestionDependencies(question_dependency, storedQuestions);
-          await savedQuestion.save(); // Save the updated question with dependencies
+          savedQuestion.question_dependency = await processAndStoreQuestionDependencies(
+              question_dependency,
+              storedQuestions
+          );
+          await savedQuestion.save();
       }
 
       if (child_questions && Array.isArray(child_questions)) {
           savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
-          await savedQuestion.save(); // Save the updated question with child questions
+          await savedQuestion.save();
       }
   }
 
   return storedQuestions;
 }
+
 
 async function processAndStoreAnswers(answerArray, questionId, questionType,survey_id) {
   // Fetch question type ID from QuestionController table based on the provided question type
@@ -248,7 +248,6 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 
   return updatedDependencies;
 }
-
 
 // Update the existing survey
 
@@ -366,100 +365,105 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
 
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
-    const { phase, currentQuestion } = req.body;
+    const { phase, answered_questions } = req.body;
 
-    // Check if 'currentQuestion' is defined and is an array
-    if (!Array.isArray(currentQuestion)) {
-      return res.status(400).json({ message: 'Invalid request format: "currentQuestion" must be an array.' });
-    }
+    let phaseQuestions = await Question.find({ phase: phase, active: 1 });
 
-    const responses = await Promise.all(
-      currentQuestion.map(async (question) => {
-        const currentQuestionId = question._id;
-        const selectedAnswer = question.answers && question.answers.length > 0 ? question.answers[0] : null;
+    const responses = [];
 
-        const foundQuestion = await Question.findById(currentQuestionId);
-        if (!foundQuestion) {
-          return { message: 'Question not found.' };
-        }
-
-        const type = await QuestionController.findOne({ _id: foundQuestion.question_type }).select('question_type -_id');
-        const questionType = type.question_type;
-
-        const nextPhaseQuestions = await Question.find({ phase });
-
-        if (questionType === 'single choice') {
-          const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
-            if (!nextQuestion.question_dependency || nextQuestion.question_dependency.length === 0) {
-              return true; // Include questions without dependencies
-            } else {
-              const hasMatchingDependency = nextQuestion.question_dependency.some((dependency) => {
-                const isMatchingParentId = dependency.parent_id.toString() === currentQuestionId.toString();
-                const isMatchingAnswer = dependency.related_answer === selectedAnswer;
-                return isMatchingParentId && isMatchingAnswer;
-              });
-              return hasMatchingDependency;
-            }
+    for (const question of phaseQuestions) {
+      if (question.question_dependency && question.question_dependency.length > 0) {
+        const isDependencySatisfied = await checkDependencySatisfaction(question, answered_questions);
+        console.log(isDependencySatisfied);
+        
+        if (isDependencySatisfied) {
+          responses.push({
+            child_id: question._id,
+            question_text: question.question_title,
+            phase: question.phase,
+            // Add other necessary fields
           });
-
-          if (eligibleQuestions.length > 0) {
-            const responses = await Promise.all(
-              eligibleQuestions.map(async (eligibleQuestion) => {
-                const answer = await Answer.findOne({ question_id: eligibleQuestion._id }).select('image');
-                return {
-                  child_id: eligibleQuestion._id,
-                  question_text: eligibleQuestion.question_title,
-                  phase: eligibleQuestion.phase,
-                  image: answer ? answer.image : null,
-                };
-              })
-            );
-
-            return {
-              child_questions: responses,
-            };
-          } else {
-            return { message: 'No child questions found.' };
-          }
-        } else if (questionType === 'Range') {
-          const hasDependencies = foundQuestion.dependencies && foundQuestion.dependencies.length > 0;
-
-          const eligibleQuestions = hasDependencies
-            ? nextPhaseQuestions.filter((nextQuestion) => {
-                const hasMatchingDependency = nextQuestion.dependencies.some((dependency) => {
-                  const isMatchingParentId = dependency.parent_id === currentQuestionId.toString();
-                  const isMatchingAnswer = dependency.related_answer === selectedAnswer;
-                  return isMatchingParentId && isMatchingAnswer;
-                });
-                return hasMatchingDependency;
-              })
-            : nextPhaseQuestions;
-
-          if (eligibleQuestions.length > 0) {
-            const responses = eligibleQuestions.map((eligibleQuestion) => ({
-              child_id: eligibleQuestion._id,
-              question_text: eligibleQuestion.question_title,
-              phase: eligibleQuestion.phase,
-              // Add other necessary fields
-            }));
-
-            return {
-              child_questions: responses,
-            };
-          } else {
-            return { message: 'No eligible child questions found.' };
-          }
-        }
-      })
-    );
-
+        } 
+    }
+    else {
+      // This question does not have dependencies
+      responses.push({
+        child_id: question._id,
+        question_text: question.question_title,
+        phase: question.phase,
+        // Add other necessary fields
+      });
+    }
+    // Send the response after processing all questions
     return res.json(responses);
-  } catch (error) {
+  }
+}
+   catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
- 
+
+async function checkDependencySatisfaction(question, answeredQuestions) {
+  const results = await Promise.all(question.question_dependency.map(async (dependency) => {
+    const parentQuestionId = dependency.parent_id.toString();
+    const relatedAnswer = dependency.related_answer;
+
+    // Find the parent question in the answered questions
+    const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
+
+    if (matchingAnsweredQuestion) {
+      // Retrieve the parent question to get the question type ID
+      const parentQuestion = await Question.findById(parentQuestionId);
+
+      if (parentQuestion && parentQuestion.question_type) {
+        const questionTypeId = parentQuestion.question_type.toString();
+
+        // Check the parent question type
+        let type = await QuestionController.findOne({ _id: questionTypeId }).select('question_type -_id');
+
+        if (type && type.question_type) {
+          let parentQuestionType = type.question_type;
+
+          // Adjust the logic based on the parent question type
+          if (parentQuestionType === 'single choice') {
+            return matchingAnsweredQuestion.answers.includes(relatedAnswer);
+          } 
+          else if (parentQuestionType === 'Range') {
+            let threshold = await Answer.findOne({_id:parentQuestion.answers[0]}).select('answer -_id');
+            threshold  = threshold.answer
+            const thresholdAnswer = parseFloat(threshold); 
+            const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]); // Assuming user answer is the first answer as a float
+            if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
+              const flag = question.flag;
+  
+              if (flag === 1) {
+                return userAnswer >= parseFloat(thresholdAnswer);
+              } else if (flag === -1) {
+                return userAnswer <= parseFloat(thresholdAnswer);
+              } else if (flag === 0) {
+                return userAnswer === parseFloat(thresholdAnswer);
+              }
+              else if (flag === -2) {
+                return userAnswer < parseFloat(thresholdAnswer);
+              } else if (flag === 2) {
+                return userAnswer > parseFloat(thresholdAnswer);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return false; // No matching answered question found or no valid type
+  }));
+
+  return results.every(result => result);
+}
+
+
+
+
 // // Get the questions according to the answers
 // router.post('/api/v1/getQuestions', async (req, res) => {
 //   const { currentQuestion } = req.body;
