@@ -460,8 +460,10 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
 });
 
 
+
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
+    const results = [];
     const { phase, answered_questions } = req.body;
 
     let phaseQuestions = await Question.find({ phase: phase, active: 1 });
@@ -469,21 +471,20 @@ router.post('/api/v1/getQuestions', async (req, res) => {
     const responses = [];
 
     for (const question of phaseQuestions) {
-      if (question.question_dependency && question.question_dependency.length > 0) {
-        const isDependencySatisfied = await checkDependencySatisfaction(question, answered_questions);
-        console.log(isDependencySatisfied);
+      let dependenciesSatisfied = true;
 
-        if (isDependencySatisfied) {
-          responses.push({
-            child_id: question._id,
-            question_text: question.question_title,
-            phase: question.phase,
-            // Add other necessary fields
-          });
+      if (question.question_dependency && question.question_dependency.length > 0) {
+        for (const dependency of question.question_dependency) {
+          const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions,results);
+          
+          if (!isDependencySatisfied) {
+            dependenciesSatisfied = false;
+            break; // No need to check further dependencies if one is not satisfied
+          }
         }
       }
-      else {
-        // This question does not have dependencies
+
+      if (dependenciesSatisfied) {
         responses.push({
           child_id: question._id,
           question_text: question.question_title,
@@ -491,74 +492,245 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           // Add other necessary fields
         });
       }
-      // Send the response after processing all questions
-      return res.json(responses);
     }
-  }
-  catch (error) {
+
+    // Send the response after processing all questions
+    return res.json(responses);
+  } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
-async function checkDependencySatisfaction(question, answeredQuestions) {
-  const results = await Promise.all(question.question_dependency.map(async (dependency) => {
-    const parentQuestionId = dependency.parent_id.toString();
-    const relatedAnswer = dependency.related_answer;
+async function checkDependencySatisfaction(dependency, answeredQuestions,results) {
+  
+  const parentQuestionId = dependency.parent_id.toString();
+  const relatedAnswer = dependency.related_answer;
+  const sign = dependency.sign;
 
-    // Find the parent question in the answered questions
-    const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
+  const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
 
-    if (matchingAnsweredQuestion) {
-      // Retrieve the parent question to get the question type ID
-      const parentQuestion = await Question.findById(parentQuestionId);
+  if (matchingAnsweredQuestion) {
+    const parentQuestion = await Question.findById(parentQuestionId);
 
-      if (parentQuestion && parentQuestion.question_type) {
-        const questionTypeId = parentQuestion.question_type.toString();
+    if (parentQuestion && parentQuestion.question_type) {
+      const questionTypeId = parentQuestion.question_type.toString();
 
-        // Check the parent question type
-        let type = await QuestionController.findOne({ _id: questionTypeId }).select('question_type -_id');
+      let type = await QuestionController.findOne({ _id: questionTypeId }).select('question_type -_id');
 
-        if (type && type.question_type) {
-          let parentQuestionType = type.question_type;
+      if (type && type.question_type) {
+        let parentQuestionType = type.question_type;
 
-          // Adjust the logic based on the parent question type
-          if (parentQuestionType === 'single choice') {
-            //combine
-            
-            return matchingAnsweredQuestion.answers.includes(relatedAnswer);
-          }
-          else if (parentQuestionType === 'Range') {
-            let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
-            threshold = threshold.answer
-            const thresholdAnswer = parseFloat(threshold);
-            const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]); // Assuming user answer is the first answer as a float
-            if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
-              const flag = question.flag;
-
-              if (flag === 1) {
-                return userAnswer >= parseFloat(thresholdAnswer);
-              } else if (flag === -1) {
-                return userAnswer <= parseFloat(thresholdAnswer);
-              } else if (flag === 0) {
-                return userAnswer === parseFloat(thresholdAnswer);
-              }
-              else if (flag === -2) {
-                return userAnswer < parseFloat(thresholdAnswer);
-              } else if (flag === 2) {
-                return userAnswer > parseFloat(thresholdAnswer);
-              }
+        if (parentQuestionType === 'single choice') {
+         
+          if (sign === null || sign.toLowerCase() === 'or') {
+            console.log('Answers:', matchingAnsweredQuestion.answers);
+            matchingAnsweredQuestion.answers.forEach(answer => {
+              const satisfiesCondition = applySign(answer, relatedAnswer, sign);
+              console.log(satisfiesCondition)
+              results.push(satisfiesCondition ? 1 : 0);
+            });
+            if(results.includes(1)){
+              return true
+            }
+            else{
+              return false
             }
           }
+          else if(sign == '&'){
+            
+          }
+          
+        } else if (parentQuestionType === 'Range') {
+          
         }
       }
     }
+  }
 
-    return false; // No matching answered question found or no valid type
-  }));
-
-  return results.every(result => result);
+  return false;
 }
+
+function applySign(answer, relatedAnswer, sign) {
+  return answer === relatedAnswer;
+}
+// async function checkDependencySatisfaction(dependency, answeredQuestions) {
+//   const parentQuestionId = dependency.parent_id.toString();
+//   const relatedAnswer = dependency.related_answer;
+//   const sign = dependency.sign;
+
+//   const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
+
+//   if (matchingAnsweredQuestion) {
+//     const parentQuestion = await Question.findById(parentQuestionId);
+
+//     if (parentQuestion && parentQuestion.question_type) {
+//       const questionTypeId = parentQuestion.question_type.toString();
+
+//       let type = await QuestionController.findOne({ _id: questionTypeId }).select('question_type -_id');
+
+//       if (type && type.question_type) {
+//         let parentQuestionType = type.question_type;
+
+//         if (parentQuestionType === 'single choice') {
+//           // If sign is null, consider it satisfied if at least one of the answers is correct
+//           if (sign === null) {
+//             return matchingAnsweredQuestion.answers.includes(relatedAnswer);
+//           } else {
+//             return applySign(matchingAnsweredQuestion.answers[0], relatedAnswer, sign);
+//           }
+//         } else if (parentQuestionType === 'Range') {
+//           // Similar logic as before
+//         }
+//       }
+//     }
+//   }
+
+//   return false;
+// }
+
+
+
+//3:26
+// async function checkDependencySatisfaction(dependency, answeredQuestions) {
+//   const parentQuestionId = dependency.parent_id.toString();
+//   const relatedAnswer = dependency.related_answer;
+//   const sign = dependency.sign;
+
+//   const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
+
+//   if (matchingAnsweredQuestion) {
+//     const parentQuestion = await Question.findById(parentQuestionId);
+
+//     if (parentQuestion && parentQuestion.question_type) {
+//       const questionTypeId = parentQuestion.question_type.toString();
+
+//       let type = await QuestionController.findOne({ _id: questionTypeId }).select('question_type -_id');
+
+//       if (type && type.question_type) {
+//         let parentQuestionType = type.question_type;
+
+//         if (parentQuestionType === 'single choice') {
+//           // If sign is null, consider it satisfied if the answer is correct
+//           if (sign === null) {
+//             return matchingAnsweredQuestion.answers.includes(relatedAnswer);
+//           } else {
+//             return applySign(matchingAnsweredQuestion.answers[0], relatedAnswer, sign);
+//           }
+//         } else if (parentQuestionType === 'Range') {
+//           // Similar logic as before
+//         }
+//       }
+//     }
+//   }
+
+//   return false;
+// }
+//3:14
+// async function checkDependencySatisfaction(dependency, answeredQuestions) {
+//   const parentQuestionId = dependency.parent_id.toString();
+//   const relatedAnswer = dependency.related_answer;
+
+//   const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
+
+//   if (matchingAnsweredQuestion) {
+//     const parentQuestion = await Question.findById(parentQuestionId);
+
+//     if (parentQuestion && parentQuestion.question_type) {
+//       const questionTypeId = parentQuestion.question_type.toString();
+
+//       let type = await QuestionController.findOne({ _id: questionTypeId }).select('question_type -_id');
+
+//       if (type && type.question_type) {
+//         let parentQuestionType = type.question_type;
+
+//         if (parentQuestionType === 'single choice') {
+//           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
+//         } else if (parentQuestionType === 'Range') {
+//           let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
+//           threshold = threshold.answer
+//           const thresholdAnswer = parseFloat(threshold);
+//           const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]); // Assuming user answer is the first answer as a float
+//           if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
+//             const flag = question.flag;
+
+//             if (flag === 1) {
+//               return userAnswer >= parseFloat(thresholdAnswer);
+//             } else if (flag === -1) {
+//               return userAnswer <= parseFloat(thresholdAnswer);
+//             } else if (flag === 0) {
+//               return userAnswer === parseFloat(thresholdAnswer);
+//             }
+//             else if (flag === -2) {
+//               return userAnswer < parseFloat(thresholdAnswer);
+//             } else if (flag === 2) {
+//               return userAnswer > parseFloat(thresholdAnswer);
+//             }
+//           }
+//         }
+//       }
+//     }
+//   }
+
+//   return false;
+// }
+
+
+//first one
+// async function checkDependencySatisfaction(dependency, answeredQuestions) {
+//   const parentQuestionId = dependency.parent_id.toString();
+//   const relatedAnswer = dependency.related_answer;
+
+//   const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
+
+//   if (matchingAnsweredQuestion) {
+//     const parentQuestion = await Question.findById(parentQuestionId);
+
+//     if (parentQuestion && parentQuestion.question_type) {
+//       const questionTypeId = parentQuestion.question_type.toString();
+
+//       let type = await QuestionController.findOne({ _id: questionTypeId }).select('question_type -_id');
+
+//       if (type && type.question_type) {
+//         let parentQuestionType = type.question_type;
+
+//         if (parentQuestionType === 'single choice') {
+//           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
+//         }
+//           else if (parentQuestionType === 'Range') {
+//             let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
+//             threshold = threshold.answer
+//             const thresholdAnswer = parseFloat(threshold);
+//             const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]); // Assuming user answer is the first answer as a float
+//             if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
+//               const flag = question.flag;
+
+//               if (flag === 1) {
+//                 return userAnswer >= parseFloat(thresholdAnswer);
+//               } else if (flag === -1) {
+//                 return userAnswer <= parseFloat(thresholdAnswer);
+//               } else if (flag === 0) {
+//                 return userAnswer === parseFloat(thresholdAnswer);
+//               }
+//               else if (flag === -2) {
+//                 return userAnswer < parseFloat(thresholdAnswer);
+//               } else if (flag === 2) {
+//                 return userAnswer > parseFloat(thresholdAnswer);
+//               }
+//             }
+//           }
+//         }
+//       }
+
+
+
+//     }
+
+//     return false; // No matching answered question found or no valid type
+  
+
+//   return results.every(result => result);
+// }
 
 
 
@@ -844,7 +1016,5 @@ function buildTree(locations, parentId) {
 
   return tree;
 }
-
-
 
 module.exports = router

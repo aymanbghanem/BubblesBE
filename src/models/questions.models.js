@@ -32,6 +32,7 @@ const questionsSchema = new Schema({
             type: Schema.Types.ObjectId,
             ref: 'question',
         },
+        sign:String,
         related_answer: String,
         text: String,
         question_title: String,
