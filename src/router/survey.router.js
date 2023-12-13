@@ -502,8 +502,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
   }
 });
 
-async function checkDependencySatisfaction(dependency, answeredQuestions,results) {
-  
+async function checkDependencySatisfaction(dependency, answeredQuestions, results) {
   const parentQuestionId = dependency.parent_id.toString();
   const relatedAnswer = dependency.related_answer;
   const sign = dependency.sign;
@@ -522,7 +521,6 @@ async function checkDependencySatisfaction(dependency, answeredQuestions,results
         let parentQuestionType = type.question_type;
 
         if (parentQuestionType === 'single choice') {
-         
           if (sign === null || sign.toLowerCase() === 'or') {
             console.log('Answers:', matchingAnsweredQuestion.answers);
             matchingAnsweredQuestion.answers.forEach(answer => {
@@ -530,19 +528,29 @@ async function checkDependencySatisfaction(dependency, answeredQuestions,results
               console.log(satisfiesCondition)
               results.push(satisfiesCondition ? 1 : 0);
             });
-            if(results.includes(1)){
-              return true
+            if (results.includes(1)) {
+              return true;
+            } else {
+              return false;
             }
-            else{
-              return false
+          } else if (sign === '&') {
+            console.log('Answers:', matchingAnsweredQuestion.answers);
+            const andResults = [];
+            matchingAnsweredQuestion.answers.forEach(answer => {
+              const satisfiesCondition = applySign(answer, relatedAnswer, sign);
+              console.log(satisfiesCondition);
+              andResults.push(satisfiesCondition ? 1 : 0);
+            });
+
+            // Check if all answers satisfy the condition using "and" operation
+            if (!andResults.includes(0) && results[results.length - 1] === 1) {
+              return true;
+            } else {
+              return false;
             }
           }
-          else if(sign == '&'){
-            
-          }
-          
         } else if (parentQuestionType === 'Range') {
-          
+          // Handle 'Range' logic if needed
         }
       }
     }
@@ -550,6 +558,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions,results
 
   return false;
 }
+
 
 function applySign(answer, relatedAnswer, sign) {
   return answer === relatedAnswer;
