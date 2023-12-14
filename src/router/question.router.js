@@ -44,7 +44,6 @@ async function processAndStoreQuestions(questions) {
 
         const newQuestion = new Question({
             id,
-            flag: flag,
             question_title,
             question_type: questionTypeId,
             ...otherFields,
@@ -111,7 +110,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
     const updatedDependencies = [];
 
     for (const dependencyData of dependencies) {
-        const { parent_dummy_id,sign, related_answer, ...otherFields } = dependencyData; // Added related_answer field
+        const { flag,parent_dummy_id, sign, related_answer, ...otherFields } = dependencyData; // Added related_answer field
 
         const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
 
@@ -119,6 +118,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
             const newDependency = {
                 ...otherFields,
                 sign,
+                flag,
                 parent_id: correspondingQuestion._id,
                 related_answer,
             };

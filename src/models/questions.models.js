@@ -28,6 +28,7 @@ const questionsSchema = new Schema({
     },
 
     question_dependency: [{
+        flag: Number,
         parent_id: {
             type: Schema.Types.ObjectId,
             ref: 'question',
@@ -38,7 +39,7 @@ const questionsSchema = new Schema({
         question_title: String,
         parent_dummy_id: String // Add this field to match your code
     }],
-    flag: Number
+    
 }, { timestamps: true });
 
 module.exports = model('question', questionsSchema);

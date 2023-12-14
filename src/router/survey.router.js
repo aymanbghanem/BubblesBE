@@ -145,7 +145,6 @@ async function rollbackLocation(location, session) {
 }
 
 
-
 async function processAndStoreLocation(locationData, survey, user) {
   try {
     const department = user.department_id;
@@ -513,6 +512,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
   const parentQuestionId = dependency.parent_id.toString();
   const relatedAnswer = dependency.related_answer;
   const sign = dependency.sign;
+  const flag = dependency.flag; // Corrected line
 
   const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
 
@@ -531,32 +531,32 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
         } else if (parentQuestionType === 'Range') {
           let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
-                    threshold = threshold.answer
-                    const thresholdAnswer = parseFloat(threshold);
-                    const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]); // Assuming user answer is the first answer as a float
-                    if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
-                      const flag = question.flag;
-          
-                      if (flag === 1) {
-                        return userAnswer >= parseFloat(thresholdAnswer);
-                      } else if (flag === -1) {
-                        return userAnswer <= parseFloat(thresholdAnswer);
-                      } else if (flag === 0) {
-                        return userAnswer === parseFloat(thresholdAnswer);
-                      }
-                      else if (flag === -2) {
-                        return userAnswer < parseFloat(thresholdAnswer);
-                      } else if (flag === 2) {
-                        return userAnswer > parseFloat(thresholdAnswer);
-                      }
-                    }
-                  }
+          threshold = threshold.answer;
+          const thresholdAnswer = parseFloat(threshold);
+          const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]);
+
+          if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
+            // Use the correct variable "flag" instead of "question.flag"
+            if (flag === 1) {
+              return userAnswer >= parseFloat(thresholdAnswer);
+            } else if (flag === -1) {
+              return userAnswer <= parseFloat(thresholdAnswer);
+            } else if (flag === 0) {
+              return userAnswer === parseFloat(thresholdAnswer);
+            } else if (flag === -2) {
+              return userAnswer < parseFloat(thresholdAnswer);
+            } else if (flag === 2) {
+              return userAnswer > parseFloat(thresholdAnswer);
+            }
+          }
         }
       }
+    }
   }
 
   return false;
 }
+
 
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
   // New logic for handling multiple dependencies
@@ -582,14 +582,97 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
   return chainSatisfied; // All dependencies satisfied with direct relations or no signs
 }
 
-
-
 function applySign(answer, relatedAnswer, sign) {
   return sign === 'or' ? answer === relatedAnswer : answer !== relatedAnswer;
 }
 
 
+router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
+  try {
+    let role = req.user.user_role
+    let survey_id = req.headers['survey_id']
+    if (role == "admin") {
+      let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, active: 1 }, { active: 0 })
+      let deleteLocations = await Location.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
+      let deleteQuestions = await Question.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
+      let deleteAnswers = await Answer.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
+      res.json({ message: "The survey and it is data deleted successfully" })
+    }
+    else {
+      res.json({ message: "sorry, you are unauthorized" })
+    }
+  } catch (error) {
+    res.json({ message: "catch error " + error })
+  }
+})
 
+router.get('/api/v1/getSurveyById', auth, async (req, res) => {
+  try {
+    const survey_id = req.headers['survey_id'];
+    const userRole = req.user.user_role;
+
+    if (userRole === "admin") {
+      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
+        path: "company_id",
+        select: "company_name"
+      })
+        .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
+      let company_name = survey.company_id.company_name;
+
+      if (survey) {
+        // Fetch locations
+        const locations = await fetchLocations(survey_id);
+
+        let response = {
+          survey_title: survey.survey_title,
+          survey_description: survey.survey_description,
+          submission_pwd: survey.submission_pwd,
+          background_color: survey.background_color,
+          question_text_color: survey.question_text_color,
+          logo: `${company_name}/${survey.logo}`,
+          locations: buildTree(locations, null)
+        };
+
+        res.json({ message: response });
+      } else {
+        res.json({ message: "The survey you are looking for does not exist" });
+      }
+    } else {
+      res.status(403).json({ message: "Sorry, you are unauthorized" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+});
+// Helper function to fetch locations
+async function fetchLocations(survey_id) {
+  const locations = await locationModel.find({
+    survey_id: survey_id,
+    active: 1
+  }).lean();
+  return locations;
+}
+// Helper function to build the entire tree structure
+function buildTree(locations, parentId) {
+  const tree = [];
+
+  locations.forEach(location => {
+    if ((parentId === null && !location.parent_id) || (location.parent_id && location.parent_id.toString() === parentId)) {
+      const children = buildTree(locations, location._id.toString());
+      const node = { ...location }; // Use spread operator to create a new object
+
+      if (children.length > 0) {
+        node.children = children;
+      }
+
+      tree.push(node);
+    }
+  });
+
+  return tree;
+}
+
+module.exports = router
 
 // async function checkDependencySatisfaction(dependency, answeredQuestions) {
 //   const parentQuestionId = dependency.parent_id.toString();
@@ -969,89 +1052,3 @@ function applySign(answer, relatedAnswer, sign) {
 //   }
 // });
 
-router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
-  try {
-    let role = req.user.user_role
-    let survey_id = req.headers['survey_id']
-    if (role == "admin") {
-      let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, active: 1 }, { active: 0 })
-      let deleteLocations = await Location.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      let deleteQuestions = await Question.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      let deleteAnswers = await Answer.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      res.json({ message: "The survey and it is data deleted successfully" })
-    }
-    else {
-      res.json({ message: "sorry, you are unauthorized" })
-    }
-  } catch (error) {
-    res.json({ message: "catch error " + error })
-  }
-})
-
-router.get('/api/v1/getSurveyById', auth, async (req, res) => {
-  try {
-    const survey_id = req.headers['survey_id'];
-    const userRole = req.user.user_role;
-
-    if (userRole === "admin") {
-      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
-        path: "company_id",
-        select: "company_name"
-      })
-        .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
-      let company_name = survey.company_id.company_name;
-
-      if (survey) {
-        // Fetch locations
-        const locations = await fetchLocations(survey_id);
-
-        let response = {
-          survey_title: survey.survey_title,
-          survey_description: survey.survey_description,
-          submission_pwd: survey.submission_pwd,
-          background_color: survey.background_color,
-          question_text_color: survey.question_text_color,
-          logo: `${company_name}/${survey.logo}`,
-          locations: buildTree(locations, null)
-        };
-
-        res.json({ message: response });
-      } else {
-        res.json({ message: "The survey you are looking for does not exist" });
-      }
-    } else {
-      res.status(403).json({ message: "Sorry, you are unauthorized" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: "Internal server error", error: error.message });
-  }
-});
-// Helper function to fetch locations
-async function fetchLocations(survey_id) {
-  const locations = await locationModel.find({
-    survey_id: survey_id,
-    active: 1
-  }).lean();
-  return locations;
-}
-// Helper function to build the entire tree structure
-function buildTree(locations, parentId) {
-  const tree = [];
-
-  locations.forEach(location => {
-    if ((parentId === null && !location.parent_id) || (location.parent_id && location.parent_id.toString() === parentId)) {
-      const children = buildTree(locations, location._id.toString());
-      const node = { ...location }; // Use spread operator to create a new object
-
-      if (children.length > 0) {
-        node.children = children;
-      }
-
-      tree.push(node);
-    }
-  });
-
-  return tree;
-}
-
-module.exports = router
