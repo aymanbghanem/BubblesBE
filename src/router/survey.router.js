@@ -557,7 +557,6 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
   return false;
 }
 
-
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
   // New logic for handling multiple dependencies
   let chainSatisfied = null; // Use null to represent that no chain is satisfied yet
@@ -577,9 +576,44 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
       // If there is no sign for the current dependency, consider it satisfied
       chainSatisfied = chainSatisfied || currentDependencySatisfied; // or simply chainSatisfied = true;
     }
+
+    // Add additional logic for "Range" type
+    if (currentDependencySatisfied && currentDependency.question_type === 'Range') {
+      const rangeSatisfied = await checkRangeDependency(currentDependency, answeredQuestions, results);
+
+      // Update the chainSatisfied based on the range dependency
+      chainSatisfied = chainSatisfied === null ? rangeSatisfied : chainSatisfied && rangeSatisfied;
+    }
   }
 
   return chainSatisfied; // All dependencies satisfied with direct relations or no signs
+}
+
+async function checkRangeDependency(dependency, answeredQuestions, results) {
+  // Implement the logic for "Range" type dependencies
+  // You can use a similar approach as in checkDependencySatisfaction for "Range" type
+  const parentQuestionId = dependency.parent_id.toString();
+  const threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
+  const thresholdAnswer = parseFloat(threshold.answer);
+  const userAnswer = parseFloat(answeredQuestions.find(question => question._id === parentQuestionId).answers[0]);
+
+  if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
+    const flag = dependency.flag;
+
+    if (flag === 1) {
+      return userAnswer >= parseFloat(thresholdAnswer);
+    } else if (flag === -1) {
+      return userAnswer <= parseFloat(thresholdAnswer);
+    } else if (flag === 0) {
+      return userAnswer === parseFloat(thresholdAnswer);
+    } else if (flag === -2) {
+      return userAnswer < parseFloat(thresholdAnswer);
+    } else if (flag === 2) {
+      return userAnswer > parseFloat(thresholdAnswer);
+    }
+  }
+
+  return false;
 }
 
 function applySign(answer, relatedAnswer, sign) {
