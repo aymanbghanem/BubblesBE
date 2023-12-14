@@ -173,6 +173,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         let { user_name, email_address, password } = req.body;
         user_name = user_name.toLowerCase();
         let newPassword = await generateMixedID()
+        console.log(newPassword)
         let hashedPassword;
         // Check if either the email_address or user_name already exists
         const existingUser = await userModels.findOne({
