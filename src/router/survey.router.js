@@ -460,7 +460,6 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
 });
 
 
-
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
     const results = [];
@@ -474,12 +473,20 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       let dependenciesSatisfied = true;
 
       if (question.question_dependency && question.question_dependency.length > 0) {
-        for (const dependency of question.question_dependency) {
-          const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions,results);
-          
+        if (question.question_dependency.length === 1) {
+          // Keep the existing logic for a single dependency
+          const dependency = question.question_dependency[0];
+          const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
+
           if (!isDependencySatisfied) {
             dependenciesSatisfied = false;
-            break; // No need to check further dependencies if one is not satisfied
+          }
+        } else {
+          // New logic for multiple dependencies
+          const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
+
+          if (!isMultipleDependenciesSatisfied) {
+            dependenciesSatisfied = false;
           }
         }
       }
@@ -521,48 +528,69 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
         let parentQuestionType = type.question_type;
 
         if (parentQuestionType === 'single choice') {
-          if (sign === null || sign.toLowerCase() === 'or') {
-            console.log('Answers:', matchingAnsweredQuestion.answers);
-            matchingAnsweredQuestion.answers.forEach(answer => {
-              const satisfiesCondition = applySign(answer, relatedAnswer, sign);
-              console.log(satisfiesCondition)
-              results.push(satisfiesCondition ? 1 : 0);
-            });
-            if (results.includes(1)) {
-              return true;
-            } else {
-              return false;
-            }
-          } else if (sign === '&') {
-            console.log('Answers:', matchingAnsweredQuestion.answers);
-            const andResults = [];
-            matchingAnsweredQuestion.answers.forEach(answer => {
-              const satisfiesCondition = applySign(answer, relatedAnswer, sign);
-              console.log(satisfiesCondition);
-              andResults.push(satisfiesCondition ? 1 : 0);
-            });
-
-            // Check if all answers satisfy the condition using "and" operation
-            if (!andResults.includes(0) && results[results.length - 1] === 1) {
-              return true;
-            } else {
-              return false;
-            }
-          }
+          return matchingAnsweredQuestion.answers.includes(relatedAnswer);
         } else if (parentQuestionType === 'Range') {
-          // Handle 'Range' logic if needed
+          let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
+                    threshold = threshold.answer
+                    const thresholdAnswer = parseFloat(threshold);
+                    const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]); // Assuming user answer is the first answer as a float
+                    if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
+                      const flag = question.flag;
+          
+                      if (flag === 1) {
+                        return userAnswer >= parseFloat(thresholdAnswer);
+                      } else if (flag === -1) {
+                        return userAnswer <= parseFloat(thresholdAnswer);
+                      } else if (flag === 0) {
+                        return userAnswer === parseFloat(thresholdAnswer);
+                      }
+                      else if (flag === -2) {
+                        return userAnswer < parseFloat(thresholdAnswer);
+                      } else if (flag === 2) {
+                        return userAnswer > parseFloat(thresholdAnswer);
+                      }
+                    }
+                  }
         }
       }
-    }
   }
 
   return false;
 }
 
+async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
+  // New logic for handling multiple dependencies
+  let chainSatisfied = null; // Use null to represent that no chain is satisfied yet
+
+  for (let i = 0; i < dependencies.length; i++) {
+    const currentDependency = dependencies[i];
+
+    const currentDependencySatisfied = await checkDependencySatisfaction(currentDependency, answeredQuestions, results);
+
+    if (currentDependency.sign === "or") {
+      // If the current dependency has the "or" sign, check if it's satisfied
+      chainSatisfied = chainSatisfied || currentDependencySatisfied;
+    } else if (currentDependency.sign === "&") {
+      // If the current dependency has the "&" sign, check if it's satisfied
+      chainSatisfied = chainSatisfied && currentDependencySatisfied;
+    } else if (currentDependency.sign === null) {
+      // If there is no sign for the current dependency, consider it satisfied
+      chainSatisfied = chainSatisfied || currentDependencySatisfied; // or simply chainSatisfied = true;
+    }
+  }
+
+  return chainSatisfied; // All dependencies satisfied with direct relations or no signs
+}
+
+
 
 function applySign(answer, relatedAnswer, sign) {
-  return answer === relatedAnswer;
+  return sign === 'or' ? answer === relatedAnswer : answer !== relatedAnswer;
 }
+
+
+
+
 // async function checkDependencySatisfaction(dependency, answeredQuestions) {
 //   const parentQuestionId = dependency.parent_id.toString();
 //   const relatedAnswer = dependency.related_answer;
