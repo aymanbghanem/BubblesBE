@@ -82,8 +82,6 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
     res.status(500).json({ message: 'Error: ' + error });
   }
 });
-
-
 async function rollbackQuestions(questions, session) {
   console.log('Inside rollbackQuestions');
   console.log('Number of questions in rollbackQuestions:', questions.length);
@@ -143,8 +141,6 @@ async function rollbackSurvey(survey, session) {
 async function rollbackLocation(location, session) {
   await Location.deleteOne({ _id: location._id }).session(session);
 }
-
-
 async function processAndStoreLocation(locationData, survey, user) {
   try {
     const department = user.department_id;
@@ -234,7 +230,6 @@ async function processAndStoreSurvey(surveyData, user) {
     throw error;
   }
 }
-
 async function processAndStoreQuestions(questionsData, survey_id, department_id) {
   const storedQuestions = [];
 
@@ -301,7 +296,6 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
   return storedQuestions;
 }
 
-
 async function processAndStoreAnswers(answerArray, questionId, questionType, survey_id) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
@@ -321,7 +315,6 @@ async function processAndStoreAnswers(answerArray, questionId, questionType, sur
 
   return answerIdsAndTexts;
 }
-
 async function processAndStoreQuestionDependencies(dependencies, storedQuestions) {
   const updatedDependencies = [];
 
@@ -347,8 +340,9 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
   return updatedDependencies;
 }
 
-// Update the existing survey
 
+
+// Update the existing survey
 router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role;
@@ -442,6 +436,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   }
 });
 
+
 //Get the questions which is in the first phase
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
   try {
@@ -482,7 +477,7 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
   }
 });
 
-
+//get questions from the specific phase
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
     const results = [];

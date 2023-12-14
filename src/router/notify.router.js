@@ -26,7 +26,7 @@ router.get('/api/v1/getNotifyData', auth, async (req, res) => {
                 .select('survey_title');
 
             // Find survey readers created by the logged-in user
-            let surveyReaders = await userModels.find({ department_id: req.user.department_id})
+            let surveyReaders = await userModels.find({ department_id: req.user.department_id,user_role:"" })
             .select('user_name ');
 
             let locations = await Location.find({ department_id: req.user.department_id, active: 1 })
