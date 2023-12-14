@@ -369,31 +369,53 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
 
       // Update locations
       const updateLocations = async (locations, parentId = null) => {
-        for (const location of locations) {
-          const { id, location_name, description, children } = location;
+        try {
+          for (const location of locations) {
+            const {
+              _id,
+              location_name,
+              active,
+              department_id, // Added department_id field
+              location_description,
+              children,
+            } = location;
 
-          // Check if the provided location_id exists
-          const existingLocation = await Location.findOne({ _id: id, active: 1, survey_id: surveyId });
+            // Check if the provided location_id exists
+            const existingLocation = await Location.findOne({
+              _id: _id,
+              active: 1,
+              survey_id: surveyId,
+            });
 
-          if (!existingLocation) {
-            return res.status(404).json({ message: `Location with ID ${id} not found` });
+            if (!existingLocation) {
+              return res.status(404).json({ message: `Location with ID ${_id} not found` });
+            }
+
+            // Update the location information
+            await Location.updateOne(
+              { _id: _id },
+              {
+                location_name,
+                active,
+                location_description,
+                parentId,
+                department_id, // Added department_id field
+              }
+            );
+
+            // Recursively update sub-locations
+            if (children && children.length > 0) {
+              await updateLocations(children, _id);
+            }
           }
 
-          // Update the location information
-          await Location.updateOne({ _id: id }, {
-            location_name,
-            active: 1,
-            location_description: description,
-            parentId,
-          });
-
-          // Recursively update sub-locations
-          if (children && children.length > 0) {
-            await updateLocations(children, id);
-          }
+          return true; // Return true to indicate successful update
+        } catch (error) {
+          throw error; // Throw error to be caught by the calling function
         }
       };
 
+      // Call the modified updateLocations function
       await updateLocations(locationData);
 
       // Update questions
@@ -658,7 +680,11 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
       if (survey) {
         // Fetch locations
         const locations = await fetchLocations(survey_id);
-
+         const questions = await Question.find({survey_id:survey_id,active:1}).populate({
+          path: 'answers',
+          model: 'answer',
+          select: 'answer image'
+        })
         let response = {
           survey_title: survey.survey_title,
           survey_description: survey.survey_description,
@@ -666,7 +692,8 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
           logo: `${company_name}/${survey.logo}`,
-          locations: buildTree(locations, null)
+          locations: buildTree(locations, null),
+          questions:questions
         };
 
         res.json({ message: response });
