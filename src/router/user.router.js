@@ -60,7 +60,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         let hashedPassword;
         const role = req.user.user_role.toLowerCase();
         let newPassword = await generateMixedID()
-        console.log(newPassword)
+       // console.log(newPassword)
         const { user_name, email_address, user_role, company_name, department_name, survey } = req.body;
 
         if (!config.roles.includes(role)) {
@@ -94,7 +94,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         }
 
         let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
-        console.log(newPassword)
+       //console.log(newPassword)
         if (user_role.toLowerCase() === 'owner' && role == "superadmin") {
             await hashPassword(newPassword,async (hash) => {
                 hashedPassword = hash;
@@ -173,7 +173,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         let { user_name, email_address, password } = req.body;
         user_name = user_name.toLowerCase();
         let newPassword = await generateMixedID()
-        console.log(newPassword)
+        //console.log(newPassword)
         let hashedPassword;
         // Check if either the email_address or user_name already exists
         const existingUser = await userModels.findOne({
@@ -324,7 +324,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
     try {
         let { user_name } = req.body
         let newPassword = await generateMixedID()
-        console.log(newPassword)
+        //console.log(newPassword)
         let response;
         let existingUser = await userModels.findOne({
             user_name:user_name

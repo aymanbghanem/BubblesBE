@@ -635,11 +635,6 @@ async function checkRangeDependency(dependency, answeredQuestions, results) {
   return false;
 }
 
-function applySign(answer, relatedAnswer, sign) {
-  return sign === 'or' ? answer === relatedAnswer : answer !== relatedAnswer;
-}
-
-
 router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role
@@ -729,6 +724,8 @@ function buildTree(locations, parentId) {
 
   return tree;
 }
+
+
 
 module.exports = router
 

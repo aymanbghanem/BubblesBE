@@ -15,6 +15,7 @@ const questionsModels = require("../models/questions.models");
 const Response = require("../models/response.model")
 const mongoose = require('mongoose');
 const userModels = require("../models/user.models");
+const notifyModels = require("../models/notify.models")
 require('dotenv').config()
 
 router.get('/api/v1/getNotifyData', auth, async (req, res) => {
@@ -26,7 +27,7 @@ router.get('/api/v1/getNotifyData', auth, async (req, res) => {
                 .select('survey_title');
 
             // Find survey readers created by the logged-in user
-            let surveyReaders = await userModels.find({ department_id: req.user.department_id,user_role:"" })
+            let surveyReaders = await userModels.find({ department_id: req.user.department_id,user_role:"survey-reader" })
             .select('user_name ');
 
             let locations = await Location.find({ department_id: req.user.department_id, active: 1 })
@@ -60,6 +61,54 @@ router.get('/api/v1/getNotifyData', auth, async (req, res) => {
         res.json({ message: "Catch error " + error });
     }
 });
+
+
+router.post('/api/v1/addNotifier', auth, async (req, res) => {
+    try {
+        let role = req.user.user_role;
+        let { survey_id, location_id, surveyReaders_id, question_id, answer_id } = req.body;
+
+        if (role === "admin") {
+            // Check if the survey, location, question, and answer exist and are active
+            let existSurvey = await surveyModel.findOne({ _id: survey_id, active: 1 });
+            let existLocation = await Location.findOne({ _id: location_id, active: 1 });
+            let existQuestion = await Question.findOne({ _id: question_id, active: 1 });
+            let existAnswer = await Answer.findOne({ _id: answer_id, active: 1 });
+
+            // Check if all survey reader ids exist and are active
+            let existReaders = await userModels.find({ _id: { $in: surveyReaders_id }, active: 1 });
+
+            if (existSurvey && existLocation && existQuestion && existAnswer && existReaders.length === surveyReaders_id.length) {
+                // Save data in the notify table
+                const notifyData = {
+                    location_id: existLocation._id,
+                    survey_id: existSurvey._id,
+                    question_id: existQuestion._id,
+                    answer_id: existAnswer._id,
+                    survey_reader_id: existReaders.map(reader => reader._id)
+                };
+                const surveyReaderData = {
+                    company_id:req.user.company_id,
+                    department_id:req.user.department_id,
+                    reader_id : existReaders.map(reader => reader._id),
+                    created_by: req.user._id,
+                    survey_id:existSurvey._id
+                }   
+                const notifyEntry = await notifyModels.create(notifyData);
+                const surveyReaderEntry = await surveyReaderModel.create(surveyReaderData);
+
+                res.json({ message: "Data saved successfully", notifyEntry });
+            } else {
+                res.json({ message: "One or more entities do not exist or are inactive" });
+            }
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        res.json({ message: "Catch error: " + error });
+    }
+});
+
 
 
 module.exports = router

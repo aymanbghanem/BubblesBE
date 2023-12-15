@@ -24,7 +24,10 @@ const notifySchema = new Schema({
     survey_reader_id: {
         type: Schema.Types.ObjectId,
         ref: 'user'
-    }
+    },  created_by:{
+        type: Schema.Types.ObjectId,
+        ref: 'user'
+    },
 
 }, { timestamps: true })
 
