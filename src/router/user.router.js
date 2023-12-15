@@ -94,14 +94,14 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         }
 
         let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
-
+        console.log(newPassword)
         if (user_role.toLowerCase() === 'owner' && role == "superadmin") {
             await hashPassword(newPassword,async (hash) => {
                 hashedPassword = hash;
 
             const user = await userModels.create({
                 user_name: user_name,
-                password: hashedPassword,
+                password: newPassword,
                 email_address: email_address,
                 company_id: company._id,
                 user_role: user_role,
@@ -122,7 +122,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 hashedPassword = hash;
             const userParams = {
                 user_name: user_name,
-                password: hashedPassword,
+                password: newPassword,
                 email_address: email_address,
                 user_role: user_role,
                 token: token,
@@ -143,7 +143,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 hashedPassword = hash;
             const userParams = {
                 user_name: user_name,
-                password: hashedPassword,
+                password: newPassword,
                 email_address: email_address,
                 user_role: user_role,
                 token: token,
@@ -192,7 +192,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     user_name: user_name,
                     user_role: 'superadmin',
                     email_address: email_address,
-                    password: hashedPassword,
+                    password: newPassword,
                     token: token,
                 });
                // await sendEmail(user_name,email_address, "Account password", newPassword,"for your account password")
@@ -202,7 +202,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     user_role: new_user.user_role,
                     email_address: new_user.email_address,
                 };
-                res.json({ response });
+                res.json({ response});
             });
         }
     } catch (error) {
@@ -212,7 +212,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
 
 router.get('/api/v1/userInfo', auth, async (req, res) => {
     try {
-        let id = req.user._id
+        let id = req.user._id;
         let user = await userModels.findById({ _id: id, active: 1 }).populate([
             {
                 path: 'company_id',
@@ -223,24 +223,26 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 select: 'department_name',
             },
         ]);
+
         if (user) {
             let response = {
                 user_name: user.user_name,
                 user_role: user.user_role,
                 token: user.token,
                 email_address: user.email_address,
-                company_name: user.company_id.company_name || " ", // Add a check here
-                department_name: user.department_id ? user.department_id.department_name || " " : " ",// Add a check here
-                image: `${user.company_id.company_name}/${user.image}`
-            }
-            res.json({ message: response })
+                company_name: user.company_id ? user.company_id.company_name || " " : " ",
+                department_name: user.department_id ? user.department_id.department_name || " " : " ",
+                image: user.company_id ? `${user.company_id.company_name}/${user.image}` : user.image,
+            };
+
+            res.json({ message: response });
         } else {
-            res.json({ message: "The user is not in the system" })
+            res.json({ message: "The user is not in the system" });
         }
     } catch (error) {
-        res.status(500).json({ message: "catch error " + error })
+        res.status(500).json({ message: "catch error " + error });
     }
-})
+});
 
 router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
     try {
@@ -330,7 +332,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
         if(existingUser){
             await hashPassword(newPassword,async (hash) => {
                 hashedPassword = hash;
-                existingUser = await userModels.findOneAndUpdate({user_name:user_name},{password:hashedPassword},{new:true})
+                existingUser = await userModels.findOneAndUpdate({user_name:user_name},{password:newPassword},{new:true})
             })
            
             //let user_name = existingUser.user_name

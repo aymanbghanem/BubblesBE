@@ -7,31 +7,42 @@ const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 require('dotenv').config()
 
-router.post('/api/v1/addCompany',auth,async(req,res)=>{
+router.post('/api/v1/addCompany', auth, async (req, res) => {
     try {
-        let {company_name,company_logo} = req.body
-        company_name = company_name.toLowerCase()
-        if(req.user.user_role=='superadmin'){
-            let existingCompany = await companyModel.findOne({company_name:company_name})
-            if(existingCompany){
-                let company = existingCompany
-                res.json({ message: "The company name  already exists",company});
+        if (req.user.user_role === 'superadmin') {
+            const { companies } = req.body;
+
+            if (!Array.isArray(companies)) {
+                return res.status(400).json({ message: "Invalid input format. 'companies' should be an array of object." });
             }
-            else{
-                let company = await companyModel.create({
-                    company_name:company_name,
-                    company_logo
-                })
-                res.json({message:"successfully added",company})
+
+            const addedCompanies = [];
+
+            for (const companyData of companies) {
+                const { company_name } = companyData;
+                const caseInsensitiveRegex = new RegExp(`^${company_name}$`, 'i');
+
+                const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex });
+
+                if (existingCompany) {
+                    addedCompanies.push({ message: `The company name '${company_name}' already exists`, company: existingCompany });
+                } else {
+                    const newCompany = await companyModel.create({
+                        company_name: company_name,
+                    });
+                    addedCompanies.push({ message: `Successfully added company '${company_name}'`, company: newCompany });
+                }
             }
+
+            res.json({ addedCompanies });
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
         }
-        else{
-            res.json({ message: "sorry you are unauthorized" })
-        }
-       
+
     } catch (error) {
-        res.status(500).json({message:"catch error "+error})
+        res.status(500).json({ message: "Catch error: " + error });
     }
-})
+});
+
 
 module.exports = router
