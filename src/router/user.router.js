@@ -307,7 +307,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
 
         const users = await userModels.find({ ...userQuery, active: 1 })
             .populate(populate)
-            .select('-_id -password');
+            .select(' -password');
 
         if (users.length !== 0) {
             res.json({ message: users });
