@@ -58,4 +58,25 @@ router.get('/api/v1/getDepartments',auth,async(req,res)=>{
         res.json({message:"catch error "+error})
     }
 })
+
+router.patch('/api/v1/deleteDepartment',auth,async(req,res)=>{
+    try {
+        let role = req.user.user_role
+        let department_id = req.headers['department_id']
+        if(role=="admin" || role=="superadmin" ){
+          let department = await departmentModel.findOneAndUpdate({_id:department_id,active:1},{active:0})
+          if(department){
+            res.json({message:"The department deleted successfully"})
+          }
+          else{
+            res.json({message:"The department you are looking for does not found"})
+          }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized"}) 
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 module.exports = router

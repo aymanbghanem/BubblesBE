@@ -45,6 +45,7 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
 });
 router.get('/api/v1/getCompanies',auth,async(req,res)=>{
     try {
+
        let companies = await companyModel.find({active:1}).select('company_name') 
        if(companies.length>0){
         res.json(companies)
@@ -56,5 +57,24 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
         res.json({message:"catch error "+error})
     }
 })
-
+router.patch('/api/v1/deleteCompany',auth,async(req,res)=>{
+    try {
+        let role = req.user.user_role
+        let company_id = req.headers['company_id']
+        if(role=="admin" || role=="superadmin" ){
+          let company = await companyModel.findOneAndUpdate({_id:company_id,active:1},{active:0})
+          if(company){
+            res.json({message:"The company deleted successfully"})
+          }
+          else{
+            res.json({message:"The company you are looking for not found"})
+          }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized"}) 
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 module.exports = router
