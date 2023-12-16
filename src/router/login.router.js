@@ -15,23 +15,23 @@ router.post('/api/v1/login', async (req, res) => {
     })
 
     if (existingUser) {
-      compareHashedPassword(password, existingUser.password,async (err, result) => {
-        if (err) {
-          res.json({ message: "Incorrect password" });
-        } else if (result) {
+     // compareHashedPassword(password, existingUser.password,async (err, result) => {
+      //  if (err) {
+          //res.json({ message: "Incorrect password" });
+      //  } else if (result) {
           let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
           let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name }, { token }, { new: true });
           let response = {
-            message: "successfully added",
+            message: "login successfully",
             token: user.token,
             user_role: user.user_role,
             email_address: user.email_address,
-          };
+        };
           res.json({ response });
-        } else {
-          res.json({ message: "Incorrect password" });
-        }
-      });
+       // } else {
+        //  res.json({ message: "Incorrect password" });
+       // }
+   //   });
     } else {
       res.json({ message: "Incorrect user name" });
     }
