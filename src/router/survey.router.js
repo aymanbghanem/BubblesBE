@@ -663,9 +663,10 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
         select: "company_name"
       })
         .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
-      let company_name = survey.company_id.company_name;
+      
 
       if (survey) {
+        let company_name = survey.company_id.company_name;
         // Fetch locations
         const locations = await fetchLocations(survey_id);
          const questions = await Question.find({survey_id:survey_id,active:1}).populate({

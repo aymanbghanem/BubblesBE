@@ -85,7 +85,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         const existingUser = await userModels.findOne({
             $and: [
                 { $or: [{ email_address: email_address }, { user_name: user_name }] },
-                { company_id: company._id },
+                { company_id: company._id,active:1 },
             ],
         });
 
@@ -226,6 +226,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
 
         if (user) {
             let response = {
+                _id:user._id,
                 user_name: user.user_name,
                 user_role: user.user_role,
                 token: user.token,
@@ -347,6 +348,33 @@ router.post('/api/v1/resetPassword', async (req, res) => {
     }
 })
 
+router.post('/api/v1/deleteUsers', auth, async (req, res) => {
+    try {
+        const role = req.user.user_role
+        const { user_ids } = req.body;
+
+        if (!config.roles.includes(role)) {
+            return res.json({ message: "Sorry, you are unauthorized" });
+        }
+
+        if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
+            return res.json({ message: "Please provide valid user IDs to delete" });
+        }
+
+        const deletedUsers = await userModels.updateMany(
+            { _id: { $in: user_ids }, active: 1 },
+            { $set: { active: 0 } }
+        );
+        
+        if (deletedUsers.modifiedCount == deletedUsers.matchedCount) {
+            return res.json({ message: "Users deleted successfully" });
+        } else {
+            return res.json({ message: "No valid users found to delete" });
+        }
+    } catch (error) {
+        return res.json({ message: error.message });
+    }
+});
 
 module.exports = router
 
