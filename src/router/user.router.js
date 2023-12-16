@@ -305,7 +305,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
             return res.json({ message: "Invalid user role" });
         }
 
-        const users = await userModels.find({ ...userQuery, active: 1 })
+        const users = await userModels.find({ ...userQuery })
             .populate(populate)
             .select(' -password');
 
