@@ -1,11 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const surveyModel = require('../models/survey.models')
-const { hashPassword } = require('../helper/hashPass.helper')
-const { myMulter } = require('../middleware/upload');
-const config = require('../../config')
+
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
+const surveyModel = require('../models/survey.models')
 const surveyReaderModel = require("../models/surveyReader.model");
 const Question = require("../models/questions.models");
 const Answer = require("../models/answers.model")
@@ -725,7 +723,41 @@ function buildTree(locations, parentId) {
   return tree;
 }
 
-
+router.get('/api/v1/getSurveys', auth, async (req, res) => {
+   try {
+    let role = req.user.user_role
+    let id = req.user._id
+    if(role == "admin"){
+      let survey = await surveyModel.find({created_by:id,active:1})
+      .select('survey_title')
+      if(survey.length>0){
+        res.json({message:survey})
+      }
+      else{
+        res.json({message:"No data found"})
+      }
+    }
+    else if(role == "survey-reader"){
+        let survey  = await surveyReaderModel.find({reader_id:id,active:1}).
+        populate({
+          path:"survey_id" ,
+          select:"survey_title" ,
+          model:"survey"
+        })
+        if(survey.length>0){
+          res.json({message:survey})
+        }
+        else{
+          res.json({message:"No data found"})
+        }
+    }
+    else{
+      res.json({message:"sorry, you are unauthorized"})
+    }
+   } catch (error) {
+    res.json({message:"catch error "+error})
+   }
+});
 
 module.exports = router
 

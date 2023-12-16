@@ -43,6 +43,18 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
         res.status(500).json({ message: "Catch error: " + error });
     }
 });
-
+router.get('/api/v1/getCompanies',auth,async(req,res)=>{
+    try {
+       let companies = await companyModel.find({active:1}).select('company_name') 
+       if(companies.length>0){
+        res.json(companies)
+       }
+       else{
+        res.json({message:"No data found"})
+       }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 
 module.exports = router
