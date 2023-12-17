@@ -59,114 +59,152 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
         let hashedPassword;
         const role = req.user.user_role.toLowerCase();
+        
         let newPassword = await generateMixedID()
-       // console.log(newPassword)
-        const { user_name, email_address, user_role, company_name, department_name, survey } = req.body;
+        // console.log(newPassword)
+        const { user_name, email_address, company_name, department_name, survey } = req.body;
 
         if (!config.roles.includes(role)) {
             return res.json({ message: "sorry, you are unauthorized" });
         }
 
-        let company = await companyModel.findOne({
-            company_name: company_name.toLowerCase(),
-            active: 1,
-        });
-
-        if (!company) {
-            company = await companyModel.create({
-                company_name: company_name,
-            });
-        }
-
-        if (user_role.toLowerCase() == 'owner') {
-            await addOwner(company);
-        }
 
         const existingUser = await userModels.findOne({
             //on the platform
             $and: [
                 { $or: [{ email_address: email_address }, { user_name: user_name }] },
-                { company_id: company._id,active:1 },
+                { active: 1 },
             ],
         });
 
         if (existingUser) {
-            return res.json({ message: "The email address or username already exists within the company" });
+            return res.json({ message: "The email address or username already exists" });
         }
 
         let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
-       //console.log(newPassword)
-        if (user_role.toLowerCase() === 'owner' && role == "superadmin") {
-            await hashPassword(newPassword,async (hash) => {
-                hashedPassword = hash;
 
-            const user = await userModels.create({
-                user_name: user_name,
-                password: newPassword,
-                email_address: email_address,
-                company_id: company._id,
-                user_role: user_role,
-                token: token,
+        if (role == "superadmin") {
+
+            let company = await companyModel.findOne({
+                company_name: { $regex: new RegExp("^" + company_name, "i") },
+                active: 1,
             });
 
-          //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-            return res.json({
-                message: "Successfully added",
-                token: user.token,
-                user_role: user.user_role,
-                email_address: user.email_address,
-                image: user.image
-            });
-        })
-        } else if (department_name && (user_role.toLowerCase() === 'admin') && role == 'owner') {
-            await hashPassword(newPassword,async (hash) => {
-                hashedPassword = hash;
-            const userParams = {
-                user_name: user_name,
-                password: newPassword,
-                email_address: email_address,
-                user_role: user_role,
-                token: token,
-            };
-            const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
-           // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-            return res.json({
-                message: "Successfully added",
-                token: user.token,
-                user_role: user.user_role,
-                email_address: user.email_address,
-                image: user.image
-            });
-        })
-        } else if ( (user_role.toLowerCase() === 'survey-reader') && role == 'admin') {
-            let user;
-            await hashPassword(newPassword,async (hash) => {
-                hashedPassword = hash;
-            const userParams = {
-                user_name: user_name,
-                password: newPassword,
-                email_address: email_address,
-                user_role: user_role,
-                token: token,
-            };
-            // user= await addDepartmentAndUser(userParams, req.user.company_id, department_name);
-           // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-           user = await userModels.create({
-            ...userParams,
-            company_id: req.user.company_id,
-            department_id: req.user.department_id,
-        });
+            const ownerError = await addOwner(company);
+            if (ownerError) {
+                return res.json({ message: ownerError  });
+            }
+            else {
+              
+                console.log(company)
+              //  await hashPassword(newPassword, async (hash) => {
+                   // hashedPassword = hash;
 
-            return res.json({
-                message: "Successfully added",
-                token: user.token,
-                user_role: user.user_role,
-                email_address: user.email_address,
-                image: user.image
-            })
-        })
-           
+                    const user = await userModels.create({
+                        user_name: user_name,
+                        password: newPassword,
+                        email_address: email_address,
+                        company_id: company._id,
+                        user_role: "owner",
+                        token: token,
+                    });
+
+                    //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
+                    return res.json({
+                        message: "Successfully added",
+                        token: user.token,
+                        user_role: user.user_role,
+                        email_address: user.email_address,
+                        image: user.image
+                    });
+              //  })
+            }
+
         }
+
+
+        else if (department_name && role == 'owner') {
+           // await hashPassword(newPassword, async (hash) => {
+              //  hashedPassword = hash;
+                const userParams = {
+                    user_name: user_name,
+                    password: newPassword,
+                    email_address: email_address,
+                    user_role: "admin",
+                    token: token,
+                };
+                const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
+                // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
+                return res.json({
+                    message: "Successfully added",
+                    token: user.token,
+                    user_role: user.user_role,
+                    email_address: user.email_address,
+                    image: user.image
+                });
+          //  })
+        }
+        else if (role === 'admin') {
+            let user;
+             
+            //await hashPassword(newPassword, async (hash) => {
+           // hashedPassword = hash;
+
+            // Set user parameters
+            const userParams = {
+                user_name: user_name,
+                password: newPassword,
+                email_address: email_address,
+                user_role: 'survey-reader',
+                token: token,
+            };
+
+            // Create a new user
+            user = await userModels.create({
+                ...userParams,
+                company_id: req.user.company_id,
+                department_id: req.user.department_id,
+            });
+
+            // Assign surveys to the user
+            for (let i = 0; i < survey.length; i++) {
+                // Get the survey information
+                const surveyInfo = await surveyModel.findOne({
+                    _id: survey[i],
+                    company_id: req.user.company_id,
+                    active: 1,
+                });
+
+                if (surveyInfo) {
+                    let survey_reader = await surveyReaderModel.create({
+                        survey_id: survey[i],
+                        company_id: req.user.company_id,
+                        department_id: user.department_id,
+                        reader_id: user._id,
+                        company_logo: user.company_logo,
+                        created_by: surveyInfo.created_by, // Assign the survey creator
+                        active: 1,
+                    });
+                } else {
+                    // Handle the case when the survey is not found
+                    console.error(`Survey not found: ${survey[i]}`);
+                }
+            }
+
+            return res.json({
+                message: "User created successfully",
+                user: {
+                    token: user.token,
+                    user_role: user.user_role,
+                    email_address: user.email_address,
+                    image: user.image
+                }
+            });
+            //  });
+
+        }
+
+
         else {
             return res.json({ message: "sorry, you are unauthorized" });
         }
@@ -190,10 +228,10 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         if (existingUser) {
             res.json({ message: "The email address or username already exists" });
         } else {
-            
-            await hashPassword(newPassword,async (hash) => {
-              hashedPassword = hash;
-           
+
+            await hashPassword(newPassword, async (hash) => {
+                hashedPassword = hash;
+
                 let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
                 let new_user = await userModels.create({
                     user_name: user_name,
@@ -202,14 +240,14 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     password: newPassword,
                     token: token,
                 });
-               // await sendEmail(user_name,email_address, "Account password", newPassword,"for your account password")
+                // await sendEmail(user_name,email_address, "Account password", newPassword,"for your account password")
                 let response = {
                     message: "successfully added",
                     token: new_user.token,
                     user_role: new_user.user_role,
                     email_address: new_user.email_address,
                 };
-                res.json({ response});
+                res.json({ response });
             });
         }
     } catch (error) {
@@ -233,14 +271,14 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
 
         if (user) {
             let response = {
-                _id:user._id,
+                _id: user._id,
                 user_name: user.user_name,
                 user_role: user.user_role,
                 token: user.token,
                 email_address: user.email_address,
                 company_name: user.company_id ? user.company_id.company_name || " " : " ",
                 department_name: user.department_id ? user.department_id.department_name || " " : " ",
-                image: user.company_id && user.image!=""? `${user.company_id.company_name}/${user.image}` : "",
+                image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
             };
 
             res.json({ message: response });
@@ -295,17 +333,17 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         let users;
 
         if (role === 'superadmin') {
-            users = await userModels.find({ user_role: 'owner',company_id:company_id}).populate({
+            users = await userModels.find({ user_role: 'owner', company_id: company_id }).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
         } else if (role === 'owner') {
-            users = await userModels.find({ user_role: 'admin',company_id:company_id }).populate({
+            users = await userModels.find({ user_role: 'admin', company_id: company_id }).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
         } else if (role === 'admin') {
-            users = await userModels.find({ user_role: 'survey-reader',company_id:company_id }).populate([
+            users = await userModels.find({ user_role: 'survey-reader', company_id: company_id }).populate([
                 {
                     path: "company_id",
                     select: "company_name -_id"
@@ -330,7 +368,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                     email_address: user.email_address,
                     company_name: user.company_id ? user.company_id.company_name || "" : "",
                     department_name: user.department_id ? user.department_id.department_name || "" : "",
-                    image: user.company_id && user.image!=""? `${user.company_id.company_name}/${user.image}` : "",
+                    image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
                 };
                 return response;
             });
@@ -353,20 +391,20 @@ router.post('/api/v1/resetPassword', async (req, res) => {
         //console.log(newPassword)
         let response;
         let existingUser = await userModels.findOne({
-            user_name:user_name
+            user_name: user_name
         })
-        if(existingUser){
-            await hashPassword(newPassword,async (hash) => {
+        if (existingUser) {
+            await hashPassword(newPassword, async (hash) => {
                 hashedPassword = hash;
-                existingUser = await userModels.findOneAndUpdate({user_name:user_name},{password:newPassword},{new:true})
+                existingUser = await userModels.findOneAndUpdate({ user_name: user_name }, { password: newPassword }, { new: true })
             })
-           
+
             //let user_name = existingUser.user_name
-          //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
-            res.json({ message: response,existingUser })
+            //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
+            res.json({ message: response, existingUser })
         }
-        else{
-            res.json({message:"The user does not exist"})
+        else {
+            res.json({ message: "The user does not exist" })
         }
     } catch (error) {
         res.json({ message: "catch error " + error })
@@ -390,7 +428,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
             { _id: { $in: user_ids }, active: 1 },
             { $set: { active: 0 } }
         );
-        
+
         if (deletedUsers.modifiedCount == deletedUsers.matchedCount) {
             return res.json({ message: "Users deleted successfully" });
         } else {
