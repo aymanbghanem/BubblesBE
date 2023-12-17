@@ -137,7 +137,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 image: user.image
             });
         })
-        } else if (department_name && (user_role.toLowerCase() === 'survey-reader') && role == 'admin') {
+        } else if ( (user_role.toLowerCase() === 'survey-reader') && role == 'admin') {
             let user;
             await hashPassword(newPassword,async (hash) => {
                 hashedPassword = hash;
