@@ -83,6 +83,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         }
 
         const existingUser = await userModels.findOne({
+            //on the platform
             $and: [
                 { $or: [{ email_address: email_address }, { user_name: user_name }] },
                 { company_id: company._id,active:1 },
@@ -286,7 +287,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
 router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
     try {
         const role = req.user.user_role;
-
+        const company_id = req.user.company_id
         if (!config.roles.includes(role)) {
             return res.json({ message: "Sorry, you are unauthorized" });
         }
@@ -294,17 +295,17 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         let users;
 
         if (role === 'superadmin') {
-            users = await userModels.find({ user_role: 'owner' }).populate({
+            users = await userModels.find({ user_role: 'owner',company_id:company_id}).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
         } else if (role === 'owner') {
-            users = await userModels.find({ user_role: 'admin' }).populate({
+            users = await userModels.find({ user_role: 'admin',company_id:company_id }).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
         } else if (role === 'admin') {
-            users = await userModels.find({ user_role: 'survey-reader' }).populate([
+            users = await userModels.find({ user_role: 'survey-reader',company_id:company_id }).populate([
                 {
                     path: "company_id",
                     select: "company_name -_id"

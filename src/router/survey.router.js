@@ -251,7 +251,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
 
     switch (question_type.toLowerCase()) {
       case "text":
-      case "single choice":
+      case "Single choice":
       case "multiple choice":
       case "range":
         const questionController = await QuestionController.findOne({
@@ -544,7 +544,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
       if (type && type.question_type) {
         let parentQuestionType = type.question_type;
 
-        if (parentQuestionType === 'single choice') {
+        if (parentQuestionType === 'Single choice') {
           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
         } else if (parentQuestionType === 'Range') {
           let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
@@ -580,7 +580,7 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
   for (let i = 0; i < dependencies.length; i++) {
     const currentDependency = dependencies[i];
     const currentDependencySatisfied = await checkDependencySatisfaction(currentDependency, answeredQuestions, results);
-     console.log(currentDependency.sign)
+
     if (currentDependency.sign === "&") {
       // Special handling for "and" relation
       const nextDependency = dependencies[i + 1];
@@ -613,9 +613,8 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
     }
   }
 
-  return overallSatisfied;
+  return overallSatisfied !== null ? overallSatisfied : true;
 }
-
 
 async function checkRangeDependency(dependency, answeredQuestions, results) {
   // Implement the logic for "Range" type dependencies
@@ -791,7 +790,7 @@ module.exports = router
 //       if (type && type.question_type) {
 //         let parentQuestionType = type.question_type;
 
-//         if (parentQuestionType === 'single choice') {
+//         if (parentQuestionType === 'Single choice') {
 //           // If sign is null, consider it satisfied if at least one of the answers is correct
 //           if (sign === null) {
 //             return matchingAnsweredQuestion.answers.includes(relatedAnswer);
@@ -829,7 +828,7 @@ module.exports = router
 //       if (type && type.question_type) {
 //         let parentQuestionType = type.question_type;
 
-//         if (parentQuestionType === 'single choice') {
+//         if (parentQuestionType === 'Single choice') {
 //           // If sign is null, consider it satisfied if the answer is correct
 //           if (sign === null) {
 //             return matchingAnsweredQuestion.answers.includes(relatedAnswer);
@@ -863,7 +862,7 @@ module.exports = router
 //       if (type && type.question_type) {
 //         let parentQuestionType = type.question_type;
 
-//         if (parentQuestionType === 'single choice') {
+//         if (parentQuestionType === 'Single choice') {
 //           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
 //         } else if (parentQuestionType === 'Range') {
 //           let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
@@ -913,7 +912,7 @@ module.exports = router
 //       if (type && type.question_type) {
 //         let parentQuestionType = type.question_type;
 
-//         if (parentQuestionType === 'single choice') {
+//         if (parentQuestionType === 'Single choice') {
 //           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
 //         }
 //           else if (parentQuestionType === 'Range') {
@@ -968,7 +967,7 @@ module.exports = router
 
 //     const nextPhaseQuestions = await Question.find({ phase: question.phase + 1 });
 
-//     if (questionType == "single choice") {
+//     if (questionType == "Single choice") {
 //       const eligibleQuestions = nextPhaseQuestions.filter((nextQuestion) => {
 //         if (!nextQuestion.dependencies || nextQuestion.dependencies.length === 0) {
 //           return true; // Include questions without dependencies

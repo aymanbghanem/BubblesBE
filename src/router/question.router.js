@@ -53,7 +53,7 @@ async function processAndStoreQuestions(questions) {
             case "text":
                 // No answers, dependencies, or child questions for text questions
                 break;
-            case "single choice":
+            case "Single choice":
             case "Multiple choice":
             case "Range":
                 // Process and store answers only for single-choice, multiple-choice, and range questions
