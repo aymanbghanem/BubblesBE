@@ -148,9 +148,9 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 user_role: user_role,
                 token: token,
             };
-             //user= await addDepartmentAndUser(userParams, req.user.company_id, req.user.department_id);
+            // user= await addDepartmentAndUser(userParams, req.user.company_id, department_name);
            // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-            user = await userModels.create({
+           user = await userModels.create({
             ...userParams,
             company_id: req.user.company_id,
             department_id: req.user.department_id,
@@ -299,16 +299,10 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                 select: "company_name -_id"
             });
         } else if (role === 'owner') {
-            users = await userModels.find({ user_role: 'admin' }).populate([
-                {
-                    path: "company_id",
-                    select: "company_name -_id"
-                },
-                {
-                    path: "department_id",
-                    select: "department_name"
-                }
-            ]);
+            users = await userModels.find({ user_role: 'admin' }).populate({
+                path: "company_id",
+                select: "company_name -_id"
+            });
         } else if (role === 'admin') {
             users = await userModels.find({ user_role: 'survey-reader' }).populate([
                 {
