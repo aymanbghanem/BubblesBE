@@ -743,6 +743,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     let id = req.user._id
     let department_id = req.user.department_id
     if (role == "admin") {
+       //the surveys in his department
       let survey = await surveyModel.find({ department_id: department_id, active: 1 })
         .select('survey_title')
       if (survey.length > 0) {
@@ -753,19 +754,29 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
       }
     }
     else if (role == "survey-reader") {
-      let survey = await surveyReaderModel.find({ department_id: department_id, active: 1 }).
-        populate({
-          path: "survey_id",
-          select: "survey_title",
-          model: "survey"
-        })
-      if (survey.length > 0) {
-        res.json({ message: survey })
+      // Retrieve the surveys assigned to the reader
+      let surveys = await surveyReaderModel
+          .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
+          .populate({
+              path: "survey_id",
+              select: "survey_title",
+              model: "survey"
+          })
+          .select('survey_title');
+      // Transform the data structure
+      let transformedSurveys = surveys.map(item => {
+          return {
+              _id: item.survey_id._id,
+              survey_title: item.survey_id.survey_title
+          };
+      });
+  
+      if (transformedSurveys.length > 0) {
+          res.json({ message: transformedSurveys });
+      } else {
+          res.json({ message: "No data found" });
       }
-      else {
-        res.json({ message: "No data found" })
-      }
-    }
+  }
     else {
       res.json({ message: "sorry, you are unauthorized" })
     }

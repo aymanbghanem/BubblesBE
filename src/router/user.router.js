@@ -25,35 +25,6 @@ const addOwner = async (company) => {
     }
 };
 
-const addDepartmentAndUser = async (userParams, company_id, department_name) => {
-    let department_id;
-
-    const department = await departmentModel
-        .find({ department_name: department_name.toLowerCase(), company_id: company_id })
-        .populate({
-            path: 'company_id',
-            select: 'company_name',
-        });
-
-    if (department.length !== 0) {
-        const filteredData = department.filter((entry) => entry.company_id !== null);
-        department_id = filteredData[0]._id.toString();
-    } else {
-        const newDepartment = await departmentModel.create({
-            department_name: department_name,
-            company_id: company_id,
-        });
-        department_id = newDepartment._id;
-    }
-
-    const user = await userModels.create({
-        ...userParams,
-        company_id: company_id,
-        department_id: department_id,
-    });
-
-    return user;
-};
 
 router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
@@ -61,13 +32,11 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         const role = req.user.user_role.toLowerCase();
         
         let newPassword = await generateMixedID()
-        // console.log(newPassword)
-        const { user_name, email_address, company_name, department_name, survey } = req.body;
 
+        const { user_name, email_address, company_name, department_name, survey } = req.body;
         if (!config.roles.includes(role)) {
             return res.json({ message: "sorry, you are unauthorized" });
         }
-
 
         const existingUser = await userModels.findOne({
             //on the platform
@@ -84,12 +53,12 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
 
         if (role == "superadmin") {
-
+            // check if the company is exists
             let company = await companyModel.findOne({
                 company_name: { $regex: new RegExp("^" + company_name, "i") },
                 active: 1,
             });
-
+           if(company){
             const ownerError = await addOwner(company);
             if (ownerError) {
                 return res.json({ message: ownerError  });
@@ -119,29 +88,52 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                     });
               //  })
             }
-
+           }
+           else{
+            res.json({message:"The company does not exist"})
+           }
         }
 
 
         else if (department_name && role == 'owner') {
            // await hashPassword(newPassword, async (hash) => {
               //  hashedPassword = hash;
-                const userParams = {
-                    user_name: user_name,
-                    password: newPassword,
-                    email_address: email_address,
-                    user_role: "admin",
-                    token: token,
-                };
-                const user = await addDepartmentAndUser(userParams, req.user.company_id, department_name);
+              
+            const department = await departmentModel.findOne({
+                department_name: { $regex: new RegExp("^" + department_name, "i") },
+                company_id: req.user.company_id,
+                active: 1,
+            });
+
+            if (!department) {
+                return res.json({ message: "The department does not exist within your company" });
+            }
+
+            // Continue with the user creation
+            const userParams = {
+                user_name: user_name,
+                password: newPassword,
+                email_address: email_address,
+                user_role: "admin",
+                token: token,
+            };
+
+            const user = await userModels.create({
+                ...userParams,
+                company_id: req.user.company_id,
+                department_id: department._id,
+            });
+
+            return res.json({
+                message: "Successfully added",
+                token: user.token,
+                user_role: user.user_role,
+                email_address: user.email_address,
+                image: user.image
+            });
+               
                 // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-                return res.json({
-                    message: "Successfully added",
-                    token: user.token,
-                    user_role: user.user_role,
-                    email_address: user.email_address,
-                    image: user.image
-                });
+              
           //  })
         }
         else if (role === 'admin') {
@@ -333,7 +325,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         let users;
 
         if (role === 'superadmin') {
-            users = await userModels.find({ user_role: 'owner', company_id: company_id }).populate({
+            users = await userModels.find({ user_role: 'owner'}).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
@@ -343,7 +335,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                 select: "company_name -_id"
             });
         } else if (role === 'admin') {
-            users = await userModels.find({ user_role: 'survey-reader', company_id: company_id }).populate([
+            users = await userModels.find({ user_role: 'survey-reader', company_id: company_id ,department_id:req.user.department_id }).populate([
                 {
                     path: "company_id",
                     select: "company_name -_id"
