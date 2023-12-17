@@ -233,7 +233,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 email_address: user.email_address,
                 company_name: user.company_id ? user.company_id.company_name || " " : " ",
                 department_name: user.department_id ? user.department_id.department_name || " " : " ",
-                image: user.company_id ? `${user.company_id.company_name}/${user.image}` : user.image,
+                image: user.company_id && user.image!=""? `${user.company_id.company_name}/${user.image}` : "",
             };
 
             res.json({ message: response });

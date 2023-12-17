@@ -575,36 +575,33 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
 }
 
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
-  // New logic for handling multiple dependencies
-  let chainSatisfied = null; // Use null to represent that no chain is satisfied yet
+  let chainSatisfied = null;
 
   for (let i = 0; i < dependencies.length; i++) {
     const currentDependency = dependencies[i];
-
     const currentDependencySatisfied = await checkDependencySatisfaction(currentDependency, answeredQuestions, results);
 
-    if (currentDependency.sign === "or") {
-      // If the current dependency has the "or" sign, check if it's satisfied
+    if (currentDependency.sign === "&") {
+      // Special handling for "and" relation
+      if (chainSatisfied === null) {
+        chainSatisfied = currentDependencySatisfied;
+      } else {
+        chainSatisfied = chainSatisfied && currentDependencySatisfied;
+      }
+    } else if (currentDependency.sign === "or" || currentDependency.sign === null) {
+      // "or" relation when sign is explicitly set to "or" or when it's null
       chainSatisfied = chainSatisfied || currentDependencySatisfied;
-    } else if (currentDependency.sign === "&") {
-      // If the current dependency has the "&" sign, check if it's satisfied
-      chainSatisfied = chainSatisfied && currentDependencySatisfied;
-    } else if (currentDependency.sign === null) {
-      // If there is no sign for the current dependency, consider it satisfied
-      chainSatisfied = chainSatisfied || currentDependencySatisfied; // or simply chainSatisfied = true;
     }
 
-    // Add additional logic for "Range" type
     if (currentDependencySatisfied && currentDependency.question_type === 'Range') {
       const rangeSatisfied = await checkRangeDependency(currentDependency, answeredQuestions, results);
-
-      // Update the chainSatisfied based on the range dependency
       chainSatisfied = chainSatisfied === null ? rangeSatisfied : chainSatisfied && rangeSatisfied;
     }
   }
 
-  return chainSatisfied; // All dependencies satisfied with direct relations or no signs
+  return chainSatisfied;
 }
+
 
 async function checkRangeDependency(dependency, answeredQuestions, results) {
   // Implement the logic for "Range" type dependencies

@@ -63,7 +63,7 @@ router.patch('/api/v1/deleteDepartment',auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         let department_id = req.headers['department_id']
-        if(role=="admin" || role=="superadmin" ){
+        if(role=="owner" || role=="superadmin" ){
           let department = await departmentModel.findOneAndUpdate({_id:department_id,active:1},{active:0})
           if(department){
             res.json({message:"The department deleted successfully"})
