@@ -315,6 +315,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         if (users.length !== 0) {
             const simplifiedUsers = users.map(user => {
                 const response = {
+                    active: user.active,
                     _id: user._id,
                     user_name: user.user_name,
                     user_role: user.user_role,
@@ -322,7 +323,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                     email_address: user.email_address,
                     company_name: user.company_id ? user.company_id.company_name || "" : "",
                     department_name: user.department_id ? user.department_id.department_name || "" : "",
-                    image: user.company_id ? `${user.company_id.company_name}/${user.image}` : user.image,
+                    image: user.company_id && user.image!=""? `${user.company_id.company_name}/${user.image}` : "",
                 };
                 return response;
             });
@@ -337,6 +338,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
 router.post('/api/v1/resetPassword', async (req, res) => {
     try {
         let { user_name } = req.body
