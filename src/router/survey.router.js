@@ -580,7 +580,7 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
   for (let i = 0; i < dependencies.length; i++) {
     const currentDependency = dependencies[i];
     const currentDependencySatisfied = await checkDependencySatisfaction(currentDependency, answeredQuestions, results);
-
+     console.log(currentDependency.sign)
     if (currentDependency.sign === "&") {
       // Special handling for "and" relation
       const nextDependency = dependencies[i + 1];

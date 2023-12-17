@@ -299,10 +299,16 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                 select: "company_name -_id"
             });
         } else if (role === 'owner') {
-            users = await userModels.find({ user_role: 'admin' }).populate({
-                path: "company_id",
-                select: "company_name -_id"
-            });
+            users = await userModels.find({ user_role: 'admin' }).populate([
+                {
+                    path: "company_id",
+                    select: "company_name -_id"
+                },
+                {
+                    path: "department_id",
+                    select: "department_name"
+                }
+            ]);
         } else if (role === 'admin') {
             users = await userModels.find({ user_role: 'survey-reader' }).populate([
                 {
