@@ -575,7 +575,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
 }
 
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
-  let chainSatisfied = null;
+  let overallSatisfied = null;
 
   for (let i = 0; i < dependencies.length; i++) {
     const currentDependency = dependencies[i];
@@ -583,23 +583,37 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
 
     if (currentDependency.sign === "&") {
       // Special handling for "and" relation
-      if (chainSatisfied === null) {
-        chainSatisfied = currentDependencySatisfied;
-      } else {
-        chainSatisfied = chainSatisfied && currentDependencySatisfied;
+      const nextDependency = dependencies[i + 1];
+
+      if (nextDependency) {
+        const nextDependencySatisfied = await checkDependencySatisfaction(nextDependency, answeredQuestions, results);
+
+        // Apply "and" operation only between the current and the next dependency
+        const andResult = currentDependencySatisfied && nextDependencySatisfied;
+
+        // If the current dependency is not satisfied, set overall result to false
+        overallSatisfied = overallSatisfied === null ? andResult : overallSatisfied || andResult;
+
+        // Skip the next dependency since it's already processed
+        i++;
       }
     } else if (currentDependency.sign === "or" || currentDependency.sign === null) {
       // "or" relation when sign is explicitly set to "or" or when it's null
-      chainSatisfied = chainSatisfied || currentDependencySatisfied;
+      overallSatisfied = overallSatisfied || currentDependencySatisfied;
+    }
+
+    if (!currentDependencySatisfied && currentDependency.sign !== "&") {
+      // If any non-"and" dependency is not satisfied, set overall result to false
+      overallSatisfied = false;
     }
 
     if (currentDependencySatisfied && currentDependency.question_type === 'Range') {
       const rangeSatisfied = await checkRangeDependency(currentDependency, answeredQuestions, results);
-      chainSatisfied = chainSatisfied === null ? rangeSatisfied : chainSatisfied && rangeSatisfied;
+      overallSatisfied = overallSatisfied === null ? rangeSatisfied : overallSatisfied && rangeSatisfied;
     }
   }
 
-  return chainSatisfied;
+  return overallSatisfied;
 }
 
 
