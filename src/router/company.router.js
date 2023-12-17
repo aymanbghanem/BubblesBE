@@ -61,7 +61,7 @@ router.patch('/api/v1/deleteCompany',auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         let company_id = req.headers['company_id']
-        if(role=="admin" || role=="superadmin" ){
+        if(role=="admin" || role=="owner" || role=="superadmin" ){
           let company = await companyModel.findOneAndUpdate({_id:company_id,active:1},{active:0})
           if(company){
             res.json({message:"The company deleted successfully"})
