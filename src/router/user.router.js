@@ -285,32 +285,49 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
             return res.json({ message: "Sorry, you are unauthorized" });
         }
 
-        const roleQueries = {
-            superadmin: {
-                userQuery: { user_role: 'owner' },
-                populate: { path: 'company_id', select: 'company_name -_id' }
-            },
-            owner: {
-                userQuery: { user_role: 'admin', company_id: req.user.company_id },
-                populate: null
-            },
-            admin: {
-                userQuery: { user_role: 'survey-reader', department_id: req.user.department_id },
-                populate: null
-            }
-        };
+        let users;
 
-        const { userQuery, populate } = roleQueries[role] || {};
-        if (!userQuery) {
+        if (role === 'superadmin') {
+            users = await userModels.find({ user_role: 'owner' }).populate({
+                path: "company_id",
+                select: "company_name -_id"
+            });
+        } else if (role === 'owner') {
+            users = await userModels.find({ user_role: 'admin' }).populate({
+                path: "company_id",
+                select: "company_name -_id"
+            });
+        } else if (role === 'admin') {
+            users = await userModels.find({ user_role: 'survey-reader' }).populate([
+                {
+                    path: "company_id",
+                    select: "company_name -_id"
+                },
+                {
+                    path: "department_id",
+                    select: "department_name"
+                }
+            ]);
+        } else {
             return res.json({ message: "Invalid user role" });
         }
 
-        const users = await userModels.find({ ...userQuery })
-            .populate(populate)
-            .select(' -password');
-
         if (users.length !== 0) {
-            res.json({ message: users });
+            const simplifiedUsers = users.map(user => {
+                const response = {
+                    _id: user._id,
+                    user_name: user.user_name,
+                    user_role: user.user_role,
+                    token: user.token,
+                    email_address: user.email_address,
+                    company_name: user.company_id ? user.company_id.company_name || "" : "",
+                    department_name: user.department_id ? user.department_id.department_name || "" : "",
+                    image: user.company_id ? `${user.company_id.company_name}/${user.image}` : user.image,
+                };
+                return response;
+            });
+
+            res.json({ message: simplifiedUsers });
         } else {
             res.json({ message: "Sorry, there are no users under your role" });
         }
@@ -320,7 +337,6 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
-
 router.post('/api/v1/resetPassword', async (req, res) => {
     try {
         let { user_name } = req.body
