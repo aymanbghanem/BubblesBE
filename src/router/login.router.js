@@ -23,6 +23,7 @@ router.post('/api/v1/login', async (req, res) => {
           let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name }, { token }, { new: true });
           let response = {
             message: "login successfully",
+            token: user.token,
         };
           res.json({ response });
        // } else {

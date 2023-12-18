@@ -593,10 +593,16 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
         const andResult = currentDependencySatisfied && nextDependencySatisfied;
 
         // If the current dependency is not satisfied, set overall result to false
-        overallSatisfied = overallSatisfied === null ? andResult : overallSatisfied || andResult;
+        overallSatisfied = overallSatisfied === null ? andResult : overallSatisfied && andResult;
 
         // Skip the next dependency since it's already processed
         i++;
+
+        // Apply an additional "and" condition between the results of the first "and" relation and the second "and" relation
+        if (i < dependencies.length - 1 && dependencies[i + 1].sign === "&") {
+          overallSatisfied = overallSatisfied && await checkDependencySatisfaction(dependencies[i + 1], answeredQuestions, results);
+          i++;
+        }
       }
     } else if (currentDependency.sign === "or" || currentDependency.sign === null) {
       // "or" relation when sign is explicitly set to "or" or when it's null
@@ -616,6 +622,7 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
 
   return overallSatisfied !== null ? overallSatisfied : true;
 }
+
 
 async function checkRangeDependency(dependency, answeredQuestions, results) {
   // Implement the logic for "Range" type dependencies
