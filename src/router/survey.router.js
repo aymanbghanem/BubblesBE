@@ -156,7 +156,6 @@ function flattenLocationData(locationData, parentId = null) {
   }
   return result;
 }
-
 async function processAndStoreAnswers(answerArray, questionId, questionType, survey_id) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
@@ -176,8 +175,6 @@ async function processAndStoreAnswers(answerArray, questionId, questionType, sur
 
   return answerIdsAndTexts;
 }
-
-
 async function processAndStoreLocation(locationData, survey, user) {
   try {
     const department = user.department_id;
@@ -435,7 +432,6 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   }
 });
 
-
 //Get the questions which is in the first phase
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
   try {
@@ -574,7 +570,6 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
 
   return false;
 }
-
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
   let overallSatisfied = false;
 
@@ -621,7 +616,6 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
 
   return overallSatisfied;
 }
-
 async function checkRangeDependency(dependency, answeredQuestions, results) {
   // Implement the logic for "Range" type dependencies
   // You can use a similar approach as in checkDependencySatisfaction for "Range" type
@@ -649,6 +643,7 @@ async function checkRangeDependency(dependency, answeredQuestions, results) {
   return false;
 }
 
+//delete survey
 router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role
@@ -669,6 +664,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   }
 })
 
+//get survey by id
 router.get('/api/v1/getSurveyById', auth, async (req, res) => {
   try {
     const survey_id = req.headers['survey_id'];
@@ -820,6 +816,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     res.json({ message: "catch error " + error })
   }
 });
+
 // Helper function to fetch locations
 async function fetchLocations(survey_id) {
   const locations = await locationModel.find({
