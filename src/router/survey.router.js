@@ -569,7 +569,8 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
 }
 
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
-  let overallSatisfied = false;
+  let overallSatisfied = true;
+  let andResult = true;
 
   for (let i = 0; i < dependencies.length; i++) {
     const currentDependency = dependencies[i];
@@ -577,20 +578,7 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
 
     if (currentDependency.sign === "&") {
       // Special handling for "and" relation
-      const nextDependency = dependencies[i + 1];
-
-      if (nextDependency) {
-        const nextDependencySatisfied = await checkDependencySatisfaction(nextDependency, answeredQuestions, results);
-
-        // Apply "and" operation only between the current and the next dependency
-        const andResult = currentDependencySatisfied && nextDependencySatisfied;
-
-        // If the current dependency is not satisfied, set overall result to false
-        overallSatisfied = overallSatisfied || andResult;
-
-        // Skip the next dependency since it's already processed
-        i++;
-      }
+      andResult = andResult && currentDependencySatisfied;
     } else if (currentDependency.sign === "or" || currentDependency.sign === null) {
       // "or" relation when sign is explicitly set to "or" or when it's null
       overallSatisfied = overallSatisfied || currentDependencySatisfied;
@@ -611,6 +599,9 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
       overallSatisfied = overallSatisfied || rangeSatisfied;
     }
   }
+
+  // Consider "and" conditions after processing all dependencies
+  overallSatisfied = overallSatisfied && andResult;
 
   return overallSatisfied;
 }
