@@ -80,8 +80,6 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
   }
 });
 
-// Rest of the code remains unchanged...
-
 async function rollbackQuestions(questions, session) {
   console.log('Inside rollbackQuestions');
   console.log('Number of questions in rollbackQuestions:', questions.length);
@@ -526,7 +524,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
   const parentQuestionId = dependency.parent_id.toString();
   const relatedAnswer = dependency.related_answer;
   const sign = dependency.sign;
-  const flag = dependency.flag; // Corrected line
+  const flag = dependency.flag;
 
   const matchingAnsweredQuestion = answeredQuestions.find((answeredQuestion) => answeredQuestion._id === parentQuestionId);
 
@@ -550,7 +548,6 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
           const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]);
 
           if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
-            // Use the correct variable "flag" instead of "question.flag"
             if (flag === 1) {
               return userAnswer >= parseFloat(thresholdAnswer);
             } else if (flag === -1) {
@@ -570,6 +567,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
 
   return false;
 }
+
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
   let overallSatisfied = false;
 
@@ -616,6 +614,8 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
 
   return overallSatisfied;
 }
+
+
 async function checkRangeDependency(dependency, answeredQuestions, results) {
   // Implement the logic for "Range" type dependencies
   // You can use a similar approach as in checkDependencySatisfaction for "Range" type
