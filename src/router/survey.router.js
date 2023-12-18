@@ -658,7 +658,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
       let deleteLocations = await Location.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
       let deleteQuestions = await Question.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
       let deleteAnswers = await Answer.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      let surveyReader = await surveyReaderModel.updateMany({})
+      let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
       res.json({ message: "The survey and it is data deleted successfully" })
     }
     else {
