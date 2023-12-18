@@ -600,7 +600,7 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
       }
     } else if (currentDependency.sign === "or" || currentDependency.sign === null) {
       // "or" relation when sign is explicitly set to "or" or when it's null
-      overallSatisfied = overallSatisfied || currentDependencySatisfied;
+      overallSatisfied = overallSatisfied === null ? currentDependencySatisfied : overallSatisfied || currentDependencySatisfied;
     }
 
     if (!currentDependencySatisfied && currentDependency.sign !== "&") {
@@ -814,8 +814,6 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     res.json({ message: "catch error " + error })
   }
 });
-
-
 // Helper function to fetch locations
 async function fetchLocations(survey_id) {
   const locations = await locationModel.find({
