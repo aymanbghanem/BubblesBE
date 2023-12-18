@@ -40,6 +40,10 @@ const surveySchema = new Schema({
     location_id:{
         type: Schema.Types.ObjectId,
         ref: 'location'
+    },
+    responses:{
+        type:Number,
+        default:1
     }
 
 }, { timestamps: true })

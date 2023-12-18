@@ -278,11 +278,11 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
       const questionController = await QuestionController.findOne({
         question_type: new RegExp(`^${question_type}$`, 'i'),
       });
-    
+
       if (!questionController) {
         throw new Error(`Question type "${question_type}" not found in question_controller`);
       }
-    
+
       // Process and store answers only if the question type is not "text"
       if (questionTypeLowerCase !== "text") {
         const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, questionTypeLowerCase, survey_id);
@@ -339,7 +339,6 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 
   return updatedDependencies;
 }
-
 
 
 // Update the existing survey
@@ -708,6 +707,115 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     res.status(500).json({ message: "Internal server error", error: error.message });
   }
 });
+
+//get survey according to the department 
+router.get('/api/v1/getSurveys', auth, async (req, res) => {
+  try {
+    let role = req.user.user_role
+    let id = req.user._id
+    let department_id = req.user.department_id
+    if (role == "admin") {
+      // Retrieve the surveys in the admin's department
+      let surveys = await surveyModel.find({ department_id: department_id, active: 1 }).populate(
+        [{
+          path: 'company_id',
+          select: 'company_name -_id',
+        },
+        {
+          path: 'department_id',
+          select: 'department_name',
+        },
+        {
+          path: 'created_by',
+          select: 'user_name -_id',
+        }
+        ]
+      )
+
+      // Flatten the data structure
+      let flattenedSurveys = surveys.map(item => {
+        return {
+          _id: item._id,
+          survey_title: item.survey_title,
+          department_name: item.department_id.department_name, // Include department_name directly
+          responses: item.responses,
+          created_by: item.created_by.user_name,
+          active: item.active,
+          survey_description: item.survey_description,
+          //item.company_id && item.logo != "" ? `${item.company_id.company_name}/${item.logo}` : ""
+          logo: item.company_id && item.logo != "" ? `${item.company_id.company_name}/${item.logo}` : "",
+          submission_pwd: item.submission_pwd,
+          background_color: item.background_color,
+          question_text_color: item.question_text_color,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          __v: item.__v
+        };
+      });
+
+      if (flattenedSurveys.length > 0) {
+        res.json({ message: flattenedSurveys });
+      } else {
+        res.json({ message: "No data found" });
+      }
+    } 
+    else if (role == "survey-reader") {
+      let surveys = await surveyReaderModel
+      .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
+      .populate([
+        {
+          path: 'company_id',
+          select: 'company_name -_id',
+        },
+        {
+          path: 'department_id',
+          select: 'department_name',
+        },
+        {
+          path: 'reader_id',
+          select: 'user_name -_id',
+        },
+        {
+          path: 'survey_id',
+          select: 'survey_title responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+        }
+      ]);
+
+    // Transform the data structure
+    let transformedSurveys = surveys.map(item => {
+      return {
+        _id: item.survey_id._id,
+        survey_title: item.survey_id.survey_title,
+        department_name: item.department_id.department_name,
+        responses: item.survey_id.responses,
+        created_by: item.survey_id.created_by.user_name,
+        active: item.survey_id.active,
+        survey_description: item.survey_id.survey_description,
+        logo: item.company_id && item.survey_id.logo != "" ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
+        submission_pwd: item.survey_id.submission_pwd,
+        background_color: item.survey_id.background_color,
+        question_text_color: item.survey_id.question_text_color,
+        createdAt: item.survey_id.createdAt,
+        updatedAt: item.survey_id.updatedAt,
+      };
+    });
+
+    if (transformedSurveys.length > 0) {
+      res.json({ message: transformedSurveys });
+    } else {
+      res.json({ message: "No data found" });
+    }
+
+     
+    } else {
+      res.json({ message: "sorry, you are unauthorized" })
+    }
+  } catch (error) {
+    res.json({ message: "catch error " + error })
+  }
+});
+
+
 // Helper function to fetch locations
 async function fetchLocations(survey_id) {
   const locations = await locationModel.find({
@@ -736,54 +844,6 @@ function buildTree(locations, parentId) {
   return tree;
 }
 
-//get survey according to the department 
-router.get('/api/v1/getSurveys', auth, async (req, res) => {
-  try {
-    let role = req.user.user_role
-    let id = req.user._id
-    let department_id = req.user.department_id
-    if (role == "admin") {
-       //the surveys in his department
-      let survey = await surveyModel.find({ department_id: department_id, active: 1 })
-        .select('survey_title')
-      if (survey.length > 0) {
-        res.json({ message: survey })
-      }
-      else {
-        res.json({ message: "No data found" })
-      }
-    }
-    else if (role == "survey-reader") {
-      // Retrieve the surveys assigned to the reader
-      let surveys = await surveyReaderModel
-          .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
-          .populate({
-              path: "survey_id",
-              select: "survey_title",
-              model: "survey"
-          })
-          .select('survey_title');
-      // Transform the data structure
-      let transformedSurveys = surveys.map(item => {
-          return {
-              _id: item.survey_id._id,
-              survey_title: item.survey_id.survey_title
-          };
-      });
-  
-      if (transformedSurveys.length > 0) {
-          res.json({ message: transformedSurveys });
-      } else {
-          res.json({ message: "No data found" });
-      }
-  }
-    else {
-      res.json({ message: "sorry, you are unauthorized" })
-    }
-  } catch (error) {
-    res.json({ message: "catch error " + error })
-  }
-});
 
 module.exports = router
 

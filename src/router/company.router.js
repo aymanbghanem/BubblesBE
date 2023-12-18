@@ -2,6 +2,12 @@ const express = require("express");
 const router = express.Router();
 const config = require('../../config')
 const companyModel = require('../models/company.models')
+const locationModel = require("../../src/models/location.models");
+const Answer = require("../models/answers.model")
+const QuestionController = require('../models/questions_controller.models')
+const userModels = require("../models/user.models");
+const departmentModel = require('../models/department.models')
+const surveyReaderModel = require('../models/surveyReader.model')
 const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
@@ -57,24 +63,37 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
         res.json({message:"catch error "+error})
     }
 })
-router.patch('/api/v1/deleteCompany',auth,async(req,res)=>{
+
+router.put('/api/v1/deleteCompany', auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let company_id = req.headers['company_id']
-        if(role=="admin" || role=="owner" || role=="superadmin" ){
-          let company = await companyModel.findOneAndUpdate({_id:company_id,active:1},{active:0})
-          if(company){
-            res.json({message:"The company deleted successfully"})
-          }
-          else{
-            res.json({message:"The company you are looking for not found"})
-          }
-        }
-        else{
-            res.json({message:"sorry, you are unauthorized"}) 
+        if (role == "admin" || role == "owner" || role == "superadmin") {
+            // Delete company and related entities
+            let company = await companyModel.findOneAndUpdate({ _id: company_id, active: 1 }, { active: 0 })
+            let user = await userModels.updateMany({ company_id: company_id, active: 1 }, { active: 0 })
+            let department = await departmentModel.updateMany({ company_id: company_id, active: 1 }, { active: 0 })
+
+            // Delete surveys and related entities
+            let surveys = await surveyModel.find({ company_id: company_id, active: 1 })
+            for (const survey of surveys) {
+                await surveyReaderModel.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 })
+                await questionModel.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 })
+                await answerModel.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 })
+                await locationModel.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 })
+            }
+
+            if (company) {
+                res.json({ message: "The company and associated entities deleted successfully" })
+            } else {
+                res.json({ message: "The company you are looking for not found" })
+            }
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" })
         }
     } catch (error) {
-        res.json({message:"catch error "+error})
+        res.json({ message: "Catch error " + error })
     }
 })
+
 module.exports = router
