@@ -56,7 +56,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
   } catch (error) {
     // Rollback in case of an error
     try {
-      console.log('Before rollbackQuestions'); // Add this line
+       
       if (session) {
         await session.abortTransaction();
         session.endSession();
