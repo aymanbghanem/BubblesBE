@@ -576,7 +576,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
 }
 
 async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuestions, results) {
-  let overallSatisfied = null;
+  let overallSatisfied = false;
 
   for (let i = 0; i < dependencies.length; i++) {
     const currentDependency = dependencies[i];
@@ -593,20 +593,19 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
         const andResult = currentDependencySatisfied && nextDependencySatisfied;
 
         // If the current dependency is not satisfied, set overall result to false
-        overallSatisfied = overallSatisfied === null ? andResult : overallSatisfied && andResult;
+        overallSatisfied = overallSatisfied || andResult;
 
         // Skip the next dependency since it's already processed
         i++;
-
-        // Apply an additional "and" condition between the results of the first "and" relation and the second "and" relation
-        if (i < dependencies.length - 1 && dependencies[i + 1].sign === "&") {
-          overallSatisfied = overallSatisfied && await checkDependencySatisfaction(dependencies[i + 1], answeredQuestions, results);
-          i++;
-        }
       }
     } else if (currentDependency.sign === "or" || currentDependency.sign === null) {
       // "or" relation when sign is explicitly set to "or" or when it's null
-      overallSatisfied = overallSatisfied === null ? currentDependencySatisfied : overallSatisfied || currentDependencySatisfied;
+      overallSatisfied = overallSatisfied || currentDependencySatisfied;
+
+      // If the current dependency is satisfied, we can break out of the loop since "or" condition is met
+      if (currentDependencySatisfied) {
+        break;
+      }
     }
 
     if (!currentDependencySatisfied && currentDependency.sign !== "&") {
@@ -616,13 +615,12 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
 
     if (currentDependencySatisfied && currentDependency.question_type === 'Range') {
       const rangeSatisfied = await checkRangeDependency(currentDependency, answeredQuestions, results);
-      overallSatisfied = overallSatisfied === null ? rangeSatisfied : overallSatisfied && rangeSatisfied;
+      overallSatisfied = overallSatisfied || rangeSatisfied;
     }
   }
 
-  return overallSatisfied !== null ? overallSatisfied : true;
+  return overallSatisfied;
 }
-
 
 async function checkRangeDependency(dependency, answeredQuestions, results) {
   // Implement the logic for "Range" type dependencies

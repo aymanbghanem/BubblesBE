@@ -54,14 +54,21 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
 router.get('/api/v1/getDepartments',auth,async(req,res)=>{
     try {
         let company_id = req.user.company_id
-       let departments = await departmentModel.find({company_id:company_id,active:1})
-       .select('department_name') 
-       if(departments.length>0){
-        res.json(departments)
-       }
-       else{
-        res.json({message:"No data found"})
-       }
+        let role = req.user.user_role
+        if(role=="owner"){
+            let departments = await departmentModel.find({company_id:company_id,active:1})
+            .select('department_name') 
+            if(departments.length>0){
+             res.json(departments)
+            }
+            else{
+                res.json({message:"No data found"})
+               }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized"})
+        }
+      
     } catch (error) {
         res.json({message:"catch error "+error})
     }

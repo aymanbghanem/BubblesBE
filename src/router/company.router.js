@@ -52,15 +52,23 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
         res.status(500).json({ message: "Catch error: " + error });
     }
 });
+
 router.get('/api/v1/getCompanies',auth,async(req,res)=>{
     try {
+       let role = req.user.user_role
+      
+       if(role=="owner"){
+        let companies = await companyModel.find({active:1}).select('company_name') 
 
-       let companies = await companyModel.find({active:1}).select('company_name') 
-       if(companies.length>0){
-        res.json(companies)
+        if(companies.length>0){
+            res.json(companies)
+           }
+           else{
+            res.json({message:"No data found"})
+           }
        }
        else{
-        res.json({message:"No data found"})
+        res.json({message:"sorry, you are unauthorized"})
        }
     } catch (error) {
         res.json({message:"catch error "+error})
