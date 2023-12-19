@@ -157,7 +157,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 department_id: req.user.department_id,
             });
             // Check if there are surveys to assign
-            if (survey ) {
+            if (survey) {
                
                     // Get the survey information
                     const surveyInfo = await surveyModel.findOne({
@@ -176,7 +176,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                         });
                     } else {
                         
-                        console.error(`Survey not found: ${survey[i]}`);
+                        console.error(`Survey not found`);
                     }
                 
             }
