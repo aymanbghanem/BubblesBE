@@ -30,7 +30,7 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
             }));
 
             if (existingDepartments.some(existingDepartment => existingDepartment)) {
-                res.json({ message: "One or more department names already exist for your company", departments: existingDepartments });
+                res.json({ message: "This department already exist in your company", departments: existingDepartments });
             } else {
                 const createdDepartments = await Promise.all(departmentsData.map(async (department) => {
                     const createdDepartment = await departmentModel.create({
