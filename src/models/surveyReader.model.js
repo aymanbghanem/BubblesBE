@@ -16,8 +16,7 @@ const surveyReaderSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'user'
     },
-    company_logo: String,
-
+    
     active: {
         type: Number,
         default: 1

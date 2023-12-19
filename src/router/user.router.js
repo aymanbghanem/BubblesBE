@@ -156,30 +156,28 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 department_id: req.user.department_id,
             });
             // Check if there are surveys to assign
-            if (survey && survey.length > 0) {
-                // Assign surveys to the user
-                for (let i = 0; i < survey.length; i++) {
+            if (survey ) {
+               
                     // Get the survey information
                     const surveyInfo = await surveyModel.findOne({
-                        _id: survey[i],
+                        _id: survey,
                         company_id: req.user.company_id,
                         active: 1,
                     });
                     if (surveyInfo) {
                         let survey_reader = await surveyReaderModel.create({
-                            survey_id: survey[i],
+                            survey_id: survey,
                             company_id: req.user.company_id,
                             department_id: user.department_id,
                             reader_id: user._id,
-                            company_logo: user.company_logo,
-                            created_by: surveyInfo.created_by, // Assign the survey creator
+                            created_by: req.user._id, // Assign the survey reader creator
                             active: 1,
                         });
                     } else {
-                        // Handle the case when the survey is not found
+                        
                         console.error(`Survey not found: ${survey[i]}`);
                     }
-                }
+                
             }
 
             return res.json({
@@ -327,7 +325,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
     }
 });
 
-router.post('/api/v1/assignSurveys',auth,async(req,res)=>{
+router.post('/api/v1/assignSurveysReader',auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         let {survey_id,reader_id} = req.body
@@ -338,16 +336,28 @@ router.post('/api/v1/assignSurveys',auth,async(req,res)=>{
                 company_id: req.user.company_id,
                 active: 1,
             });
-            if (surveyInfo) {
-                let survey_reader = await surveyReaderModel.create({
-                    survey_id: survey_id,
-                    company_id: req.user.company_id,
-                    department_id: req.user.department_id,
-                    reader_id: reader_id,
-                    company_logo: user.company_logo,
-                    created_by: surveyInfo.created_by, // Assign the survey creator
-                    active: 1,
-                });
+            const user  = await userModels.findOne({
+                _id:reader_id,
+                active:1
+            })
+            if(user){
+                if (surveyInfo) {
+                    let survey_reader = await surveyReaderModel.create({
+                        survey_id: survey_id,
+                        company_id: surveyInfo.company_id,
+                        department_id: surveyInfo.department_id,
+                        reader_id: reader_id,
+                        created_by: req.user._id, // Assign the survey creator
+                        active: 1,
+                    });
+                    res.json({message:"Successfully added"})
+                }
+                else{
+                    res.json({message:"The survey you are looking for does not found"})
+                }
+            }
+            else{
+                res.json({message:"The user you are looking for does not found"})
             }
         }
         else{
