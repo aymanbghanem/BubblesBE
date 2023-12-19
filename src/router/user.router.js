@@ -525,7 +525,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
         );
         
         const deletedSurveyReader = await surveyReaderModel.updateMany(
-            { _id: { $in: user_ids }, active: 1 },
+            { reader_id: { $in: user_ids }, active: 1 },
             { $set: { active: 0 } }
         );
 
