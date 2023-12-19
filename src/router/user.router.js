@@ -458,7 +458,7 @@ router.post('/api/v1/assignSurveysReader',auth,async(req,res)=>{
             }
         }
         else{
-            res.json({message:"sorry, you are unauthorized or the survey id not assigned"})
+            res.json({message:"sorry, you are unauthorized"})
         }
     } catch (error) {
         res.json({message:"catch error "+error})
