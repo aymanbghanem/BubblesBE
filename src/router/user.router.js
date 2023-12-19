@@ -244,6 +244,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
     }
 });
 
+
 router.get('/api/v1/userInfo', auth, async (req, res) => {
     try {
         let id = req.user._id;
@@ -279,6 +280,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
     }
 });
 
+
 router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
     try {
         let { user_name, email_address, image } = req.body
@@ -303,7 +305,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
                         return res.json({ message: "Email address is not unique. Please choose a different email." });
                     }
                 }
-               else{
+               
                 let updateUser = await userModels.findByIdAndUpdate(
                     { _id: existingUser._id },
                     {
@@ -314,7 +316,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
                 );
 
                 return res.json({ message: "successfully updated", updateUser });
-               }
+             
                
             } else {
                 return res.json({ message: "The user is not in the system" });
