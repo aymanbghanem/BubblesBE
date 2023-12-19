@@ -56,7 +56,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
   } catch (error) {
     // Rollback in case of an error
     try {
-       
+
       if (session) {
         await session.abortTransaction();
         session.endSession();
@@ -474,48 +474,56 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
     const results = [];
+    let survey_id = req.headers['survey_id']
     const { phase, answered_questions } = req.body;
 
-    let phaseQuestions = await Question.find({ phase: phase, active: 1 });
-     
-   
+    let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 });
+
     const responses = [];
+    const maxPhase = await Question.findOne({ survey_id: survey_id, active: 1 })
+      .sort({ phase: -1 }) // Sort in descending order of phase number
+      .limit(1)
+      .select('phase');
+    let phaseNum = maxPhase.phase
 
-    for (const question of phaseQuestions) {
-      let dependenciesSatisfied = true;
+    if (phase <= phaseNum) {
+      for (const question of phaseQuestions) {
+        let dependenciesSatisfied = true;
 
-      if (question.question_dependency && question.question_dependency.length > 0) {
-        if (question.question_dependency.length === 1) {
-          // Keep the existing logic for a single dependency
-          const dependency = question.question_dependency[0];
-          const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
+        if (question.question_dependency && question.question_dependency.length > 0) {
+          if (question.question_dependency.length === 1) {
+            // Keep the existing logic for a single dependency
+            const dependency = question.question_dependency[0];
+            const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
 
-          if (!isDependencySatisfied) {
-            dependenciesSatisfied = false;
-          }
-        } else {
-          // New logic for multiple dependencies
-          const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
+            if (!isDependencySatisfied) {
+              dependenciesSatisfied = false;
+            }
+          } else {
+            // New logic for multiple dependencies
+            const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
 
-          if (!isMultipleDependenciesSatisfied) {
-            dependenciesSatisfied = false;
+            if (!isMultipleDependenciesSatisfied) {
+              dependenciesSatisfied = false;
+            }
           }
         }
-      }
 
-      if (dependenciesSatisfied) {
-        responses.push({
-          child_id: question._id,
-          question_text: question.question_title,
-          phase: question.phase,
-          // Add other necessary fields
-        });
+        if (dependenciesSatisfied) {
+          responses.push({
+            child_id: question._id,
+            question_text: question.question_title,
+            phase: question.phase,
+          });
+        }
       }
+      return res.json(responses);
     }
-
-    // Send the response after processing all questions
-    return res.json(responses);
-  } catch (error) {
+    else{
+      res.json({message:"No more questions"})
+    }
+  }
+  catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
@@ -752,55 +760,55 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
       } else {
         res.json({ message: "No data found" });
       }
-    } 
+    }
     else if (role == "survey-reader") {
       let surveys = await surveyReaderModel
-      .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
-      .populate([
-        {
-          path: 'company_id',
-          select: 'company_name -_id',
-        },
-        {
-          path: 'department_id',
-          select: 'department_name',
-        },
-        {
-          path: 'reader_id',
-          select: 'user_name -_id',
-        },
-        {
-          path: 'survey_id',
-          select: 'survey_title responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
-        }
-      ]);
+        .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
+        .populate([
+          {
+            path: 'company_id',
+            select: 'company_name -_id',
+          },
+          {
+            path: 'department_id',
+            select: 'department_name',
+          },
+          {
+            path: 'reader_id',
+            select: 'user_name -_id',
+          },
+          {
+            path: 'survey_id',
+            select: 'survey_title responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+          }
+        ]);
 
-    // Transform the data structure
-    let transformedSurveys = surveys.map(item => {
-      return {
-        _id: item.survey_id._id,
-        survey_title: item.survey_id.survey_title,
-        department_name: item.department_id.department_name,
-        responses: item.survey_id.responses,
-        created_by: item.survey_id.created_by.user_name,
-        active: item.survey_id.active,
-        survey_description: item.survey_id.survey_description,
-        logo: item.company_id && item.survey_id.logo != "" ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
-        submission_pwd: item.survey_id.submission_pwd,
-        background_color: item.survey_id.background_color,
-        question_text_color: item.survey_id.question_text_color,
-        createdAt: item.survey_id.createdAt,
-        updatedAt: item.survey_id.updatedAt,
-      };
-    });
+      // Transform the data structure
+      let transformedSurveys = surveys.map(item => {
+        return {
+          _id: item.survey_id._id,
+          survey_title: item.survey_id.survey_title,
+          department_name: item.department_id.department_name,
+          responses: item.survey_id.responses,
+          created_by: item.survey_id.created_by.user_name,
+          active: item.survey_id.active,
+          survey_description: item.survey_id.survey_description,
+          logo: item.company_id && item.survey_id.logo != "" ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
+          submission_pwd: item.survey_id.submission_pwd,
+          background_color: item.survey_id.background_color,
+          question_text_color: item.survey_id.question_text_color,
+          createdAt: item.survey_id.createdAt,
+          updatedAt: item.survey_id.updatedAt,
+        };
+      });
 
-    if (transformedSurveys.length > 0) {
-      res.json({ message: transformedSurveys });
-    } else {
-      res.json({ message: "No data found" });
-    }
+      if (transformedSurveys.length > 0) {
+        res.json({ message: transformedSurveys });
+      } else {
+        res.json({ message: "No data found" });
+      }
 
-     
+
     } else {
       res.json({ message: "sorry, you are unauthorized" })
     }
