@@ -30,7 +30,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
         let hashedPassword;
         const role = req.user.user_role.toLowerCase();
-        
+
         let newPassword = await generateMixedID()
 
         const { user_name, email_address, company_name, department_name, survey } = req.body;
@@ -58,16 +58,16 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 company_name: { $regex: new RegExp("^" + company_name, "i") },
                 active: 1,
             });
-           if(company){
-            const ownerError = await addOwner(company);
-            if (ownerError) {
-                return res.json({ message: ownerError  });
-            }
-            else {
-              
-                console.log(company)
-              //  await hashPassword(newPassword, async (hash) => {
-                   // hashedPassword = hash;
+            if (company) {
+                const ownerError = await addOwner(company);
+                if (ownerError) {
+                    return res.json({ message: ownerError });
+                }
+                else {
+
+                    console.log(company)
+                    //  await hashPassword(newPassword, async (hash) => {
+                    // hashedPassword = hash;
 
                     const user = await userModels.create({
                         user_name: user_name,
@@ -86,19 +86,19 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                         email_address: user.email_address,
                         image: user.image
                     });
-              //  })
+                    //  })
+                }
             }
-           }
-           else{
-            res.json({message:"The company does not exist"})
-           }
+            else {
+                res.json({ message: "The company does not exist" })
+            }
         }
 
 
         else if (department_name && role == 'owner') {
-           // await hashPassword(newPassword, async (hash) => {
-              //  hashedPassword = hash;
-              
+            // await hashPassword(newPassword, async (hash) => {
+            //  hashedPassword = hash;
+
             const department = await departmentModel.findOne({
                 department_name: { $regex: new RegExp("^" + department_name, "i") },
                 company_id: req.user.company_id,
@@ -131,17 +131,16 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 email_address: user.email_address,
                 image: user.image
             });
-               
-                // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-              
-          //  })
+
+            // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
+
+            //  })
         }
         else if (role === 'admin') {
-            let user;
-             
+            
             //await hashPassword(newPassword, async (hash) => {
-           // hashedPassword = hash;
-
+            // hashedPassword = hash;
+            let user;
             // Set user parameters
             const userParams = {
                 user_name: user_name,
@@ -150,36 +149,36 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 user_role: 'survey-reader',
                 token: token,
             };
-
             // Create a new user
             user = await userModels.create({
                 ...userParams,
                 company_id: req.user.company_id,
                 department_id: req.user.department_id,
             });
-
-            // Assign surveys to the user
-            for (let i = 0; i < survey.length; i++) {
-                // Get the survey information
-                const surveyInfo = await surveyModel.findOne({
-                    _id: survey[i],
-                    company_id: req.user.company_id,
-                    active: 1,
-                });
-
-                if (surveyInfo) {
-                    let survey_reader = await surveyReaderModel.create({
-                        survey_id: survey[i],
+            // Check if there are surveys to assign
+            if (survey && survey.length > 0) {
+                // Assign surveys to the user
+                for (let i = 0; i < survey.length; i++) {
+                    // Get the survey information
+                    const surveyInfo = await surveyModel.findOne({
+                        _id: survey[i],
                         company_id: req.user.company_id,
-                        department_id: user.department_id,
-                        reader_id: user._id,
-                        company_logo: user.company_logo,
-                        created_by: surveyInfo.created_by, // Assign the survey creator
                         active: 1,
                     });
-                } else {
-                    // Handle the case when the survey is not found
-                    console.error(`Survey not found: ${survey[i]}`);
+                    if (surveyInfo) {
+                        let survey_reader = await surveyReaderModel.create({
+                            survey_id: survey[i],
+                            company_id: req.user.company_id,
+                            department_id: user.department_id,
+                            reader_id: user._id,
+                            company_logo: user.company_logo,
+                            created_by: surveyInfo.created_by, // Assign the survey creator
+                            active: 1,
+                        });
+                    } else {
+                        // Handle the case when the survey is not found
+                        console.error(`Survey not found: ${survey[i]}`);
+                    }
                 }
             }
 
@@ -195,8 +194,6 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             //  });
 
         }
-
-
         else {
             return res.json({ message: "sorry, you are unauthorized" });
         }
@@ -325,7 +322,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         let users;
 
         if (role === 'superadmin') {
-            users = await userModels.find({ user_role: 'owner'}).populate({
+            users = await userModels.find({ user_role: 'owner' }).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
@@ -341,7 +338,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                 }
             ]);
         } else if (role === 'admin') {
-            users = await userModels.find({ user_role: 'survey-reader', company_id: company_id ,department_id:req.user.department_id }).populate([
+            users = await userModels.find({ user_role: 'survey-reader', company_id: company_id, department_id: req.user.department_id }).populate([
                 {
                     path: "company_id",
                     select: "company_name -_id"
