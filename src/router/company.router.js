@@ -58,7 +58,7 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
        let role = req.user.user_role
       
        if(role=="superadmin"){
-        let companies = await companyModel.find({active:1}).select('company_name') 
+        let companies = await companyModel.find({active:1}).select('company_name active') 
 
         if(companies.length>0){
             res.json(companies)

@@ -57,7 +57,7 @@ router.get('/api/v1/getDepartments',auth,async(req,res)=>{
         let role = req.user.user_role
         if(role=="owner"){
             let departments = await departmentModel.find({company_id:company_id,active:1})
-            .select('department_name') 
+            .select('department_name active') 
             if(departments.length>0){
              res.json(departments)
             }
