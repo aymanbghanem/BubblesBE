@@ -137,7 +137,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             //  })
         }
         else if (role === 'admin') {
-            
+
             //await hashPassword(newPassword, async (hash) => {
             // hashedPassword = hash;
             let user;
@@ -183,7 +183,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             }
 
             return res.json({
-                message: "User created successfully",
+                message: "Successfully added",
                 user: {
                     token: user.token,
                     user_role: user.user_role,
@@ -289,27 +289,43 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
             let existingUser = await userModels.findOne({
                 user_name: user_name,
                 active: 1,
-                company_id: company_id
             })
-            if (existingUser) {
-                let updateUser = await userModels.findByIdAndUpdate({ _id: existingUser._id }, {
-                    email_address: email_address ? email_address : existingUser.email_address,
-                    image: image ? image : existingUser.image
-                }, { new: true })
-                res.json({ message: "successfully updated", updateUser })
-            }
-            else {
-                res.json({ message: "The user is not in the system" })
-            }
-        }
-        else {
-            res.json({ message: "sorry, you are unauthorized" })
-        }
 
+            if (existingUser) {
+                // Check if the updated email is unique
+                if (email_address && email_address !== existingUser.email_address) {
+                    const isEmailUnique = await userModels.findOne({
+                        email_address: email_address,
+                        _id: { $ne: existingUser._id } // Exclude the current user from the check
+                    });
+
+                    if (isEmailUnique) {
+                        return res.json({ message: "Email address is not unique. Please choose a different email." });
+                    }
+                }
+               else{
+                let updateUser = await userModels.findByIdAndUpdate(
+                    { _id: existingUser._id },
+                    {
+                        email_address: email_address ? email_address : existingUser.email_address,
+                        image: image ? image : existingUser.image
+                    },
+                    { new: true }
+                );
+
+                return res.json({ message: "successfully updated", updateUser });
+               }
+               
+            } else {
+                return res.json({ message: "The user is not in the system" });
+            }
+        } else {
+            return res.json({ message: "sorry, you are unauthorized" });
+        }
     } catch (error) {
-        res.json({ message: "catch error " + error })
+        return res.json({ message: "catch error " + error });
     }
-})
+});
 
 router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
     try {

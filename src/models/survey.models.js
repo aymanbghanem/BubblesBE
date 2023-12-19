@@ -44,6 +44,12 @@ const surveySchema = new Schema({
     responses:{
         type:Number,
         default:0
+    },
+    title_font_size: {
+        type: String
+    },
+    description_font_size: {
+        type: String
     }
 
 }, { timestamps: true })
