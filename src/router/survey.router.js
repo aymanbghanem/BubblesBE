@@ -646,23 +646,25 @@ async function checkRangeDependency(dependency, answeredQuestions, results) {
 //delete survey
 router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
-    let role = req.user.user_role
-    let survey_id = req.headers['survey_id']
-    if (role == "admin") {
-      let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, active: 1 }, { active: 0 })
-      let deleteLocations = await Location.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      let deleteQuestions = await Question.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      let deleteAnswers = await Answer.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 })
-      res.json({ message: "The survey and it is data deleted successfully" })
-    }
-    else {
-      res.json({ message: "sorry, you are unauthorized" })
+    let role = req.user.user_role;
+    let survey_id = req.headers['survey_id'];
+    let company_id = req.user.company_id
+    let survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).select('company_id -_id');
+
+    if (role === "admin" && company_id === survey.company_id) {
+      let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, company_id: req.user.company_id, active: 1 }, { active: 0 });
+      let deleteLocations = await Location.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 });
+      let deleteQuestions = await Question.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 });
+      let deleteAnswers = await Answer.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 });
+      let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 });
+      res.json({ message: "The survey and its data were deleted successfully" });
+    } else {
+      res.json({ message: "Sorry, you are unauthorized" });
     }
   } catch (error) {
-    res.json({ message: "catch error " + error })
+    res.json({ message: "Catch error: " + error });
   }
-})
+});
 
 //get survey by id
 router.get('/api/v1/getSurveyById', auth, async (req, res) => {
