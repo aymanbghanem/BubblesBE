@@ -477,7 +477,8 @@ router.post('/api/v1/getQuestions', async (req, res) => {
     const { phase, answered_questions } = req.body;
 
     let phaseQuestions = await Question.find({ phase: phase, active: 1 });
-
+     
+   
     const responses = [];
 
     for (const question of phaseQuestions) {
