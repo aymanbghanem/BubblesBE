@@ -326,7 +326,6 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
     }
 });
 
-
 router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
     try {
         const role = req.user.user_role;
@@ -504,6 +503,41 @@ router.put('/api/v1/deleteAssignedSurveyReader',auth,async(req,res)=>{
         res.json({message:"catch error"})
     }
 })
+
+router.get('/api/v1/userById', async (req, res) => {
+    try {
+        let id = req.headers['id'];
+        let user = await userModels.findOne({ _id: id, active: 1 }).populate([
+            {
+                path: 'company_id',
+                select: 'company_name -_id',
+            },
+            {
+                path: 'department_id',
+                select: 'department_name',
+            },
+        ]);
+
+        if (user) {
+            let response = {
+                _id: user._id,
+                user_name: user.user_name,
+                user_role: user.user_role,
+                token: user.token,
+                email_address: user.email_address,
+                company_name: user.company_id ? user.company_id.company_name || " " : " ",
+                department_name: user.department_id ? user.department_id.department_name || " " : " ",
+                image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
+            };
+
+            res.json({ message: response });
+        } else {
+            res.json({ message: "The user is not in the system" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "catch error " + error });
+    }
+});
 
 router.post('/api/v1/deleteUsers', auth, async (req, res) => {
     try {
