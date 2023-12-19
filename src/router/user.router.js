@@ -157,7 +157,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 department_id: req.user.department_id,
             });
             // Check if there are surveys to assign
-            if (survey) {
+            if (survey.length!=0) {
                
                     // Get the survey information
                     const surveyInfo = await surveyModel.findOne({
