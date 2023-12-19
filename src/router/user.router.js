@@ -244,7 +244,6 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
     }
 });
 
-
 router.get('/api/v1/userInfo', auth, async (req, res) => {
     try {
         let id = req.user._id;
@@ -279,7 +278,6 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
         res.status(500).json({ message: "catch error " + error });
     }
 });
-
 
 router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
     try {
@@ -328,6 +326,37 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
         return res.json({ message: "catch error " + error });
     }
 });
+
+router.post('/api/v1/assignSurveys',auth,async(req,res)=>{
+    try {
+        let role = req.user.user_role
+        let {survey_id,reader_id} = req.body
+        if(role=="admin" && survey_id){
+
+            const surveyInfo = await surveyModel.findOne({
+                _id: survey_id,
+                company_id: req.user.company_id,
+                active: 1,
+            });
+            if (surveyInfo) {
+                let survey_reader = await surveyReaderModel.create({
+                    survey_id: survey_id,
+                    company_id: req.user.company_id,
+                    department_id: req.user.department_id,
+                    reader_id: reader_id,
+                    company_logo: user.company_logo,
+                    created_by: surveyInfo.created_by, // Assign the survey creator
+                    active: 1,
+                });
+            }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized or the survey id not assigned"})
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 
 router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
     try {
