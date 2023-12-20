@@ -243,6 +243,43 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
     }
 });
 
+
+
+router.get('/api/v1/userById', async (req, res) => {
+    try {
+        let id = req.headers['id'];
+        let user = await userModels.findOne({ _id: id, active: 1 }).populate([
+            {
+                path: 'company_id',
+                select: 'company_name -_id',
+            },
+            {
+                path: 'department_id',
+                select: 'department_name',
+            },
+        ]);
+
+        if (user) {
+            let response = {
+                _id: user._id,
+                user_name: user.user_name,
+                user_role: user.user_role,
+                token: user.token,
+                email_address: user.email_address,
+                company_name: user.company_id ? user.company_id.company_name || " " : " ",
+                department_name: user.department_id ? user.department_id.department_name || " " : " ",
+                image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
+            };
+
+            res.json({ message: response });
+        } else {
+            res.json({ message: "The user is not in the system" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "catch error " + error });
+    }
+});
+
 router.get('/api/v1/userInfo', auth, async (req, res) => {
     try {
         let id = req.user._id;
@@ -277,56 +314,6 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
         res.status(500).json({ message: "catch error " + error });
     }
 });
-
-router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
-    try {
-        let { user_name, email_address, image } = req.body
-        let role = req.user.user_role
-        let company_id = req.user.company_id
-
-        if (config.roles.includes(role)) {
-            let existingUser = await userModels.findOne({
-                user_name: user_name,
-                active: 1,
-            })
-
-            if (existingUser) {
-                // Check if the updated email is unique
-                if (email_address && email_address !== existingUser.email_address) {
-                    const isEmailUnique = await userModels.findOne({
-                        email_address: email_address,
-                        _id: { $ne: existingUser._id } // Exclude the current user from the check
-                    });
-
-                    if (isEmailUnique) {
-                        return res.json({ message: "Email address is not unique. Please choose a different email." });
-                    }
-                }
-
-                let updateUser = await userModels.findByIdAndUpdate(
-                    { _id: existingUser._id },
-                    {
-                        email_address: email_address ? email_address : existingUser.email_address,
-                        image: image ? image : existingUser.image
-                    },
-                    { new: true }
-                );
-
-                return res.json({ message: "successfully updated", updateUser });
-
-
-            } else {
-                return res.json({ message: "The user is not in the system" });
-            }
-        } else {
-            return res.json({ message: "sorry, you are unauthorized" });
-        }
-    } catch (error) {
-        return res.json({ message: "catch error " + error });
-    }
-});
-
-
 
 router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
     try {
@@ -379,7 +366,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                     active: 1
                 }).populate({
                     path: 'survey_id',
-                    select: 'survey_title', // Add other fields as needed
+                    select: 'survey_title',  
                     model: 'survey'
                 });
             
@@ -456,35 +443,130 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
     }
 });
 
-
-router.post('/api/v1/resetPassword', async (req, res) => {
+router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
     try {
-        let { user_name } = req.body
-        let newPassword = await generateMixedID()
-        //console.log(newPassword)
-        let response;
-        let existingUser = await userModels.findOne({
-            user_name: user_name
-        })
-        if (existingUser) {
-            await hashPassword(newPassword, async (hash) => {
-                hashedPassword = hash;
-                existingUser = await userModels.findOneAndUpdate({ user_name: user_name }, { password: newPassword }, { new: true })
-            })
+        let role = req.user.user_role; //from the token
+        let id = req.headers['id']; // from the front
 
-            //let user_name = existingUser.user_name
-            //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
-            res.json({ message: response, existingUser })
-        }
-        else {
-            res.json({ message: "The user does not exist" })
+        if (role == 'admin' || role == 'survey-reader') {
+            let userSurveys = await surveyReaderModel.find({
+                reader_id: id,
+                active: 1
+            }).populate([{
+                path: 'survey_id',
+                select: 'survey_title',
+                model: 'survey'
+            }]).select('survey_id -_id');
+
+            if (userSurveys.length != 0) {
+                // Map the response to return only the survey titles
+                const surveysWithoutId = userSurveys.map(survey => ({
+                    survey_title: survey.survey_id.survey_title,
+                    _id: survey.survey_id._id
+                }));
+
+                res.json({ message: surveysWithoutId });
+            } else {
+                res.json({ message: "No data found" });
+            }
+        } else {
+            res.json({ message: "sorry, you are unauthorized" });
         }
     } catch (error) {
-        res.json({ message: "catch error " + error })
+        res.json({ message: "catch error " + error });
+    }
+});
+
+
+router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
+    try {
+        let { user_name, email_address, image } = req.body
+        let role = req.user.user_role
+        let company_id = req.user.company_id
+
+        if (config.roles.includes(role)) {
+            let existingUser = await userModels.findOne({
+                user_name: user_name,
+                active: 1,
+            })
+
+            if (existingUser) {
+                // Check if the updated email is unique
+                if (email_address && email_address !== existingUser.email_address) {
+                    const isEmailUnique = await userModels.findOne({
+                        email_address: email_address,
+                        _id: { $ne: existingUser._id } // Exclude the current user from the check
+                    });
+
+                    if (isEmailUnique) {
+                        return res.json({ message: "Email address is not unique. Please choose a different email." });
+                    }
+                }
+
+                let updateUser = await userModels.findByIdAndUpdate(
+                    { _id: existingUser._id },
+                    {
+                        email_address: email_address ? email_address : existingUser.email_address,
+                        image: image ? image : existingUser.image
+                    },
+                    { new: true }
+                );
+
+                return res.json({ message: "successfully updated", updateUser });
+
+
+            } else {
+                return res.json({ message: "The user is not in the system" });
+            }
+        } else {
+            return res.json({ message: "sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        return res.json({ message: "catch error " + error });
+    }
+});
+
+
+//Update this api not only 
+router.put('/api/v1/deleteAssignedSurveyReader', auth, async (req, res) => {
+    try {
+        let role = req.user.user_role
+        let { survey_id, reader_id } = req.body
+        if (role == "admin") {
+            const surveyInfo = await surveyModel.findOne({
+                _id: survey_id,
+                company_id: req.user.company_id,
+                active: 1,
+            });
+            const user = await userModels.findOne({
+                _id: reader_id,
+                active: 1
+            })
+            if (user) {
+                if (surveyInfo) {
+
+                    let deletedSurveyReader = await surveyReaderModel.updateMany({
+                        reader_id: reader_id,
+                        survey_id: survey_id,
+                        active: 1
+                    }, { active: 0 })
+                    res.json({ message: "The data deleted sucssfully" })
+                }
+                else {
+                    res.json({ message: "The survey you are looking for does not exist" })
+                }
+            }
+            else {
+                res.json({ message: "The user you are looking for does not exist" })
+            }
+        }
+        else {
+            res.json({ message: "sorry, you are unauthorized" })
+        }
+    } catch (error) {
+        res.json({ message: "catch error" })
     }
 })
-
-
 router.post('/api/v1/assignSurveysReader', auth, async (req, res) => {
     try {
         let role = req.user.user_role
@@ -528,81 +610,32 @@ router.post('/api/v1/assignSurveysReader', auth, async (req, res) => {
     }
 })
 
-//Update this api not only 
-router.put('/api/v1/deleteAssignedSurveyReader', auth, async (req, res) => {
+router.post('/api/v1/resetPassword', async (req, res) => {
     try {
-        let role = req.user.user_role
-        let { survey_id, reader_id } = req.body
-        if (role == "admin") {
-            const surveyInfo = await surveyModel.findOne({
-                _id: survey_id,
-                company_id: req.user.company_id,
-                active: 1,
-            });
-            const user = await userModels.findOne({
-                _id: reader_id,
-                active: 1
+        let { user_name } = req.body
+        let newPassword = await generateMixedID()
+        //console.log(newPassword)
+        let response;
+        let existingUser = await userModels.findOne({
+            user_name: user_name
+        })
+        if (existingUser) {
+            await hashPassword(newPassword, async (hash) => {
+                hashedPassword = hash;
+                existingUser = await userModels.findOneAndUpdate({ user_name: user_name }, { password: newPassword }, { new: true })
             })
-            if (user) {
-                if (surveyInfo) {
 
-                    let deletedSurveyReader = await surveyReaderModel.updateMany({
-                        reader_id: reader_id,
-                        survey_id: survey_id,
-                        active: 1
-                    }, { active: 0 })
-                    res.json({ message: "The data deleted sucssfully" })
-                }
-                else {
-                    res.json({ message: "The survey you are looking for does not exist" })
-                }
-            }
-            else {
-                res.json({ message: "The user you are looking for does not exist" })
-            }
+            //let user_name = existingUser.user_name
+            //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
+            res.json({ message: response, existingUser })
         }
         else {
-            res.json({ message: "sorry, you are unauthorized" })
+            res.json({ message: "The user does not exist" })
         }
     } catch (error) {
-        res.json({ message: "catch error" })
+        res.json({ message: "catch error " + error })
     }
 })
-
-router.get('/api/v1/userById', async (req, res) => {
-    try {
-        let id = req.headers['id'];
-        let user = await userModels.findOne({ _id: id, active: 1 }).populate([
-            {
-                path: 'company_id',
-                select: 'company_name -_id',
-            },
-            {
-                path: 'department_id',
-                select: 'department_name',
-            },
-        ]);
-
-        if (user) {
-            let response = {
-                _id: user._id,
-                user_name: user.user_name,
-                user_role: user.user_role,
-                token: user.token,
-                email_address: user.email_address,
-                company_name: user.company_id ? user.company_id.company_name || " " : " ",
-                department_name: user.department_id ? user.department_id.department_name || " " : " ",
-                image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
-            };
-
-            res.json({ message: response });
-        } else {
-            res.json({ message: "The user is not in the system" });
-        }
-    } catch (error) {
-        res.status(500).json({ message: "catch error " + error });
-    }
-});
 
 router.post('/api/v1/deleteUsers', auth, async (req, res) => {
     try {
