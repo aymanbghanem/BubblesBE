@@ -695,7 +695,8 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           submission_pwd: survey.submission_pwd,
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
-          logo: `${company_name}/${survey.logo}`,
+          //image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
+          logo:survey.logo!=""? `${company_name}/${survey.logo}`: " ",
           locations: buildTree(locations, null),
           questions: questions
         };
