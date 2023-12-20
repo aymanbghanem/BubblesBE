@@ -454,15 +454,16 @@ router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
                 active: 1
             }).populate([{
                 path: 'survey_id',
-                select: 'survey_title',
+                select: 'survey_title active',
                 model: 'survey'
-            }]).select('survey_id -_id');
+            }]).select('survey_id -_id active');
 
             if (userSurveys.length != 0) {
                 // Map the response to return only the survey titles
                 const surveysWithoutId = userSurveys.map(survey => ({
                     survey_title: survey.survey_id.survey_title,
-                    _id: survey.survey_id._id
+                    _id: survey.survey_id._id,
+                    active:survey.survey_id.active
                 }));
 
                 res.json({ message: surveysWithoutId });
@@ -527,88 +528,140 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
 });
 
 
-//Update this api not only 
-router.put('/api/v1/deleteAssignedSurveyReader', auth, async (req, res) => {
+// //Update this api not only 
+// router.put('/api/v1/deleteAssignedSurveyReader', auth, async (req, res) => {
+//     try {
+//         let role = req.user.user_role
+//         let { survey_id, reader_id } = req.body
+//         if (role == "admin") {
+//             const surveyInfo = await surveyModel.findOne({
+//                 _id: survey_id,
+//                 company_id: req.user.company_id,
+//                 active: 1,
+//             });
+//             const user = await userModels.findOne({
+//                 _id: reader_id,
+//                 active: 1
+//             })
+//             if (user) {
+//                 if (surveyInfo) {
+
+//                     let deletedSurveyReader = await surveyReaderModel.updateMany({
+//                         reader_id: reader_id,
+//                         survey_id: survey_id,
+//                         active: 1
+//                     }, { active: 0 })
+//                     res.json({ message: "The data deleted sucssfully" })
+//                 }
+//                 else {
+//                     res.json({ message: "The survey you are looking for does not exist" })
+//                 }
+//             }
+//             else {
+//                 res.json({ message: "The user you are looking for does not exist" })
+//             }
+//         }
+//         else {
+//             res.json({ message: "sorry, you are unauthorized" })
+//         }
+//     } catch (error) {
+//         res.json({ message: "catch error" })
+//     }
+// })
+// router.post('/api/v1/assignSurveysReader', auth, async (req, res) => {
+//     try {
+//         let role = req.user.user_role
+//         let { survey_id, reader_id } = req.body
+//         if (role == "admin" && survey_id) {
+
+//             const surveyInfo = await surveyModel.findOne({
+//                 _id: survey_id,
+//                 company_id: req.user.company_id,
+//                 active: 1,
+//             });
+//             const user = await userModels.findOne({
+//                 _id: reader_id,
+//                 active: 1
+//             })
+//             if (user) {
+//                 if (surveyInfo) {
+//                     let survey_reader = await surveyReaderModel.create({
+//                         survey_id: survey_id,
+//                         company_id: surveyInfo.company_id,
+//                         department_id: surveyInfo.department_id,
+//                         reader_id: reader_id,
+//                         created_by: req.user._id, // Assign the survey creator
+//                         active: 1,
+//                     });
+//                     res.json({ message: "Successfully added" })
+//                 }
+//                 else {
+//                     res.json({ message: "The survey you are looking for does not found" })
+//                 }
+//             }
+//             else {
+//                 res.json({ message: "The user you are looking for does not found" })
+//             }
+//         }
+//         else {
+//             res.json({ message: "sorry, you are unauthorized" })
+//         }
+//     } catch (error) {
+//         res.json({ message: "catch error " + error })
+//     }
+// })
+
+router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
     try {
-        let role = req.user.user_role
-        let { survey_id, reader_id } = req.body
-        if (role == "admin") {
-            const surveyInfo = await surveyModel.findOne({
-                _id: survey_id,
-                company_id: req.user.company_id,
-                active: 1,
-            });
+        let role = req.user.user_role;
+        let { survey_id, reader_id, active } = req.body;
+
+        if (role === "admin") {
             const user = await userModels.findOne({
                 _id: reader_id,
-                active: 1
-            })
-            if (user) {
-                if (surveyInfo) {
-
-                    let deletedSurveyReader = await surveyReaderModel.updateMany({
-                        reader_id: reader_id,
-                        survey_id: survey_id,
-                        active: 1
-                    }, { active: 0 })
-                    res.json({ message: "The data deleted sucssfully" })
-                }
-                else {
-                    res.json({ message: "The survey you are looking for does not exist" })
-                }
-            }
-            else {
-                res.json({ message: "The user you are looking for does not exist" })
-            }
-        }
-        else {
-            res.json({ message: "sorry, you are unauthorized" })
-        }
-    } catch (error) {
-        res.json({ message: "catch error" })
-    }
-})
-router.post('/api/v1/assignSurveysReader', auth, async (req, res) => {
-    try {
-        let role = req.user.user_role
-        let { survey_id, reader_id } = req.body
-        if (role == "admin" && survey_id) {
-
-            const surveyInfo = await surveyModel.findOne({
-                _id: survey_id,
-                company_id: req.user.company_id,
                 active: 1,
             });
-            const user = await userModels.findOne({
-                _id: reader_id,
-                active: 1
-            })
-            if (user) {
-                if (surveyInfo) {
-                    let survey_reader = await surveyReaderModel.create({
-                        survey_id: survey_id,
-                        company_id: surveyInfo.company_id,
-                        department_id: surveyInfo.department_id,
-                        reader_id: reader_id,
-                        created_by: req.user._id, // Assign the survey creator
-                        active: 1,
-                    });
-                    res.json({ message: "Successfully added" })
-                }
-                else {
-                    res.json({ message: "The survey you are looking for does not found" })
-                }
+
+            if (user) { 
+                   let surveyInfo = await surveyModel.findOne({_id:survey_id,company_id: req.user.company_id,active:1})
+                    if (surveyInfo) {
+                        // If survey_id is present and active is set to 0, delete the assignment
+                        if (active === 0) {
+                            let deletedSurveyReader = await surveyReaderModel.updateMany({
+                                reader_id: reader_id,
+                                survey_id: survey_id,
+                                active: 1,
+                            }, { active: 0 });
+    
+                            res.json({ message: "Assigned survey deleted successfully" });
+                        } else {
+                                let surveyReader = await surveyReaderModel.create({
+                                    survey_id: surveyInfo._id,
+                                    company_id: surveyInfo.company_id,
+                                    department_id: surveyInfo.department_id,
+                                    reader_id: reader_id,
+                                    created_by: req.user._id,
+                                    active: 1,
+                                });
+        
+                                res.json({ message: "Survey assigned successfully" });
+                        }
+                    }
+                    else{
+                        res.json({message:"The survey you are looking for does not found"})
+                    }
+                   
+            } else {
+                res.json({ message: "User not found" });
             }
-            else {
-                res.json({ message: "The user you are looking for does not found" })
-            }
-        }
-        else {
-            res.json({ message: "sorry, you are unauthorized" })
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        res.json({ message: "catch error " + error })
+        res.json({ message: "Catch error " + error });
     }
-})
+});
+
 
 router.post('/api/v1/resetPassword', async (req, res) => {
     try {
