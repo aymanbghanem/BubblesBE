@@ -679,26 +679,42 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
       })
         .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
 
-
       if (survey) {
         let company_name = survey.company_id.company_name;
+
         // Fetch locations
         const locations = await fetchLocations(survey_id);
-        const questions = await Question.find({ survey_id: survey_id, active: 1 }).populate({
-          path: 'answers',
-          model: 'answer',
-          select: 'answer image'
-        })
+
+        const questions = await Question.find({ survey_id: survey_id, active: 1 }).populate([
+          {
+            path: 'answers',
+            model: 'answer',
+            select: 'answer image'
+          },
+          {
+            path: 'question_type',
+            model: 'question_controller',
+            select: 'question_type'
+          }
+        ]);
+
+        // Extract only the question_type property from each question
+        const simplifiedQuestions = questions.map(question => {
+          return {
+            ...question.toObject(),
+            question_type: question.question_type.question_type
+          };
+        });
+
         let response = {
           survey_title: survey.survey_title,
           survey_description: survey.survey_description,
           submission_pwd: survey.submission_pwd,
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
-          //image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
-          logo:survey.logo!=""? `${company_name}/${survey.logo}`: " ",
+          logo: survey.logo !== "" ? `${company_name}/${survey.logo}` : " ",
           locations: buildTree(locations, null),
-          questions: questions
+          questions: simplifiedQuestions
         };
 
         res.json({ message: response });
@@ -712,6 +728,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     res.status(500).json({ message: "Internal server error", error: error.message });
   }
 });
+
 
 //get survey according to the department 
 router.get('/api/v1/getSurveys', auth, async (req, res) => {

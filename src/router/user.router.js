@@ -220,7 +220,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
             await hashPassword(newPassword, async (hash) => {
                 hashedPassword = hash;
 
-                let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
+                let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY,{ expiresIn: '10m' });
                 let new_user = await userModels.create({
                     user_name: user_name,
                     user_role: 'superadmin',
