@@ -344,6 +344,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
 
     if (role === 'admin') {
       const { updatedSurveyData, locationData, questionsUpdates } = req.body;
+      const department = req.user.department_id;
 
       // Update survey information
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
@@ -352,59 +353,61 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         return res.status(404).json({ message: `Survey with ID ${surveyId} not found` });
       }
 
-      // Update the survey information
-      await surveyModel.updateOne({ _id: surveyId }, updatedSurveyData);
-
-      // Update locations
       const updateLocations = async (locations, parentId = null) => {
         try {
           for (const location of locations) {
-            const {
-              _id,
-              location_name,
-              active,
-              department_id, // Added department_id field
-              location_description,
-              children,
-            } = location;
-
+            const { id, location_name, location_description, subLocations } = location;
+      
             // Check if the provided location_id exists
             const existingLocation = await Location.findOne({
-              _id: _id,
+              id: id,
               active: 1,
               survey_id: surveyId,
             });
-
+      
             if (!existingLocation) {
-              return res.status(404).json({ message: `Location with ID ${_id} not found` });
-            }
-
-            // Update the location information
-            await Location.updateOne(
-              { _id: _id },
-              {
+              // If the location doesn't exist, create a new one
+              const newLocation = new Location({
+                id,
                 location_name,
-                active,
                 location_description,
-                parentId,
-                department_id, // Added department_id field
+                parent_id:parentId,
+                survey_id: surveyId,
+                department_id: department,
+              });
+      
+              const savedLocation = await newLocation.save();
+      
+              // Recursively update sub-locations
+              if (subLocations && subLocations.length > 0) {
+                await updateLocations(subLocations, savedLocation._id);
               }
-            );
-
-            // Recursively update sub-locations
-            if (children && children.length > 0) {
-              await updateLocations(children, _id);
+            } else {
+              // If the location already exists, update its information
+              await Location.updateOne(
+                { _id: existingLocation._id },
+                {
+                  location_name,
+                  location_description,
+                }
+              );
+      
+              // Recursively update sub-locations
+              if (subLocations && subLocations.length > 0) {
+                await updateLocations(subLocations, existingLocation._id);
+              }
             }
           }
-
+      
           return true; // Return true to indicate successful update
         } catch (error) {
           throw error; // Throw error to be caught by the calling function
         }
       };
-
-      // Call the modified updateLocations function
+      
+      // Call the modified updateLocations function with parentId set to null for the root level
       await updateLocations(locationData);
+      
 
       // Update questions
       for (const questionUpdate of questionsUpdates) {
@@ -413,9 +416,9 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         // Check if the provided question_id exists
         const existingQuestion = await Question.findOne({ _id: _id, active: 1 });
 
-        if (!existingQuestion) {
-          return res.status(404).json({ message: `Question not found or already soft-deleted` });
-        }
+        // if (!existingQuestion) {
+        //   return res.status(404).json({ message: `Question not found or already soft-deleted` });
+        // }
 
         if (active === 0) {
           // Soft delete the question
