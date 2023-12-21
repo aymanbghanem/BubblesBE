@@ -669,7 +669,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
     let company_id = req.user.company_id
     let survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).select('company_id -_id');
 
-    if (role === "admin" && company_id === survey.company_id) {
+    if (role === "admin") {
       let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, company_id: req.user.company_id, active: 1 }, { active: 0 });
       let deleteLocations = await Location.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 });
       let deleteQuestions = await Question.updateMany({ survey_id: survey_id, active: 1 }, { active: 0 });
