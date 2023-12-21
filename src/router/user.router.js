@@ -610,7 +610,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
 router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
-        let { survey_id, reader_id, active } = req.body;
+        let reader_id = req.headers['reader_id']; // Get reader_id from headers
 
         if (role === "admin") {
             const user = await userModels.findOne({
@@ -618,43 +618,106 @@ router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
                 active: 1,
             });
 
-            if (user) { 
-                   let surveyInfo = await surveyModel.findOne({_id:survey_id,company_id: req.user.company_id,active:1})
-                    if (surveyInfo) {
-                        // If survey_id is present and active is set to 0, delete the assignment
-                        if (active === 0) {
-                            let deletedSurveyReader = await surveyReaderModel.updateMany({
-                                reader_id: reader_id,
-                                survey_id: survey_id,
-                                active: 1,
-                            }, { active: 0 });
-    
-                            res.json({ message: "Assigned survey deleted successfully" });
-                        } else {
-                                let surveyReader = await surveyReaderModel.create({
-                                    survey_id: surveyInfo._id,
-                                    company_id: surveyInfo.company_id,
-                                    department_id: surveyInfo.department_id,
-                                    reader_id: reader_id,
-                                    created_by: req.user._id,
-                                    active: 1,
-                                });
-        
-                                res.json({ message: "Survey assigned successfully" });
-                        }
-                    }
-                    else{
-                        res.json({message:"The survey you are looking for does not found"})
-                    }
-                   
-            } else {
-                res.json({ message: "User not found" });
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
             }
+
+            const assignments = req.body.assignments; // Extract assignments from req.body
+
+            // Ensure assignments is an array
+            if (!Array.isArray(assignments)) {
+                return res.status(400).json({ message: "Invalid format for assignments" });
+            }
+
+            for (const assignment of assignments) {
+                const { survey_id, active } = assignment;
+
+                let existingAssignment = await surveyReaderModel.findOne({
+                    reader_id: reader_id,
+                    survey_id: survey_id,
+                    active:1
+                });
+
+                let surveyInfo = await surveyModel.findOne({ _id: survey_id, company_id: req.user.company_id, active: 1 });
+
+                if (!surveyInfo) {
+                    return res.status(404).json({ message: `The survey with ID ${survey_id} does not exist` });
+                }
+
+                if (!existingAssignment) {
+                    // If assignment is new, store it
+                    await surveyReaderModel.create({
+                        survey_id: surveyInfo._id,
+                        company_id: surveyInfo.company_id,
+                        department_id: surveyInfo.department_id,
+                        reader_id: reader_id,
+                        created_by: req.user._id,
+                        active: 1,
+                    });
+                } else {
+                    // If assignment exists and active is 0, update the active to 0
+                    if (active === 0) {
+                        await surveyReaderModel.updateMany({
+                            reader_id: reader_id,
+                            survey_id: survey_id,
+                        }, { active: 0 });
+                    }
+                }
+            }
+
+            return res.json({ message: "Survey assignments updated successfully" });
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            return res.status(403).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        res.json({ message: "Catch error " + error });
+        console.error(error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+
+router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
+    try {
+        let role = req.user.user_role;
+        let reader_id = req.headers['reader_id']; // Get reader_id from headers
+
+        if (role === "admin") {
+            const user = await userModels.findOne({
+                _id: reader_id,
+                active: 1,
+            });
+
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            const assignments = req.body.assignments; // Extract assignments from req.body
+
+            // Ensure assignments is an array
+            if (!Array.isArray(assignments)) {
+                return res.status(400).json({ message: "Invalid format for assignments" });
+            }
+
+            for (const assignment of assignments) {
+                const { id, active } = assignment;
+
+                // Insert a new record with active: 0
+                await surveyReaderModel.create({
+                    survey_id: id,
+                    company_id: req.user.company_id,
+                    department_id: user.department_id,
+                    reader_id: reader_id,
+                    created_by: req.user._id,
+                });
+            }
+
+            return res.json({ message: "Survey assignments updated successfully" });
+        } else {
+            return res.status(403).json({ message: "Sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 });
 
