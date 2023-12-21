@@ -32,11 +32,12 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     select: 'question_type',
                 },
             ]).select('answers question_type');
-
+            
             // Extract question type from the result
             const { question_type } = questionType;
-            console.log(question_type)
-            if (question_type === 'text') {
+
+            if (question_type.question_type == 'text' || question_type.question_type == 'Text') {
+                console.log('question_type 1 '+ question_type.question_type)
                 // If the question type is 'text', store the response directly
                 await responseModel.create({
                     survey_id,
@@ -47,7 +48,8 @@ router.post('/api/v1/createResponse', async (req, res) => {
                 });
                  
             }
-            else if (question_type === 'range') {
+            else if (question_type.question_type == 'range' || question_type.question_type == 'Range') {
+                console.log('question_type 2 '+ question_type.question_type)
                 await responseModel.create({
                     survey_id,
                     question_id,
@@ -83,8 +85,9 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         user_answer,
                     });
                    
-                } else {
-                    res.json({ message: "There is no answer matching your answer" })
+                }
+                else{
+                    console.log(userAnswerLower)
                 }
             }
         }

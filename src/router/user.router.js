@@ -243,8 +243,6 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
     }
 });
 
-
-
 router.get('/api/v1/userById', async (req, res) => {
     try {
         let id = req.headers['id'];
@@ -478,7 +476,6 @@ router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
     }
 });
 
-
 router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
     try {
         let { user_name, email_address, image } = req.body
@@ -526,7 +523,6 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
         return res.json({ message: "catch error " + error });
     }
 });
-
 
 // //Update this api not only 
 // router.put('/api/v1/deleteAssignedSurveyReader', auth, async (req, res) => {
