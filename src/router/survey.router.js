@@ -730,7 +730,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           submission_pwd: survey.submission_pwd,
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
-          logo: survey.logo !== "" ? `${company_name}/${survey.logo}` : " ",
+          logo: (survey.logo !== "" && survey.logo !== " ") ? `${company_name}/${survey.logo}` : " " || "",
           locations: buildTree(locations, null),
           questions: simplifiedQuestions
         };
