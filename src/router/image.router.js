@@ -41,7 +41,7 @@ router.post('/api/v1/uploadAnswersImage',answersImageUploader().single('image'),
         } 
         else {
           try {
-            const filePath = path.resolve(__dirname, '..', '..', 'logo', req.file.filename);
+            const filePath = path.resolve(__dirname, '..', '..', 'answersImage', req.file.filename);
             fs.unlink(filePath, (error) => {
               if (error) {
                 res.json(`An error occurred while trying to delete the file: ${error}`);
