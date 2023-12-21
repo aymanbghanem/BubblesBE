@@ -414,11 +414,29 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         const existingQuestion = await Question.findOne({ _id: _id, active: 1 });
 
         if (!existingQuestion) {
-          return res.status(404).json({ message: `Question with ID ${_id} not found` });
+          return res.status(404).json({ message: `Question not found or already soft-deleted` });
         }
 
-        // Update the question information
-        await Question.updateOne({ _id: _id }, { question_title, active, required });
+        if (active === 0) {
+          // Soft delete the question
+          await Question.updateOne({ _id: _id }, { active: 0 });
+
+          // Check for dependencies
+          const dependentQuestions = await Question.find({
+            "question_dependency.parent_id": _id,
+            active: 1,
+          });
+
+          if (dependentQuestions.length > 0) {
+            // Soft delete dependent questions
+            for (const dependentQuestion of dependentQuestions) {
+              await Question.updateOne({ _id: dependentQuestion._id }, { active: 0 });
+            }
+          }
+        } else {
+          // Update the question information
+          await Question.updateOne({ _id: _id }, { question_title, active, required });
+        }
       }
 
       res.status(200).json({ message: 'Survey, locations, and questions updated successfully!' });
@@ -519,8 +537,8 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       }
       return res.json(responses);
     }
-    else{
-      res.json({message:"No more questions"})
+    else {
+      res.json({ message: "No more questions" })
     }
   }
   catch (error) {
@@ -712,7 +730,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           submission_pwd: survey.submission_pwd,
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
-          logo: survey.logo !== "" ? `${company_name}/${survey.logo}` : " ",
+          logo: survey.logo !== " " ? `${company_name}/${survey.logo}` : " ",
           locations: buildTree(locations, null),
           questions: simplifiedQuestions
         };
