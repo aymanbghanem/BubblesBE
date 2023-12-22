@@ -78,10 +78,11 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let department_id = req.headers['department_id']
+        let {active} = req.body
         if(role=="owner" || role=="superadmin" ){
             // Delete department and related entities
-            let department = await departmentModel.findOneAndUpdate({_id: department_id, active: 1 }, { active: 0 });
-            let user = await userModels.updateMany({ department_id: department_id, active: 1 }, { active: 0 });
+            let department = await departmentModel.findOneAndUpdate({_id: department_id}, { active:active });
+            let user = await userModels.updateMany({ department_id: department_id}, { active: active });
             
 
             // Deactivate surveys and related entities
