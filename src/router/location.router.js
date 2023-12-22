@@ -211,6 +211,37 @@ const getLocationsTree = async (parentId) => {
     };
 };
 
+router.get('/api/v1/getLocations',auth,async(req,res)=>{
+    try {
+        let survey_id = req.headers['survey_id']
+        let role = req.user.user_role
+        if(role=="admin"){
+           let existingSurvey = await surveyModel.findOne({_id:survey_id})
+           if(existingSurvey){
+            let locations = await locationModels.find({
+                survey_id:survey_id,
+                active:1
+            }).select('location_name')
+            if(locations.length>0){
+               res.json({message:locations})
+            }else{
+                res.json({message:"There is no location for this survey"})
+            }
+           }else{
+            res.json({message:"The survey you are looking for it is locations does not exist"})
+           }
+        }else{
+            res.json({message:"sorry, you are unauthorized"})
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
+
+router.get('/api/v1/getLeafLocation',auth,async(req,res)=>{
+    
+})
+
 router.put('/api/v1/updateLocation', auth, async(req, res) => {
     try {
         let role = req.user.user_role;

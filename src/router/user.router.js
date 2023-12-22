@@ -65,8 +65,6 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                     return res.json({ message: ownerError });
                 }
                 else {
-
-                    console.log(company)
                     //  await hashPassword(newPassword, async (hash) => {
                     // hashedPassword = hash;
 
