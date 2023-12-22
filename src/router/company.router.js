@@ -75,43 +75,44 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
     }
 })
 
-router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
+router.put('/api/v1/deleteCompany', auth, async (req, res) => {
     try {
-        let role = req.user.user_role
-        let department_id = req.headers['department_id']
-        let { active } = req.body
-        
-        if (role == "owner" || role == "superadmin") {
-            // Update department and related entities
-            let department = await departmentModel.findOneAndUpdate({ _id: department_id }, { active: active });
-            let user = await userModels.updateMany({ department_id: department_id }, { active: active });
+        let role = req.user.user_role;
+        let company_id = req.headers['company_id'];
+        let {active} = req.body
+        if (role === "superadmin") {
+            // Delete company and related entities
+            let company = await companyModel.findOneAndUpdate({ _id: company_id}, { active:active});
+            let user = await userModels.updateMany({ company_id: company_id}, {active:active});
+            let department = await departmentModel.updateMany({ company_id: company_id}, {active:active});
 
-            // Update surveys and related entities
-            let surveys = await surveyModel.find({ department_id: department_id, active: 1 });
+            // Deactivate surveys and related entities
+            let surveys = await surveyModel.find({ company_id: company_id});
             for (const survey of surveys) {
                 await Promise.all([
-                    surveyModel.updateOne({ _id: survey._id, active: 1 }, { active: active }),
-                    surveyReaderModel.updateMany({ survey_id: survey._id, active: 1 }, { active: active }),
-                    questionModel.updateMany({ survey_id: survey._id, active: 1 }, { active: active }),
-                    Answer.updateMany({ survey_id: survey._id, active: 1 }, { active: active }),
-                    locationModel.updateMany({ survey_id: survey._id, active: 1 }, { active: active })
+                    surveyModel.updateOne({ _id: survey._id}, { active:active }),
+                    surveyReaderModel.updateMany({ survey_id: survey._id }, { active:active }),
+                    questionModel.updateMany({ survey_id: survey._id }, { active:active }),
+                    Answer.updateMany({ survey_id: survey._id }, { active:active }),
+                    locationModel.updateMany({ survey_id: survey._id }, { active:active })
                 ]);
             }
 
-            if (department) {
-                if (active == 1) {
-                    res.json({ message: "The department and associated entities activated successfully" });
-                } else {
-                    res.json({ message: "The department and associated entities deleted successfully" });
+            if (company) {
+                if(active==1){
+                    res.json({ message: "The company and associated entities activated successfully" });
+                }
+                else{
+                    res.json({ message: "The company and associated entities deleted successfully" });
                 }
             } else {
-                res.json({ message: "The department you are looking for not found" });
+                res.json({ message: "The company you are looking for not found" });
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        res.json({ message: "Error occurred during the update operation: " + error.message });
+        res.json({ message: "Error occurred during the delete operation: " + error.message });
     }
 });
 
