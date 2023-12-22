@@ -238,9 +238,66 @@ router.get('/api/v1/getLocations',auth,async(req,res)=>{
     }
 })
 
-router.get('/api/v1/getLeafLocation',auth,async(req,res)=>{
-    
-})
+
+router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
+    try {
+        let survey_id = req.headers['survey_id'];
+        let role = req.user.user_role;
+
+        if (role == "admin") {
+            let existingSurvey = await surveyModel.findOne({ _id: survey_id });
+
+            if (existingSurvey) {
+                const mainRoots = await locationModels.find({
+                    survey_id: survey_id,
+                    parent_id: null,
+                    active: 1
+                });
+
+                const leafLocations = await Promise.all(mainRoots.map(async (root) => {
+                    return await getLeafLocations(root._id);
+                }));
+
+                res.json({ message: leafLocations.flat() }); // Flattening the result array
+            } else {
+                res.json({ message: "The survey you are looking for its locations does not exist" });
+            }
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        res.json({ message: "Catch error " + error.message });
+    }
+});
+
+const getLeafLocations = async (parentId) => {
+    const location = await locationModels.findOne({ _id: parentId, active: 1 });
+
+    if (!location) {
+        return null; // Return null if location is not found
+    }
+
+    const subLocations = await locationModels.find({ parent_id: parentId, active: 1 });
+    const leafLocations = await Promise.all(subLocations.map(async (subLocation) => {
+        return await getLeafLocations(subLocation._id);
+    }));
+
+    // If location has no subLocations, or all its subLocations are leaf nodes, include it in the result
+    if (subLocations.length === 0 || leafLocations.every(leaf => leaf === null)) {
+        return [{
+            _id: location._id,
+            location_name: location.location_name,
+            parentId: location.parent_id,
+            active: location.active,
+            description: location.location_description,
+        }];
+    }
+
+    // Filter out null values and return only non-null leaf nodes
+    return leafLocations.filter(Boolean).flat();
+};
+
+
 
 router.put('/api/v1/updateLocation', auth, async(req, res) => {
     try {
