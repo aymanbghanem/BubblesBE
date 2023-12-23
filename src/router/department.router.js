@@ -98,7 +98,12 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
             }
 
             if (department) {
-                res.json({ message: "The department and associated entities deleted successfully" });
+                if(active==0){
+                    res.json({ message: "The department and associated entities deleted successfully" });
+                }
+                else if(active==1){
+                    res.json({ message: "The department and associated entities activated successfully" });
+                }
             } else {
                 res.json({ message: "The department you are looking for not found" });
             }
