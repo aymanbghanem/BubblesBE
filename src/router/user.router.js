@@ -328,7 +328,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                 select: "company_name -_id"
             });
         } else if (role === 'owner') {
-            users = await userModels.find({ user_role: 'admin', company_id: company_id }).populate([
+            users = await userModels.find({ user_role: 'admin', company_id: company_id,active:1 }).populate([
                 {
                     path: "company_id",
                     select: "company_name -_id"
