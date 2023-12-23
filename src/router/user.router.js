@@ -26,7 +26,6 @@ const addOwner = async (company) => {
     }
 };
 
-
 router.post('/api/v1/addUsers', auth, async (req, res) => {
     try {
         let hashedPassword;
