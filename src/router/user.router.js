@@ -18,6 +18,7 @@ const addOwner = async (company) => {
     const existingOwner = await userModels.findOne({
         user_role: 'owner',
         company_id: company._id,
+        active:1
     });
 
     if (existingOwner) {
