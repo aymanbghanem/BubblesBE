@@ -79,7 +79,7 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
         let role = req.user.user_role
         let department_id = req.headers['department_id']
         let {active} = req.body
-        if(role=="admin"|| role=="owner"){
+        if(role=="admin"|| role=="owner" || role=="superadmin"){
             // Delete department and related entities
             let department = await departmentModel.findOneAndUpdate({_id: department_id}, { active:active });
             let user = await userModels.updateMany({ department_id: department_id}, { active: active });
