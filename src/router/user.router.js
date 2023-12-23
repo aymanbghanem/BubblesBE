@@ -323,12 +323,12 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         let users;
 
         if (role === 'superadmin') {
-            users = await userModels.find({ user_role: 'owner' }).populate({
+            users = await userModels.find({ user_role: 'owner',active:1  }).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
         } else if (role === 'owner') {
-            users = await userModels.find({ user_role: 'admin', company_id: company_id,active:1 }).populate([
+            users = await userModels.find({ user_role: 'admin', company_id: company_id}).populate([
                 {
                     path: "company_id",
                     select: "company_name -_id"
