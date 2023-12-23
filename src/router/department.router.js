@@ -89,11 +89,11 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
             let surveys = await surveyModel.find({ department_id: department_id, active: 1 });
             for (const survey of surveys) {
                 await Promise.all([
-                    surveyModel.updateOne({ _id: survey._id, active: 1 }, { active: 0 }),
-                    surveyReaderModel.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 }),
-                    questionModel.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 }),
-                    Answer.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 }),
-                    locationModel.updateMany({ survey_id: survey._id, active: 1 }, { active: 0 })
+                    surveyModel.updateOne({ _id: survey._id}, { active: active }),
+                    surveyReaderModel.updateMany({ survey_id: survey._id}, { active: active }),
+                    questionModel.updateMany({ survey_id: survey._id}, { active: active }),
+                    Answer.updateMany({ survey_id: survey._id}, { active: active }),
+                    locationModel.updateMany({ survey_id: survey._id }, { active: active })
                 ]);
             }
 
