@@ -889,11 +889,11 @@ function buildTree(locations, parentId) {
 
   locations.forEach(location => {
     if ((parentId === null && !location.parent_id) || (location.parent_id && location.parent_id.toString() === parentId)) {
-      const children = buildTree(locations, location._id.toString());
+      const sublocations = buildTree(locations, location._id.toString());
       const node = { ...location }; // Use spread operator to create a new object
 
-      if (children.length > 0) {
-        node.children = children;
+      if (sublocations.length > 0) {
+        node.sublocations = sublocations;
       }
 
       tree.push(node);
