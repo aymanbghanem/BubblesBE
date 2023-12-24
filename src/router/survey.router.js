@@ -146,7 +146,7 @@ function flattenLocationData(locationData, parentId = null) {
   for (const item of locationData) {
     result.push({
       id: String(item.id), // Convert the ID to a string
-      location_name: item.location_name,
+      location_name: item.location_name ||item.textValue,
       location_description: item.location_description || "",
       parentId: parentId !== null ? String(parentId) : null, // Convert parent ID to a string if it exists
     });
@@ -183,10 +183,10 @@ async function processAndStoreLocation(locationData, survey, user) {
     const idToLocationMap = new Map();
 
     for (const flattenedLocation of flattenLocationData(locationData)) {
-      const { id, location_name, location_description, parentId } = flattenedLocation;
+      const { id, location_name,textValue, location_description, parentId } = flattenedLocation;
 
       const location = new Location({
-        location_name,
+        location_name:location_name,
         department_id: department,
         id, // Use the string ID
         location_description,
