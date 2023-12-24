@@ -200,11 +200,11 @@ const getLocationsTree = async (parentId) => {
 
     return {
         id: location._id,
-        name: location.location_name,
+        location_name: location.location_name,
         parentId: location.parent_id,
         active: location.active,
-        description: location.location_description,
-        children: subTrees.filter(Boolean), // Remove null values
+        location_description: location.location_description,
+        sublocations: subTrees.filter(Boolean), // Remove null values
     };
 };
 
