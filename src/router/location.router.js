@@ -147,14 +147,12 @@ function flattenLocationData(locationData, parentId = null) {
 router.get('/api/v1/getRootLocation', auth, async (req, res) => {
     try {
         let role = req.user.user_role
-        let survey_id = req.headers['survey_id']
         if (role == "admin") {
             let locations = await locationModels.find({
                 department_id: req.user.department_id,
                 active: 1,
                 parent_id: null,
                 clone:0,
-                survey_id:survey_id
             }).select('location_name ')
             if (locations.length != 0) {
                 res.json({ message: locations })
