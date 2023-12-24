@@ -682,9 +682,9 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
               let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
               let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
 
-              if (active === 1) {
+              if (active == 1) {
                   res.json({ message: "The survey and its data were activated successfully" });
-              } else if (active === 0) {
+              } else if (active == 0) {
                   res.json({ message: "The survey and its data were deleted successfully" });
               } else {
                   res.status(400).json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", active });
@@ -773,7 +773,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     let department_id = req.user.department_id
     if (role == "admin") {
       // Retrieve the surveys in the admin's department
-      let surveys = await surveyModel.find({ department_id: department_id, active: 1 }).populate(
+      let surveys = await surveyModel.find({ department_id: department_id}).populate(
         [{
           path: 'company_id',
           select: 'company_name -_id',
@@ -818,7 +818,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     }
     else if (role == "survey-reader") {
       let surveys = await surveyReaderModel
-        .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
+        .find({ department_id: department_id, reader_id: req.user._id})
         .populate([
           {
             path: 'company_id',
