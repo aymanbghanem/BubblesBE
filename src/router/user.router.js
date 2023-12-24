@@ -458,7 +458,7 @@ router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
                 // Map the response to return only the survey titles
                 const surveysWithoutId = userSurveys.map(survey => ({
                     survey_title: survey.survey_id.survey_title,
-                    survey_id_id: survey.survey_id._id,
+                    survey_id: survey.survey_id._id,
                     active:survey.survey_id.active
                 }));
 
