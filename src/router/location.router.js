@@ -172,8 +172,7 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
 router.get('/api/v1/getLocationInfo',  async (req, res) => {
     try {
       
-        let { parentId } = req.body; // Assuming parentId is in the request body
-
+        let parentId = req.headers['parentId']
         const mainRoot = await locationModels.findOne({ _id: parentId, parent_id: null, active: 1 });
 
         if (mainRoot) {
