@@ -628,16 +628,39 @@ router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
             }
 
             for (const assignment of assignments) {
-                const { id, active } = assignment;
+                const { survey_id, active } = assignment;
 
-                // Insert a new record with active: 0
-                await surveyReaderModel.create({
-                    survey_id: id,
-                    company_id: req.user.company_id,
-                    department_id: user.department_id,
+                let existingAssignment = await surveyReaderModel.findOne({
                     reader_id: reader_id,
-                    created_by: req.user._id,
+                    survey_id: survey_id,
+                    active:1
                 });
+
+                let surveyInfo = await surveyModel.findOne({ _id: survey_id, company_id: req.user.company_id, active: 1 });
+
+                if (!surveyInfo) {
+                    return res.status(404).json({ message: `The survey with ID ${survey_id} does not exist` });
+                }
+
+                if (!existingAssignment) {
+                    // If assignment is new, store it
+                    await surveyReaderModel.create({
+                        survey_id: surveyInfo._id,
+                        company_id: surveyInfo.company_id,
+                        department_id: surveyInfo.department_id,
+                        reader_id: reader_id,
+                        created_by: req.user._id,
+                        active: 1,
+                    });
+                } else {
+                    // If assignment exists and active is 0, update the active to 0
+                    if (active === 0) {
+                        await surveyReaderModel.updateMany({
+                            reader_id: reader_id,
+                            survey_id: survey_id,
+                        }, { active: 0 });
+                    }
+                }
             }
 
             return res.json({ message: "Survey assignments updated successfully" });
