@@ -800,7 +800,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
           active: item.active,
           survey_description: item.survey_description,
           //item.company_id && item.logo != "" ? `${item.company_id.company_name}/${item.logo}` : ""
-          logo: (item.company_id && item.survey_id.logo != " ")||(item.company_id && item.survey_id.logo != "") ? `${item.company_id.company_name}/${item.survey_id.logo}` : ""||" ",
+          logo: ((item.company_id && item.survey_id.logo != " ")||(item.company_id && item.survey_id.logo != "")) ? (`${item.company_id.company_name}/${item.survey_id.logo}`) : ""||" ",
           submission_pwd: item.submission_pwd,
           background_color: item.background_color,
           question_text_color: item.question_text_color,
@@ -848,7 +848,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
           created_by: item.survey_id.created_by.user_name,
           active: item.survey_id.active,
           survey_description: item.survey_id.survey_description,
-          logo: (item.company_id && item.survey_id.logo != " ")||(item.company_id && item.survey_id.logo != "") ? `${item.company_id.company_name}/${item.survey_id.logo}` : ""||" ",
+          logo: ((item.company_id && item.survey_id.logo != " ")||(item.company_id && item.survey_id.logo != "")) ? (`${item.company_id.company_name}/${item.survey_id.logo}`) : ""||" ",
           submission_pwd: item.survey_id.submission_pwd,
           background_color: item.survey_id.background_color,
           question_text_color: item.survey_id.question_text_color,
