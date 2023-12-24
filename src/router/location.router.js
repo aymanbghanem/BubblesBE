@@ -169,12 +169,12 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
     }
 })
 
-router.get('/api/v1/getLocationInfo',  async (req, res) => {
+router.get('/api/v1/getLocationInfo',async (req, res) => {
     try {
       
-        let parentId = req.headers['parentId']
+         let parentId = req.headers['location_id']
         const mainRoot = await locationModels.findOne({ _id: parentId, parent_id: null, active: 1 });
-
+        console.log(mainRoot)
         if (mainRoot) {
             const locationTree = await getLocationsTree(mainRoot._id);
             res.json({ location_tree: locationTree });
@@ -235,7 +235,6 @@ router.get('/api/v1/getLocations',auth,async(req,res)=>{
     }
 })
 
-
 router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
     try {
         let survey_id = req.headers['survey_id'];
@@ -293,8 +292,6 @@ const getLeafLocations = async (parentId) => {
     // Filter out null values and return only non-null leaf nodes
     return leafLocations.filter(Boolean).flat();
 };
-
-
 
 router.put('/api/v1/updateLocation', auth, async(req, res) => {
     try {

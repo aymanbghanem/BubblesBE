@@ -95,7 +95,8 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
                     surveyReaderModel.updateMany({ survey_id: survey._id }, { active:active }),
                     questionModel.updateMany({ survey_id: survey._id }, { active:active }),
                     Answer.updateMany({ survey_id: survey._id }, { active:active }),
-                    locationModel.updateMany({ survey_id: survey._id }, { active:active })
+                    locationModel.updateMany({ survey_id: survey._id }, { active:active }),
+                    qrModel.updateMany({ survey_id: survey._id }, { active:active })
                 ]);
             }
 
