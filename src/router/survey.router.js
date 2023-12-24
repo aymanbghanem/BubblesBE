@@ -140,14 +140,15 @@ async function rollbackSurvey(survey, session) {
 async function rollbackLocation(location, session) {
   await Location.deleteOne({ _id: location._id }).session(session);
 }
+
 function flattenLocationData(locationData, parentId = null) {
   let result = [];
   for (const item of locationData) {
     result.push({
-      id: item.id, // Use the string ID
+      id: String(item.id), // Convert the ID to a string
       location_name: item.location_name,
       location_description: item.location_description || "",
-      parentId: parentId !== null ? parentId : null,
+      parentId: parentId !== null ? String(parentId) : null, // Convert parent ID to a string if it exists
     });
     if (item.sublocations && item.sublocations.length > 0) {
       result = result.concat(flattenLocationData(item.sublocations, item.id));
