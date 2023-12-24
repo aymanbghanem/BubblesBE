@@ -2,7 +2,8 @@ const express = require("express");
 const auth = require("../middleware/auth");
 const locationModels = require("../models/location.models");
 const surveyModels = require("../models/survey.models");
-const { create } = require("../models/user.models");const qrModel = require("../models/qr.model");
+const { create } = require("../models/user.models");
+const qrModel = require("../models/qr.model");
 const router = express.Router();
 
 

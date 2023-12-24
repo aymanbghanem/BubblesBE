@@ -11,6 +11,7 @@ const departmentModel = require('../models/department.models')
 const surveyReaderModel = require('../models/surveyReader.model')
 const surveyModel = require('../models/survey.models')
 const questionModel = require("../models/questions.models");
+const qrModel = require("../models/qr.model");
 const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');

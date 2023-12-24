@@ -169,9 +169,9 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
     }
 })
 
-router.get('/api/v1/getLocationInfo', auth, async (req, res) => {
+router.get('/api/v1/getLocationInfo',  async (req, res) => {
     try {
-        let role = req.user.user_role;
+      
         let { parentId } = req.body; // Assuming parentId is in the request body
 
         const mainRoot = await locationModels.findOne({ _id: parentId, parent_id: null, active: 1 });

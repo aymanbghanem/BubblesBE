@@ -12,6 +12,7 @@ const Location = require("../../src/models/location.models");
 const locationModel = require("../../src/models/location.models");
 const questionsModels = require("../models/questions.models");
 const Response = require("../models/response.model")
+const qrModel = require("../models/qr.model");
 const mongoose = require('mongoose');
 const questions_controllerModels = require("../models/questions_controller.models");
 require('dotenv').config()
@@ -236,7 +237,9 @@ async function processAndStoreSurvey(surveyData, user) {
         company_id: user.company_id,
         background_color: surveyData.background_color,
         question_text_color: surveyData.question_text_color,
-        submission_pwd: surveyData.submission_pwd
+        submission_pwd: surveyData.submission_pwd,
+        title_font_size:surveyData.title_font_size,
+        description_font_size:surveyData.description_font_size
       });
 
       return survey;
@@ -681,7 +684,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
               let deleteQuestions = await Question.updateMany({ survey_id: survey_id }, { active: active });
               let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
               let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
-
+              let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active })
               if (active == 1) {
                   res.json({ message: "The survey and its data were activated successfully" });
               } else if (active == 0) {
