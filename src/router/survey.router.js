@@ -668,7 +668,8 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
       let role = req.user.user_role;
       let survey_id = req.headers['survey_id'];
-      let { active } = req.body;
+      let active = req.headers['active']
+    //  let { active } = req.body;
       let company_id = req.user.company_id;
 
       let survey = await surveyModel.findOne({ _id: survey_id }).select('company_id -_id');
