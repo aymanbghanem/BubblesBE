@@ -664,32 +664,39 @@ async function checkRangeDependency(dependency, answeredQuestions, results) {
   return false;
 }
 
-//delete survey
 router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
   try {
-    let role = req.user.user_role;
-    let survey_id = req.headers['survey_id'];
-    let {active} = req.body
-    let company_id = req.user.company_id
-    let survey = await surveyModel.findOne({ _id: survey_id}).select('company_id -_id');
+      let role = req.user.user_role;
+      let survey_id = req.headers['survey_id'];
+      let { active } = req.body;
+      let company_id = req.user.company_id;
 
-    if (role === "admin") {
-      let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, company_id: req.user.company_id }, { active: active });
-      let deleteLocations = await Location.updateMany({ survey_id: survey_id}, { active: active });
-      let deleteQuestions = await Question.updateMany({ survey_id: survey_id}, { active: active });
-      let deleteAnswers = await Answer.updateMany({ survey_id: survey_id}, { active: active });
-      let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id}, { active: active });
-      if(active == 1){
-        res.json({ message: "The survey and its data were activated successfully" });
+      let survey = await surveyModel.findOne({ _id: survey_id }).select('company_id -_id');
+
+      if (role === "admin") {
+          if (survey) {
+              let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, company_id: req.user.company_id }, { active: active });
+              let deleteLocations = await Location.updateMany({ survey_id: survey_id }, { active: active });
+              let deleteQuestions = await Question.updateMany({ survey_id: survey_id }, { active: active });
+              let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
+              let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
+
+              if (active === 1) {
+                  res.json({ message: "The survey and its data were activated successfully" });
+              } else if (active === 0) {
+                  res.json({ message: "The survey and its data were deleted successfully" });
+              } else {
+                  res.status(400).json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", active });
+              }
+          } else {
+              res.status(404).json({ message: "The survey you are looking for does not exist" });
+          }
+      } else {
+          res.status(403).json({ message: "Unauthorized. Only admin users can perform this operation." });
       }
-      else{
-        res.json({ message: "The survey and its data were deleted successfully" });
-      }
-    } else {
-      res.json({ message: "Sorry, you are unauthorized" });
-    }
   } catch (error) {
-    res.json({ message: "Catch error: " + error });
+      console.error(error);
+      res.status(500).json({ message: "Internal server error. Please try again later." });
   }
 });
 
