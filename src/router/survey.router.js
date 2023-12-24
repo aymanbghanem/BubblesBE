@@ -144,17 +144,18 @@ function flattenLocationData(locationData, parentId = null) {
   let result = [];
   for (const item of locationData) {
     result.push({
-      id: item.id,
+      id: item.id, // Use the string ID
       location_name: item.location_name,
       location_description: item.location_description || "",
       parentId: parentId !== null ? parentId : null,
     });
-    if (item.subLocations && item.subLocations.length > 0) {
-      result = result.concat(flattenLocationData(item.subLocations, item.id));
+    if (item.sublocations && item.sublocations.length > 0) {
+      result = result.concat(flattenLocationData(item.sublocations, item.id));
     }
   }
   return result;
 }
+
 async function processAndStoreAnswers(answerArray, questionId, questionType, survey_id) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
@@ -186,7 +187,7 @@ async function processAndStoreLocation(locationData, survey, user) {
       const location = new Location({
         location_name,
         department_id: department,
-        id,
+        id, // Use the string ID
         location_description,
         survey_id: survey._id, // Link the location to the survey
       });
@@ -213,7 +214,7 @@ async function processAndStoreLocation(locationData, survey, user) {
       }
     }
 
-    return "Locations stored and parent references assigned successfully!";;
+    return "Locations stored and parent references assigned successfully!";
   } catch (error) {
     throw error;
   }
