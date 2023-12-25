@@ -717,7 +717,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
         path: "company_id",
         select: "company_name"
       })
-        .select('survey_title survey_description logo submission_pwd background_color question_text_color company_id');
+        .select('survey_title  survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
       if (survey) {
         let company_name = survey.company_id.company_name;
@@ -749,6 +749,8 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
         let response = {
           survey_title: survey.survey_title,
           survey_description: survey.survey_description,
+          title_font_size:survey.title_font_size,
+          description_font_size:survey.description_font_size,
           submission_pwd: survey.submission_pwd,
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
