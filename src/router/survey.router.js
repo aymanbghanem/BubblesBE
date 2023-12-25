@@ -351,6 +351,19 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       const { updatedSurveyData, locationData, questionsUpdates } = req.body;
       const department = req.user.department_id;
 
+      // Check if the survey title is being updated
+      if (updatedSurveyData.survey_title) {
+        // Check if the new survey title already exists
+        const existingSurveyWithNewTitle = await surveyModel.findOne({
+          survey_title: updatedSurveyData.survey_title,
+          _id: { $ne: surveyId }, // Exclude the current survey from the check
+        });
+      
+        if (existingSurveyWithNewTitle) {
+          return res.status(400).json({ message: 'Survey title must be unique. Choose a different title.' });
+        }
+      }
+      
       // Update survey information
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
 
@@ -358,6 +371,21 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         return res.status(404).json({ message: `Survey with ID ${surveyId} not found` });
       }
 
+      // Update survey data
+      await surveyModel.updateOne(
+        { _id: surveyId },
+        {
+          $set: {
+            survey_title: updatedSurveyData.survey_title || existingSurvey.survey_title,
+            survey_description: updatedSurveyData.survey_description || existingSurvey.survey_description,
+            logo: updatedSurveyData.logo || existingSurvey.logo,
+            question_text_color: updatedSurveyData.question_text_color || existingSurvey.question_text_color,
+            submission_pwd: updatedSurveyData.submission_pwd || existingSurvey.submission_pwd,
+            title_font_size: updatedSurveyData.title_font_size || existingSurvey.title_font_size,
+            description_font_size: updatedSurveyData.description_font_size || existingSurvey.description_font_size,
+          },
+        }
+      );
       const updateLocations = async (locations, parentId = null) => {
         try {
           for (const location of locations) {
