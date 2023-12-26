@@ -484,7 +484,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   }
 });
 
-//Get the questions which is in the first phase
+
 router.post('/api/v1/getInitialQuestions', async (req, res) => {
   try {
     const { survey_id, phase, answers } = req.body;
@@ -504,25 +504,40 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
       survey_id: survey_id,
       active: 1,
       phase: 1,
-    }).populate({
-      path: 'answers',
-      model: 'answer',
-      select: 'answer image'
-    }).select('question_title answers');
+    })
+      .populate({
+        path: 'answers',
+        model: 'answer',
+        select: 'answer image',
+      })
+      .populate({
+        path: 'question_type',
+        model: 'question_controller',
+        select: 'question_type',
+      })
+      .select('question_title answers question_type');
 
     if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
       return res.status(404).json({ message: "No questions found for the first phase." });
     }
 
-    // You can implement your logic to handle answers and find matching questions here
-    // For now, let's assume all questions in the first phase should be returned
+    // Flatten the question_type field
+    const flattenedQuestions = firstPhaseQuestions.map(question => {
+      return {
+        _id: question._id,
+        question_title: question.question_title,
+        answers: question.answers,
+        question_type: question.question_type.question_type,
+      };
+    });
 
-    res.json({ questions: firstPhaseQuestions, nextPhase: 2 });
+    res.json({ questions: flattenedQuestions });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
 
 //get questions from the specific phase
 router.post('/api/v1/getQuestions', async (req, res) => {
@@ -530,7 +545,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
     const results = [];
     let survey_id = req.headers['survey_id']
     const { phase, answered_questions } = req.body;
-
+    console.log(phase)
     let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 });
 
     const responses = [];
@@ -538,8 +553,9 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       .sort({ phase: -1 }) // Sort in descending order of phase number
       .limit(1)
       .select('phase');
+      
     let phaseNum = maxPhase.phase
-
+    
     if (phase <= phaseNum) {
       for (const question of phaseQuestions) {
         let dependenciesSatisfied = true;
@@ -568,20 +584,20 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             child_id: question._id,
             question_text: question.question_title,
             phase: question.phase,
+            question_type: question.question_type ? question.question_type.question_type : null,
           });
         }
       }
       return res.json(responses);
+    } else {
+      res.json({ message: "No more questions" });
     }
-    else {
-      res.json({ message: "No more questions" })
-    }
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
 
 async function checkDependencySatisfaction(dependency, answeredQuestions, results) {
   const parentQuestionId = dependency.parent_id.toString();

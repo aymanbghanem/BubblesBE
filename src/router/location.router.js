@@ -17,123 +17,123 @@ require('dotenv').config()
 
 
 
-router.get('/api/v1/getLocations', auth, async (req, res) => {
-    try {
-        let survey_id = req.headers['survey_id'];
-        let role = req.user.user_role;
+// router.get('/api/v1/getLocations', auth, async (req, res) => {
+//     try {
+//         let survey_id = req.headers['survey_id'];
+//         let role = req.user.user_role;
 
-        if (role === "admin") {
-            let existingSurvey = await surveyModel.findOne({ _id: survey_id });
+//         if (role === "admin") {
+//             let existingSurvey = await surveyModel.findOne({ _id: survey_id });
 
-            if (existingSurvey) {
-                let locations = await locationModels.find({
-                    survey_id: survey_id,
-                    active: 1
-                }).select('location_name _id');
+//             if (existingSurvey) {
+//                 let locations = await locationModels.find({
+//                     survey_id: survey_id,
+//                     active: 1
+//                 }).select('location_name _id');
 
-                if (locations.length > 0) {
-                    const dynamicLinks = await Promise.all(locations.map(async (location) => {
-                        const dynamicLink = `http://localhost:2107/dynamic-link?location_id=${location._id}&survey_id=${survey_id}`;
-                        const qrCode = await qr.toDataURL(dynamicLink);
-                        return { location: location.location_name, dynamicLink, qrCode };
-                    }));
+//                 if (locations.length > 0) {
+//                     const dynamicLinks = await Promise.all(locations.map(async (location) => {
+//                         const dynamicLink = `http://localhost:2107/dynamic-link?location_id=${location._id}&survey_id=${survey_id}`;
+//                         const qrCode = await qr.toDataURL(dynamicLink);
+//                         return { location: location.location_name, dynamicLink, qrCode };
+//                     }));
 
-                    res.json({ locations: dynamicLinks });
-                } else {
-                    res.json({ message: "There are no locations for this survey" });
-                }
-            } else {
-                res.json({ message: "The survey you are looking for its locations does not exist" });
-            }
-        } else {
-            res.json({ message: "Sorry, you are unauthorized" });
-        }
-    } catch (error) {
-        res.json({ message: "Catch error " + error });
-    }
-});
+//                     res.json({ locations: dynamicLinks });
+//                 } else {
+//                     res.json({ message: "There are no locations for this survey" });
+//                 }
+//             } else {
+//                 res.json({ message: "The survey you are looking for its locations does not exist" });
+//             }
+//         } else {
+//             res.json({ message: "Sorry, you are unauthorized" });
+//         }
+//     } catch (error) {
+//         res.json({ message: "Catch error " + error });
+//     }
+// });
 
-router.get('/dynamic-link', (req, res) => {
-    const location_id = req.query.location_id;
-    const survey_id = req.query.survey_id; // Include survey_id
-    res.redirect(`http://localhost:2107/location/${location_id}?survey_id=${survey_id}`);
-});
+// router.get('/dynamic-link', (req, res) => {
+//     const location_id = req.query.location_id;
+//     const survey_id = req.query.survey_id; // Include survey_id
+//     res.redirect(`http://localhost:2107/location/${location_id}?survey_id=${survey_id}`);
+// });
 
-router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
-    try {
-        let survey_id = req.headers['survey_id'];
-        let role = req.user.user_role;
+// router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
+//     try {
+//         let survey_id = req.headers['survey_id'];
+//         let role = req.user.user_role;
 
-        if (role === "admin") {
-            let existingSurvey = await surveyModel.findOne({ _id: survey_id });
+//         if (role === "admin") {
+//             let existingSurvey = await surveyModel.findOne({ _id: survey_id });
 
-            if (existingSurvey) {
-                const mainRoots = await locationModels.find({
-                    survey_id: survey_id,
-                    parent_id: null,
-                    active: 1
-                });
+//             if (existingSurvey) {
+//                 const mainRoots = await locationModels.find({
+//                     survey_id: survey_id,
+//                     parent_id: null,
+//                     active: 1
+//                 });
 
-                const leafLocations = await Promise.all(mainRoots.map(async (root) => {
-                    return await getLeafLocations(root._id, survey_id);
-                }));
+//                 const leafLocations = await Promise.all(mainRoots.map(async (root) => {
+//                     return await getLeafLocations(root._id, survey_id);
+//                 }));
 
-                const flatLeafLocations = leafLocations.flat();
-                const dynamicLinksAndQRCodes = await generateDynamicLinksAndQRCodes(flatLeafLocations);
+//                 const flatLeafLocations = leafLocations.flat();
+//                 const dynamicLinksAndQRCodes = await generateDynamicLinksAndQRCodes(flatLeafLocations);
 
-                res.json({ message:dynamicLinksAndQRCodes });
-            } else {
-                res.json({ message: "The survey you are looking for its locations does not exist" });
-            }
-        } else {
-            res.json({ message: "Sorry, you are unauthorized" });
-        }
-    } catch (error) {
-        res.json({ message: "Catch error " + error.message });
-    }
-});
+//                 res.json({ message:dynamicLinksAndQRCodes });
+//             } else {
+//                 res.json({ message: "The survey you are looking for its locations does not exist" });
+//             }
+//         } else {
+//             res.json({ message: "Sorry, you are unauthorized" });
+//         }
+//     } catch (error) {
+//         res.json({ message: "Catch error " + error.message });
+//     }
+// });
 
-const getLeafLocations = async (parentId, survey_id) => {
-    const location = await locationModels.findOne({ _id: parentId, active: 1 });
+// const getLeafLocations = async (parentId, survey_id) => {
+//     const location = await locationModels.findOne({ _id: parentId, active: 1 });
 
-    if (!location) {
-        return null; // Return null if location is not found
-    }
+//     if (!location) {
+//         return null; // Return null if location is not found
+//     }
 
-    const subLocations = await locationModels.find({ parent_id: parentId, active: 1 });
-    const leafLocations = await Promise.all(subLocations.map(async (subLocation) => {
-        return await getLeafLocations(subLocation._id, survey_id);
-    }));
+//     const subLocations = await locationModels.find({ parent_id: parentId, active: 1 });
+//     const leafLocations = await Promise.all(subLocations.map(async (subLocation) => {
+//         return await getLeafLocations(subLocation._id, survey_id);
+//     }));
 
-    // If location has no subLocations, or all its subLocations are leaf nodes, include it in the result
-    if (subLocations.length === 0 || leafLocations.every(leaf => leaf === null)) {
-        return [{
-            _id: location._id,
-            location_name: location.location_name,
-            parent_id: location.parent_id,
-            active: location.active,
-            description: location.location_description,
-            survey_id: survey_id,
-        }];
-    }
+//     // If location has no subLocations, or all its subLocations are leaf nodes, include it in the result
+//     if (subLocations.length === 0 || leafLocations.every(leaf => leaf === null)) {
+//         return [{
+//             _id: location._id,
+//             location_name: location.location_name,
+//             parent_id: location.parent_id,
+//             active: location.active,
+//             description: location.location_description,
+//             survey_id: survey_id,
+//         }];
+//     }
 
-    return leafLocations.filter(Boolean).flat();
-};
+//     return leafLocations.filter(Boolean).flat();
+// };
 
-const generateDynamicLinksAndQRCodes = async (leafLocations) => {
-    const dynamicLinksAndQRCodes = await Promise.all(leafLocations.map(async (leafLocation) => {
-        const dynamicLink = `http://localhost:2107/dynamic-link?location_id=${leafLocation._id}&survey_id=${leafLocation.survey_id}`;
-        const qrCode = await qr.toDataURL(dynamicLink);
+// const generateDynamicLinksAndQRCodes = async (leafLocations) => {
+//     const dynamicLinksAndQRCodes = await Promise.all(leafLocations.map(async (leafLocation) => {
+//         const dynamicLink = `http://localhost:2107/dynamic-link?location_id=${leafLocation._id}&survey_id=${leafLocation.survey_id}`;
+//         const qrCode = await qr.toDataURL(dynamicLink);
 
-        return {
-            dynamicLink,
-            qrCode,
-            location: leafLocation.location_name,
-        };
-    }));
+//         return {
+//             dynamicLink,
+//             qrCode,
+//             location: leafLocation.location_name,
+//         };
+//     }));
 
-    return dynamicLinksAndQRCodes;
-};
+//     return dynamicLinksAndQRCodes;
+// };
 
 // router.post('/api/v1/addLocation', auth, async (req, res) => {
 //     try {
@@ -269,90 +269,90 @@ const getLocationsTree = async (parentId) => {
     };
 };
 
-// router.get('/api/v1/getLocations',auth,async(req,res)=>{
-//     try {
-//         let survey_id = req.headers['survey_id']
-//         let role = req.user.user_role
-//         if(role=="admin"){
-//            let existingSurvey = await surveyModel.findOne({_id:survey_id})
-//            if(existingSurvey){
-//             let locations = await locationModels.find({
-//                 survey_id:survey_id,
-//                 active:1
-//             }).select('location_name')
-//             if(locations.length>0){
-//                res.json({message:locations})
-//             }else{
-//                 res.json({message:"There is no location for this survey"})
-//             }
-//            }else{
-//             res.json({message:"The survey you are looking for it is locations does not exist"})
-//            }
-//         }else{
-//             res.json({message:"sorry, you are unauthorized"})
-//         }
-//     } catch (error) {
-//         res.json({message:"catch error "+error})
-//     }
-// })
+router.get('/api/v1/getLocations',auth,async(req,res)=>{
+    try {
+        let survey_id = req.headers['survey_id']
+        let role = req.user.user_role
+        if(role=="admin"){
+           let existingSurvey = await surveyModel.findOne({_id:survey_id})
+           if(existingSurvey){
+            let locations = await locationModels.find({
+                survey_id:survey_id,
+                active:1
+            }).select('location_name')
+            if(locations.length>0){
+               res.json({message:locations})
+            }else{
+                res.json({message:"There is no location for this survey"})
+            }
+           }else{
+            res.json({message:"The survey you are looking for it is locations does not exist"})
+           }
+        }else{
+            res.json({message:"sorry, you are unauthorized"})
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 
-// router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
-//     try {
-//         let survey_id = req.headers['survey_id'];
-//         let role = req.user.user_role;
+router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
+    try {
+        let survey_id = req.headers['survey_id'];
+        let role = req.user.user_role;
 
-//         if (role == "admin") {
-//             let existingSurvey = await surveyModel.findOne({ _id: survey_id });
+        if (role == "admin") {
+            let existingSurvey = await surveyModel.findOne({ _id: survey_id });
 
-//             if (existingSurvey) {
-//                 const mainRoots = await locationModels.find({
-//                     survey_id: survey_id,
-//                     parent_id: null,
-//                     active: 1
-//                 });
+            if (existingSurvey) {
+                const mainRoots = await locationModels.find({
+                    survey_id: survey_id,
+                    parent_id: null,
+                    active: 1
+                });
 
-//                 const leafLocations = await Promise.all(mainRoots.map(async (root) => {
-//                     return await getLeafLocations(root._id);
-//                 }));
+                const leafLocations = await Promise.all(mainRoots.map(async (root) => {
+                    return await getLeafLocations(root._id);
+                }));
 
-//                 res.json({ message: leafLocations.flat() }); // Flattening the result array
-//             } else {
-//                 res.json({ message: "The survey you are looking for its locations does not exist" });
-//             }
-//         } else {
-//             res.json({ message: "Sorry, you are unauthorized" });
-//         }
-//     } catch (error) {
-//         res.json({ message: "Catch error " + error.message });
-//     }
-// });
+                res.json({ message: leafLocations.flat() }); // Flattening the result array
+            } else {
+                res.json({ message: "The survey you are looking for its locations does not exist" });
+            }
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        res.json({ message: "Catch error " + error.message });
+    }
+});
 
-// const getLeafLocations = async (parentId) => {
-//     const location = await locationModels.findOne({ _id: parentId, active: 1 });
+const getLeafLocations = async (parentId) => {
+    const location = await locationModels.findOne({ _id: parentId, active: 1 });
 
-//     if (!location) {
-//         return null; // Return null if location is not found
-//     }
+    if (!location) {
+        return null; // Return null if location is not found
+    }
 
-//     const subLocations = await locationModels.find({ parent_id: parentId, active: 1 });
-//     const leafLocations = await Promise.all(subLocations.map(async (subLocation) => {
-//         return await getLeafLocations(subLocation._id);
-//     }));
+    const subLocations = await locationModels.find({ parent_id: parentId, active: 1 });
+    const leafLocations = await Promise.all(subLocations.map(async (subLocation) => {
+        return await getLeafLocations(subLocation._id);
+    }));
 
-//     // If location has no subLocations, or all its subLocations are leaf nodes, include it in the result
-//     if (subLocations.length === 0 || leafLocations.every(leaf => leaf === null)) {
-//         return [{
-//             _id: location._id,
-//             location_name: location.location_name,
-//             parentId: location.parent_id,
-//             active: location.active,
-//             description: location.location_description,
-//         }];
-//     }
+    // If location has no subLocations, or all its subLocations are leaf nodes, include it in the result
+    if (subLocations.length === 0 || leafLocations.every(leaf => leaf === null)) {
+        return [{
+            _id: location._id,
+            location_name: location.location_name,
+            parentId: location.parent_id,
+            active: location.active,
+            description: location.location_description,
+        }];
+    }
 
-//     // Filter out null values and return only non-null leaf nodes
-//     return leafLocations.filter(Boolean).flat();
-// };
+    // Filter out null values and return only non-null leaf nodes
+    return leafLocations.filter(Boolean).flat();
+};
 
 router.put('/api/v1/updateLocation', auth, async(req, res) => {
     try {

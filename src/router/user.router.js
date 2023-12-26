@@ -41,9 +41,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         const existingUser = await userModels.findOne({
             //on the platform
             $and: [
-                { $or: [{ email_address: email_address }, { user_name: user_name }] },
-                { active: 1 },
-            ],
+                { $or: [{ email_address: email_address }, { user_name: user_name }] }],
         });
 
         if (existingUser) {
