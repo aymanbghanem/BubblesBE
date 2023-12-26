@@ -648,7 +648,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             });
           }
         }
-        return res.json(responses);
+        return res.json({questions:responses});
       } 
       else {
         res.json({ message: "No more questions" });
