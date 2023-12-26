@@ -389,7 +389,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       const updateLocations = async (locations, parentId = null) => {
         try {
           for (const location of locations) {
-            const { id, location_name, location_description, subLocations } = location;
+            const { id, location_name,textValue, location_description, sublocations } = location;
       
             // Check if the provided location_id exists
             const existingLocation = await Location.findOne({
@@ -402,7 +402,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
               // If the location doesn't exist, create a new one
               const newLocation = new Location({
                 id,
-                location_name,
+                location_name:location_name || textValue,
                 location_description,
                 parent_id:parentId,
                 survey_id: surveyId,
@@ -412,22 +412,22 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
               const savedLocation = await newLocation.save();
       
               // Recursively update sub-locations
-              if (subLocations && subLocations.length > 0) {
-                await updateLocations(subLocations, savedLocation._id);
+              if (sublocations && sublocations.length > 0) {
+                await updateLocations(sublocations, savedLocation._id);
               }
             } else {
               // If the location already exists, update its information
               await Location.updateOne(
                 { _id: existingLocation._id },
                 {
-                  location_name,
+                  location_name : location_name || textValue,
                   location_description,
                 }
               );
       
               // Recursively update sub-locations
-              if (subLocations && subLocations.length > 0) {
-                await updateLocations(subLocations, existingLocation._id);
+              if (sublocations && sublocations.length > 0) {
+                await updateLocations(sublocations, existingLocation._id);
               }
             }
           }
