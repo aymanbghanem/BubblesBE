@@ -34,7 +34,7 @@ router.post('/api/v1/addSetting', auth, async (req, res) => {
 router.get('/api/v1/getSetting',auth,async(req,res)=>{
     try {
         let role = req.user.user_role
-        if (role==="superadmin") {
+        if (role==="superadmin" || role==="admin" ) {
             let  setting = await settingModels.findOne({
                 active:1
             })

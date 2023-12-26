@@ -540,43 +540,135 @@ router.post('/api/v1/getInitialQuestions', async (req, res) => {
 
 
 //get questions from the specific phase
+
+// router.post('/api/v1/getQuestions', async (req, res) => {
+//   try {
+//     const results = [];
+//     let survey_id = req.headers['survey_id']
+//     const { phase, answered_questions } = req.body;
+     
+//     let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
+//     .populate({
+//       path: 'question_type',
+//       model: 'question_controller',
+//       select: 'question_type',
+//     });
+
+//     const responses = [];
+//     const maxPhase = await Question.findOne({ survey_id: survey_id, active: 1 })
+//       .sort({ phase: -1 }) // Sort in descending order of phase number
+//       .limit(1)
+//       .select('phase');
+      
+//     let phaseNum = maxPhase.phase
+    
+//     if (phase <= phaseNum) {
+//       for (const question of phaseQuestions) {
+//         let dependenciesSatisfied = true;
+
+//         if (question.question_dependency && question.question_dependency.length > 0) {
+//           if (question.question_dependency.length === 1) {
+//             // Keep the existing logic for a single dependency
+//             const dependency = question.question_dependency[0];
+//             const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
+
+//             if (!isDependencySatisfied) {
+//               dependenciesSatisfied = false;
+//             }
+//           } else {
+//             // New logic for multiple dependencies
+//             const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
+
+//             if (!isMultipleDependenciesSatisfied) {
+//               dependenciesSatisfied = false;
+//             }
+//           }
+//         }
+
+//         if (dependenciesSatisfied) {
+//           responses.push({
+//             _id: question._id,
+//             question_text: question.question_title,
+//             phase: question.phase,
+//             question_type: question.question_type ? question.question_type.question_type : null,
+//           });
+//         }
+//       }
+//       return res.json(responses);
+//     } else {
+//       res.json({ message: "No more questions" });
+//     }
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// });
+
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
-    const results = [];
-    let survey_id = req.headers['survey_id']
     const { phase, answered_questions } = req.body;
-     
-    let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
-    .populate({
-      path: 'question_type',
-      model: 'question_controller',
-      select: 'question_type',
+    let survey_id = req.headers['survey_id'];
+
+    // Validate survey existence and active status
+    const existingSurvey = await surveyModel.findOne({
+      _id: survey_id,
+      active: 1,
     });
 
-    const responses = [];
-    const maxPhase = await Question.findOne({ survey_id: survey_id, active: 1 })
-      .sort({ phase: -1 }) // Sort in descending order of phase number
-      .limit(1)
-      .select('phase');
-      
-    let phaseNum = maxPhase.phase
+    if (!existingSurvey) {
+      return res.status(404).json({ message: "The survey does not exist or is not active." });
+    }
+
+    let questions;
     
-    if (phase <= phaseNum) {
-      for (const question of phaseQuestions) {
+    if (phase === 1) {
+      // Fetch questions for the first phase
+      questions = await Question.find({
+        survey_id: survey_id,
+        active: 1,
+        phase: 1,
+      })
+        .populate({
+          path: 'answers',
+          model: 'answer',
+          select: 'answer image',
+        })
+        .populate({
+          path: 'question_type',
+          model: 'question_controller',
+          select: 'question_type',
+        })
+        .select('_id question_title answers question_type');
+    } else {
+      // Fetch questions for the specific phase, including answers
+      questions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
+        .populate({
+          path: 'answers',
+          model: 'answer',
+          select: 'answer image',
+        })
+        .populate({
+          path: 'question_type',
+          model: 'question_controller',
+          select: 'question_type',
+        })
+        .select('_id question_title answers question_type');
+    }
+
+    const responses = questions
+      .filter(question => {
         let dependenciesSatisfied = true;
 
         if (question.question_dependency && question.question_dependency.length > 0) {
           if (question.question_dependency.length === 1) {
-            // Keep the existing logic for a single dependency
             const dependency = question.question_dependency[0];
-            const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
+            const isDependencySatisfied = checkDependencySatisfaction(dependency, answered_questions, []);
 
             if (!isDependencySatisfied) {
               dependenciesSatisfied = false;
             }
           } else {
-            // New logic for multiple dependencies
-            const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
+            const isMultipleDependenciesSatisfied = checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, []);
 
             if (!isMultipleDependenciesSatisfied) {
               dependenciesSatisfied = false;
@@ -584,18 +676,26 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           }
         }
 
-        if (dependenciesSatisfied) {
-          responses.push({
-            _id: question._id,
-            question_text: question.question_title,
-            phase: question.phase,
-            question_type: question.question_type ? question.question_type.question_type : null,
-          });
-        }
-      }
+        return dependenciesSatisfied;
+      })
+      .map(question => {
+        return {
+          _id: question._id,
+          question_text: question.question_title,
+          phase: phase, // Include the phase in the response
+          question_type: question.question_type ? question.question_type.question_type : null,
+          answers: question.answers ? question.answers.map(answer => ({
+            _id: answer._id,
+            answer: answer.answer,
+            image: answer.image,
+          })) : [],
+        };
+      });
+
+    if (responses.length > 0) {
       return res.json(responses);
     } else {
-      res.json({ message: "No more questions" });
+      return res.json({ message: "No more questions" });
     }
   } catch (error) {
     console.error(error);
