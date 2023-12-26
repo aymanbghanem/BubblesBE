@@ -637,7 +637,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           if (dependenciesSatisfied) {
             responses.push({
               _id: question._id,
-              question_text: question.question_title,
+              question_title: question.question_title,
               phase: question.phase,
               question_type: question.question_type ? question.question_type.question_type : null,
               answers: question.answers.map(answer => ({
