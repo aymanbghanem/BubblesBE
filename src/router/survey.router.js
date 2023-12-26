@@ -545,8 +545,13 @@ router.post('/api/v1/getQuestions', async (req, res) => {
     const results = [];
     let survey_id = req.headers['survey_id']
     const { phase, answered_questions } = req.body;
-    console.log(phase)
-    let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 });
+     
+    let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
+    .populate({
+      path: 'question_type',
+      model: 'question_controller',
+      select: 'question_type',
+    });
 
     const responses = [];
     const maxPhase = await Question.findOne({ survey_id: survey_id, active: 1 })
@@ -581,7 +586,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
 
         if (dependenciesSatisfied) {
           responses.push({
-            child_id: question._id,
+            _id: question._id,
             question_text: question.question_title,
             phase: question.phase,
             question_type: question.question_type ? question.question_type.question_type : null,
