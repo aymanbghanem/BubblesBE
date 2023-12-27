@@ -35,6 +35,10 @@ const responseSchema = new Schema({
      response_flag:{
         type:Number,
         default:0
+     },
+     department_id:{
+        type: Schema.Types.ObjectId,
+        ref: 'department'
      }
  }, { timestamps: true });
 
