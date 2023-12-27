@@ -12,12 +12,12 @@ router.post('/api/v1/createResponse', async (req, res) => {
     try {
         const { survey_id } = req.body;
         const { location_id, user_number } = req.headers;
-        const responseArray = req.body.responses;
+        const responseArray = req.body.answered_questions;
 
         for (const responseObj of responseArray) {
-            const { question_id, user_answer } = responseObj;
+            const { _id, answers } = responseObj;
 
-            const questionType = await questionModel.findOne({ _id: question_id, active: 1 }).populate([
+            const questionType = await questionModel.findOne({ _id:_id, active: 1 }).populate([
                 {
                     path: 'answers',
                     model: 'answer',
@@ -39,12 +39,12 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     question_id,
                     location_id,
                     user_number,
-                    user_answer,
+                    answers,
                 });
             } else if (question_type.question_type === 'Multiple choice') {
-                if (Array.isArray(user_answer)) {
+                if (Array.isArray(answers)) {
                     // If it's an array of answers, iterate over each selected answer
-                    for (const selectedAnswer of user_answer) {
+                    for (const selectedAnswer of answers) {
                         // Check if the selected answer matches any of the existing answers using regex
                         const userAnswerLower = selectedAnswer.toLowerCase();
                         const isMatch = (answer, userAnswer) => {
@@ -61,11 +61,11 @@ router.post('/api/v1/createResponse', async (req, res) => {
                             // If a matching answer is found, store the response with the answer's ID
                             await responseModel.create({
                                 survey_id,
-                                question_id,
+                                question_id:_id,
                                 answer_id: matchedAnswer._id,
                                 location_id,
                                 user_number,
-                                user_answer: selectedAnswer,
+                                answers: selectedAnswer,
                             });
                         } else {
                             console.log(userAnswerLower);
@@ -75,15 +75,15 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     // If it's a single answer, store the response as usual
                     await responseModel.create({
                         survey_id,
-                        question_id,
+                        question_id:_id,
                         location_id,
                         user_number,
-                        user_answer,
+                        answers,
                     });
                 }
             } else {
                 // For other question types, compare user's answer with existing answers using regex
-                const userAnswerLower = user_answer.toLowerCase();
+                const userAnswerLower = answers.toLowerCase();
                 const isMatch = (answer, userAnswer) => {
                     const regex = new RegExp(answer, 'i');
                     return regex.test(userAnswer);
@@ -96,11 +96,11 @@ router.post('/api/v1/createResponse', async (req, res) => {
                 if (matchedAnswer) {
                     await responseModel.create({
                         survey_id,
-                        question_id,
+                        question_id:_id,
                         answer_id: matchedAnswer._id,
                         location_id,
                         user_number,
-                        user_answer,
+                        answers,
                     });
                 } else {
                     console.log(userAnswerLower);
@@ -120,7 +120,7 @@ module.exports = router
 // let responseCreation = await responseModel.create({
 //     survey_id,
 //     question_id,
-//     user_answer,
+//     answers,
 //     location_id,
 //     user_number
 // })
