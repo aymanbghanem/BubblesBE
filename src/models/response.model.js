@@ -43,6 +43,9 @@ const responseSchema = new Schema({
      company_id:{
         type: Schema.Types.ObjectId,
         ref: 'company'
+     },
+     question_type:{
+        type:String
      }
  }, { timestamps: true });
 

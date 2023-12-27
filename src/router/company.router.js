@@ -15,6 +15,7 @@ const qrModel = require("../models/qr.model");
 const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
+const responseModel = require("../models/response.model");
 require('dotenv').config()
 
 router.post('/api/v1/addCompany', auth, async (req, res) => {
@@ -96,7 +97,8 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
                     questionModel.updateMany({ survey_id: survey._id }, { active:active }),
                     Answer.updateMany({ survey_id: survey._id }, { active:active }),
                     locationModel.updateMany({ survey_id: survey._id }, { active:active }),
-                    qrModel.updateMany({ survey_id: survey._id }, { active:active })
+                    qrModel.updateMany({ survey_id: survey._id }, { active:active }),
+                    responseModel.updateMany({ survey_id: survey._id }, { active:active })
                 ]);
             }
 

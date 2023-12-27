@@ -10,6 +10,7 @@ const userModels = require("../models/user.models");
 const surveyReaderModel = require('../models/surveyReader.model')
 const surveyModel = require('../models/survey.models')
 const questionModel = require("../models/questions.models");
+const responseModel = require("../models/response.model");
 const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
@@ -93,7 +94,8 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
                     surveyReaderModel.updateMany({ survey_id: survey._id}, { active: active }),
                     questionModel.updateMany({ survey_id: survey._id}, { active: active }),
                     Answer.updateMany({ survey_id: survey._id}, { active: active }),
-                    locationModel.updateMany({ survey_id: survey._id }, { active: active })
+                    locationModel.updateMany({ survey_id: survey._id }, { active: active }),
+                    responseModel.updateMany({ survey_id: survey._id }, { active:active })
                 ]);
             }
 

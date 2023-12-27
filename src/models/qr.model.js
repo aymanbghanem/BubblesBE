@@ -19,4 +19,4 @@ const qrSchema = new Schema({
 
 }, { timestamps: true })
 
-module.exports = model('qr', qrSchema)
+module.exports = model('QR', qrSchema)

@@ -49,6 +49,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     department_id:department_id,
                     company_id:company_id,
                     user_answer : user_answer[0],
+                    question_type : question_type.question_type
                 });
             } else if (question_type.question_type === 'Multiple choice') {
                 if (Array.isArray(user_answer)) {
@@ -70,6 +71,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                 department_id:department_id,
                                 company_id:company_id,
                                 user_answer: selectedAnswer,
+                                question_type : question_type.question_type
                             });
                         } else {
                             console.log(selectedAnswer);
@@ -85,6 +87,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         department_id:department_id,
                         company_id:company_id,
                         user_answer,
+                        question_type : question_type.question_type
                     });
                 }
             } else if (question_type.question_type === 'Single choice')  {
@@ -103,6 +106,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         department_id:department_id,
                         company_id:company_id,
                         user_answer : user_answer[0],
+                        question_type : question_type.question_type
                     });
                 } else {
                     console.log(user_answer);

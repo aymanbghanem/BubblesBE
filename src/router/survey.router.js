@@ -15,6 +15,7 @@ const Response = require("../models/response.model")
 const qrModel = require("../models/qr.model");
 const mongoose = require('mongoose');
 const questions_controllerModels = require("../models/questions_controller.models");
+const responseModel = require("../models/response.model");
 require('dotenv').config()
 
 // Create new survey 
@@ -794,7 +795,9 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
               let deleteQuestions = await Question.updateMany({ survey_id: survey_id }, { active: active });
               let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
               let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
-              let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active })
+              let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active });
+              let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
+
               if (active == 1) {
                   res.json({ message: "The survey and its data were activated successfully" });
               } else if (active == 0) {
