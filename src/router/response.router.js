@@ -34,14 +34,14 @@ router.post('/api/v1/createResponse', async (req, res) => {
 
             const { question_type } = questionType;
 
-            if (['text', 'range'].includes(question_type.question_type)) {
+            if (['text', 'range','Range','Text'].includes(question_type.question_type)) {
                 // If the question type is 'text' or 'range', store the response directly
                 await responseModel.create({
                     survey_id,
                     question_id,
                     location_id,
                     user_number,
-                    user_answer,
+                    user_answer : user_answer[0],
                 });
             } else if (question_type.question_type === 'Multiple choice') {
                 if (Array.isArray(user_answer)) {
@@ -49,7 +49,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     for (const selectedAnswer of user_answer) {
                         // Find the matching answer using strict equality
                         const matchedAnswer = questionType.answers.find(answer =>
-                            answer.answer === selectedAnswer
+                            answer.answer == selectedAnswer
                         );
 
                         if (matchedAnswer) {
@@ -76,10 +76,10 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         user_answer,
                     });
                 }
-            } else {
+            } else if (question_type.question_type === 'Single choice')  {
                 // For other question types, compare user's answer with existing answers using strict equality
                 const matchedAnswer = questionType.answers.find(answer =>
-                    answer.answer === user_answer
+                    answer.answer === user_answer[0]
                 );
 
                 if (matchedAnswer) {
@@ -89,7 +89,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         answer_id: matchedAnswer._id,
                         location_id,
                         user_number,
-                        user_answer,
+                        user_answer : user_answer[0],
                     });
                 } else {
                     console.log(user_answer);

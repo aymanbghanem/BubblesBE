@@ -586,6 +586,8 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           question_title: question.question_title,
           answers: question.answers,
           question_type: question.question_type.question_type,
+          required : question.required,
+          
         };
       });
   
@@ -644,6 +646,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
                 _id: answer._id,
                 answer: answer.answer,
                 image: answer.image,
+                required : question.required
               })),
             });
           }
