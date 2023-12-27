@@ -8,7 +8,6 @@ const responseModel = require('../models/response.model')
 const questionModel = require('../models/questions.models')
 require('dotenv').config()
 
-
 router.post('/api/v1/createResponse', async (req, res) => {
     try {
         const { survey_id } = req.body;
@@ -17,8 +16,10 @@ router.post('/api/v1/createResponse', async (req, res) => {
 
         for (const responseObj of responseArray) {
             const { _id, answers } = responseObj;
+            let question_id = _id;
+            let user_answer = answers;
 
-            const questionType = await questionModel.findOne({ _id: _id, active: 1 }).populate([
+            const questionType = await questionModel.findOne({ _id: question_id, active: 1 }).populate([
                 {
                     path: 'answers',
                     model: 'answer',
@@ -33,33 +34,33 @@ router.post('/api/v1/createResponse', async (req, res) => {
 
             const { question_type } = questionType;
 
-            if (['text', 'range'].includes(question_type.question_type.toLowerCase())) {
+            if (['text', 'range'].includes(question_type.question_type)) {
                 // If the question type is 'text' or 'range', store the response directly
                 await responseModel.create({
                     survey_id,
-                    question_id: _id,
+                    question_id,
                     location_id,
                     user_number,
-                    answers,
+                    user_answer,
                 });
-            } else if (question_type.question_type.toLowerCase() === 'multiple choice') {
-                if (Array.isArray(answers)) {
+            } else if (question_type.question_type === 'Multiple choice') {
+                if (Array.isArray(user_answer)) {
                     // If it's an array of answers, iterate over each selected answer
-                    for (const selectedAnswer of answers) {
-                        // Find the matching answer without using regex or lowercase
+                    for (const selectedAnswer of user_answer) {
+                        // Find the matching answer using strict equality
                         const matchedAnswer = questionType.answers.find(answer =>
-                            answer.answer.localeCompare(selectedAnswer, undefined, { sensitivity: 'base' }) === 0
+                            answer.answer === selectedAnswer
                         );
 
                         if (matchedAnswer) {
                             // If a matching answer is found, store the response with the answer's ID
                             await responseModel.create({
                                 survey_id,
-                                question_id: _id,
+                                question_id,
                                 answer_id: matchedAnswer._id,
                                 location_id,
                                 user_number,
-                                answers: selectedAnswer,
+                                user_answer: selectedAnswer,
                             });
                         } else {
                             console.log(selectedAnswer);
@@ -69,29 +70,29 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     // If it's a single answer, store the response as usual
                     await responseModel.create({
                         survey_id,
-                        question_id: _id,
+                        question_id,
                         location_id,
                         user_number,
-                        answers,
+                        user_answer,
                     });
                 }
             } else {
-                // For other question types, compare user's answer with existing answers without using regex or lowercase
+                // For other question types, compare user's answer with existing answers using strict equality
                 const matchedAnswer = questionType.answers.find(answer =>
-                    answer.answer.localeCompare(answers, undefined, { sensitivity: 'base' }) === 0
+                    answer.answer === user_answer
                 );
 
                 if (matchedAnswer) {
                     await responseModel.create({
                         survey_id,
-                        question_id: _id,
+                        question_id,
                         answer_id: matchedAnswer._id,
                         location_id,
                         user_number,
-                        answers,
+                        user_answer,
                     });
                 } else {
-                    console.log(answers);
+                    console.log(user_answer);
                 }
             }
         }
@@ -101,14 +102,13 @@ router.post('/api/v1/createResponse', async (req, res) => {
     }
 });
 
-
 module.exports = router
 
 
 // let responseCreation = await responseModel.create({
 //     survey_id,
 //     question_id,
-//     answers,
+//     user_answer,
 //     location_id,
 //     user_number
 // })
