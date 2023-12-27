@@ -39,6 +39,10 @@ const responseSchema = new Schema({
      department_id:{
         type: Schema.Types.ObjectId,
         ref: 'department'
+     },
+     company_id:{
+        type: Schema.Types.ObjectId,
+        ref: 'company'
      }
  }, { timestamps: true });
 

@@ -18,6 +18,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
         let surveyInfo = await surveyModels.findOne({_id:survey_id})
         if(surveyInfo){
         let department_id = surveyInfo.department_id
+        let company_id = surveyInfo.company_id
         for (const responseObj of responseArray) {
             const { _id, answers } = responseObj;
             let question_id = _id;
@@ -46,6 +47,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     location_id,
                     user_number,
                     department_id:department_id,
+                    company_id:company_id,
                     user_answer : user_answer[0],
                 });
             } else if (question_type.question_type === 'Multiple choice') {
@@ -66,6 +68,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                 location_id,
                                 user_number,
                                 department_id:department_id,
+                                company_id:company_id,
                                 user_answer: selectedAnswer,
                             });
                         } else {
@@ -80,6 +83,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         location_id,
                         user_number,
                         department_id:department_id,
+                        company_id:company_id,
                         user_answer,
                     });
                 }
@@ -97,6 +101,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         location_id,
                         user_number,
                         department_id:department_id,
+                        company_id:company_id,
                         user_answer : user_answer[0],
                     });
                 } else {
@@ -119,7 +124,8 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
         let role = req.user.user_role;
         if (role == 'admin' || role == "survey-reader") {
             let department_id = req.user.department_id;
-            let responses = await responseModel.find({ department_id }).populate([
+           
+            let responses = await responseModel.find({ department_id , active:1}).populate([
                 {
                     path: 'survey_id',
                     model: 'survey',
@@ -135,7 +141,7 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                     model: 'location',
                     select: 'location_name -_id'
                 },
-            ]).select('user_answer createdAt');
+            ]).select('user_answer createdAt active');
 
             if (responses) {
                 // Transform the responses array
