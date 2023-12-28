@@ -5,6 +5,10 @@ const reportSchema = new Schema({
         type: Number,
         default: 1
     },
+    created_by : {
+        type: Schema.Types.ObjectId,
+        ref: 'user'
+    },
     location_id: {
         type: Schema.Types.ObjectId,
         ref: 'survey'
