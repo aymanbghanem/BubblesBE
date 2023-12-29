@@ -4,6 +4,7 @@ const router = express.Router();
 const config = require('../../config')
 const auth = require('../middleware/auth')
 const { MongoClient, ObjectId } = require('mongodb');
+const _ = require('lodash');
 const responseModel = require('../models/response.model')
 const questionModel = require('../models/questions.models');
 const surveyModels = require("../models/survey.models");
@@ -141,8 +142,8 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
         let role = req.user.user_role;
         if (role == 'admin' || role == "survey-reader") {
             let department_id = req.user.department_id;
-           
-            let responses = await responseModel.find({ department_id , active:1}).populate([
+
+            let responses = await responseModel.find({ department_id, active: 1 }).populate([
                 {
                     path: 'survey_id',
                     model: 'survey',
@@ -158,17 +159,22 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                     model: 'location',
                     select: 'location_name -_id'
                 },
-            ]).select('user_answer createdAt active');
+            ]).select('user_answer createdAt active user_id');
 
             if (responses) {
-                // Transform the responses array
-                const formattedResponses = responses.map(response => ({
+                // Group responses by user_id
+                const groupedResponses = _.groupBy(responses, 'user_id');
+
+                // Select only the first response for each user_id
+                const uniqueResponses = _.map(groupedResponses, group => group[0]);
+
+                // Transform the unique responses array
+                const formattedResponses = uniqueResponses.map(response => ({
                     _id: response._id,
-                    question_title: response.question_id.question_title,
                     survey_title: response.survey_id.survey_title,
                     location_name: response.location_id.location_name,
-                    user_answer: response.user_answer,
-                    createdAt: response.createdAt
+                    createdAt: response.createdAt,
+                    user_id: response.user_id
                 }));
 
                 res.json({ message: formattedResponses });
