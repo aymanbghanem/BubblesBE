@@ -25,8 +25,8 @@ const responseSchema = new Schema({
      user_answer: {
          type: String
      },
-     user_number : {
-        type: String
+     user_id : {
+        type: Schema.Types.ObjectId,
      },
      answer_id:{
         type: Schema.Types.ObjectId,
@@ -45,6 +45,9 @@ const responseSchema = new Schema({
         ref: 'company'
      },
      question_type:{
+        type:String
+     },
+     user_number:{
         type:String
      }
  }, { timestamps: true });

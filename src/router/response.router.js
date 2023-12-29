@@ -3,117 +3,130 @@ const router = express.Router();
 
 const config = require('../../config')
 const auth = require('../middleware/auth')
-
+const { MongoClient, ObjectId } = require('mongodb');
 const responseModel = require('../models/response.model')
 const questionModel = require('../models/questions.models');
 const surveyModels = require("../models/survey.models");
+const locationModels = require("../models/location.models");
 require('dotenv').config()
 
 router.post('/api/v1/createResponse', async (req, res) => {
     try {
-        const { survey_id } = req.body;
-        const { location_id, user_number } = req.headers;
+         let survey_id = req.query.survey_id
+         let location_id = req.query.location_id;
+         let user_number = req.query.user_number
+         const user_id = new ObjectId();
+        // const { survey_id } = req.body;
+        // const { location_id, user_number } = req.headers;
         const responseArray = req.body.answered_questions;
 
-        let surveyInfo = await surveyModels.findOne({_id:survey_id})
+        let surveyInfo = await surveyModels.findOne({_id:survey_id , active:1})
         if(surveyInfo){
-        let department_id = surveyInfo.department_id
-        let company_id = surveyInfo.company_id
-        for (const responseObj of responseArray) {
-            const { _id, answers } = responseObj;
-            let question_id = _id;
-            let user_answer = answers;
-
-            const questionType = await questionModel.findOne({ _id: question_id, active: 1 }).populate([
-                {
-                    path: 'answers',
-                    model: 'answer',
-                    select: 'answer',
-                },
-                {
-                    path: 'question_type',
-                    model: 'question_controller',
-                    select: 'question_type',
-                },
-            ]).select('answers question_type');
-
-            const { question_type } = questionType;
-
-            if (['text', 'range','Range','Text'].includes(question_type.question_type)) {
-                // If the question type is 'text' or 'range', store the response directly
-                await responseModel.create({
-                    survey_id,
-                    question_id,
-                    location_id,
-                    user_number,
-                    department_id:department_id,
-                    company_id:company_id,
-                    user_answer : user_answer[0],
-                    question_type : question_type.question_type
-                });
-            } else if (question_type.question_type === 'Multiple choice') {
-                if (Array.isArray(user_answer)) {
-                    // If it's an array of answers, iterate over each selected answer
-                    for (const selectedAnswer of user_answer) {
-                        // Find the matching answer using strict equality
+            let locationExist = await locationModels.findOne({_id:location_id , active:1})
+            if(locationExist){
+                let department_id = surveyInfo.department_id
+                let company_id = surveyInfo.company_id
+                for (const responseObj of responseArray) {
+                    const { _id, answers } = responseObj;
+                    let question_id = _id;
+                    let user_answer = answers;
+        
+                    const questionType = await questionModel.findOne({ _id: question_id, active: 1 }).populate([
+                        {
+                            path: 'answers',
+                            model: 'answer',
+                            select: 'answer',
+                        },
+                        {
+                            path: 'question_type',
+                            model: 'question_controller',
+                            select: 'question_type',
+                        },
+                    ]).select('answers question_type');
+        
+                    const { question_type } = questionType;
+        
+                    if (['text', 'range','Range','Text'].includes(question_type.question_type)) {
+                        // If the question type is 'text' or 'range', store the response directly
+                        await responseModel.create({
+                            survey_id,
+                            question_id,
+                            location_id,
+                            user_number:user_number||"",
+                            department_id:department_id,
+                            company_id:company_id,
+                            user_id,
+                            user_answer : user_answer[0],
+                            question_type : question_type.question_type
+                        });
+                    } else if (question_type.question_type === 'Multiple choice') {
+                        if (Array.isArray(user_answer)) {
+                            // If it's an array of answers, iterate over each selected answer
+                            for (const selectedAnswer of user_answer) {
+                                // Find the matching answer using strict equality
+                                const matchedAnswer = questionType.answers.find(answer =>
+                                    answer.answer == selectedAnswer
+                                );
+        
+                                if (matchedAnswer) {
+                                    // If a matching answer is found, store the response with the answer's ID
+                                    await responseModel.create({
+                                        survey_id,
+                                        question_id,
+                                        answer_id: matchedAnswer._id,
+                                        location_id,
+                                        user_number:user_number||"",
+                                        user_id,
+                                        department_id:department_id,
+                                        company_id:company_id,
+                                        user_answer: selectedAnswer,
+                                        question_type : question_type.question_type
+                                    });
+                                } 
+                            }
+                        } else {
+                            // If it's a single answer, store the response as usual
+                            await responseModel.create({
+                                survey_id,
+                                question_id,
+                                location_id,
+                                user_number:user_number||"",
+                                user_id,
+                                department_id:department_id,
+                                company_id:company_id,
+                                user_answer,
+                                question_type : question_type.question_type
+                            });
+                        }
+                    } else if (question_type.question_type === 'Single choice')  {
+                        // For other question types, compare user's answer with existing answers using strict equality
                         const matchedAnswer = questionType.answers.find(answer =>
-                            answer.answer == selectedAnswer
+                            answer.answer === user_answer[0]
                         );
-
+        
                         if (matchedAnswer) {
-                            // If a matching answer is found, store the response with the answer's ID
                             await responseModel.create({
                                 survey_id,
                                 question_id,
                                 answer_id: matchedAnswer._id,
                                 location_id,
-                                user_number,
+                                user_number:user_number||"",
+                                user_id,
                                 department_id:department_id,
                                 company_id:company_id,
-                                user_answer: selectedAnswer,
+                                user_answer : user_answer[0],
                                 question_type : question_type.question_type
                             });
                         } else {
-                            console.log(selectedAnswer);
+                            console.log(user_answer);
                         }
                     }
-                } else {
-                    // If it's a single answer, store the response as usual
-                    await responseModel.create({
-                        survey_id,
-                        question_id,
-                        location_id,
-                        user_number,
-                        department_id:department_id,
-                        company_id:company_id,
-                        user_answer,
-                        question_type : question_type.question_type
-                    });
                 }
-            } else if (question_type.question_type === 'Single choice')  {
-                // For other question types, compare user's answer with existing answers using strict equality
-                const matchedAnswer = questionType.answers.find(answer =>
-                    answer.answer === user_answer[0]
-                );
-
-                if (matchedAnswer) {
-                    await responseModel.create({
-                        survey_id,
-                        question_id,
-                        answer_id: matchedAnswer._id,
-                        location_id,
-                        user_number,
-                        department_id:department_id,
-                        company_id:company_id,
-                        user_answer : user_answer[0],
-                        question_type : question_type.question_type
-                    });
-                } else {
-                    console.log(user_answer);
-                }
+                res.json({ message: 'Stored responses successfully' });
             }
-        }
-        res.json({ message: 'Stored responses successfully' });
+            else{
+                res.json({message:"The location you are looking for does not exist"})
+            }
     } 
     else{
         res.json({message:"The survey that you try to answer does not exist"})
