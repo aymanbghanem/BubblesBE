@@ -114,7 +114,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
             }
         }
         res.json({ message: 'Stored responses successfully' });
-    }
+    } 
     else{
         res.json({message:"The survey that you try to answer does not exist"})
     }

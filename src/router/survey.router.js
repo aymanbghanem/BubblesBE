@@ -158,25 +158,6 @@ function flattenLocationData(locationData, parentId = null) {
   return result;
 }
 
-async function processAndStoreAnswers(answerArray, questionId, questionType, survey_id) {
-  // Fetch question type ID from QuestionController table based on the provided question type
-  const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
-  const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
-
-  const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
-    const newAnswer = new Answer({
-      answer: answerText.text,
-      image: answerText.image,
-      question_id: questionId,
-      survey_id: survey_id,
-      question_type: questionTypeId,
-    });
-    const savedAnswer = await newAnswer.save();
-    return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
-  }));
-
-  return answerIdsAndTexts;
-}
 async function processAndStoreLocation(locationData, survey, user) {
   try {
     const department = user.department_id;
@@ -220,6 +201,25 @@ async function processAndStoreLocation(locationData, survey, user) {
   } catch (error) {
     throw error;
   }
+}
+async function processAndStoreAnswers(answerArray, questionId, questionType, survey_id) {
+  // Fetch question type ID from QuestionController table based on the provided question type
+  const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
+  const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
+
+  const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
+    const newAnswer = new Answer({
+      answer: answerText.text,
+      image: answerText.image,
+      question_id: questionId,
+      survey_id: survey_id,
+      question_type: questionTypeId,
+    });
+    const savedAnswer = await newAnswer.save();
+    return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
+  }));
+
+  return answerIdsAndTexts;
 }
 async function processAndStoreSurvey(surveyData, user) {
   try {
@@ -341,8 +341,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
   return updatedDependencies;
 }
 
-
-// Update the existing survey
+//Update exist survey
 router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   try {
     let role = req.user.user_role;
@@ -387,95 +386,20 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
           },
         }
       );
-      const updateLocations = async (locations, parentId = null) => {
-        try {
-          for (const location of locations) {
-            const { id, location_name,textValue, location_description, sublocations } = location;
-      
-            // Check if the provided location_id exists
-            const existingLocation = await Location.findOne({
-              id: id,
-              active: 1,
-              survey_id: surveyId,
-            });
-      
-            if (!existingLocation) {
-              // If the location doesn't exist, create a new one
-              const newLocation = new Location({
-                id,
-                location_name:location_name || textValue,
-                location_description,
-                parent_id:parentId,
-                survey_id: surveyId,
-                department_id: department,
-              });
-      
-              const savedLocation = await newLocation.save();
-      
-              // Recursively update sub-locations
-              if (sublocations && sublocations.length > 0) {
-                await updateLocations(sublocations, savedLocation._id);
-              }
-            } else {
-              // If the location already exists, update its information
-              await Location.updateOne(
-                { _id: existingLocation._id },
-                {
-                  location_name : location_name || textValue,
-                  location_description,
-                }
-              );
-      
-              // Recursively update sub-locations
-              if (sublocations && sublocations.length > 0) {
-                await updateLocations(sublocations, existingLocation._id);
-              }
-            }
-          }
-      
-          return true; // Return true to indicate successful update
-        } catch (error) {
-          throw error; // Throw error to be caught by the calling function
-        }
-      };
-      
-      // Call the modified updateLocations function with parentId set to null for the root level
-      await updateLocations(locationData);
-      
+ 
+      // Soft delete existing locations related to the survey
+      await Location.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
 
-      // Update questions
-      for (const questionUpdate of questionsUpdates) {
-        const { _id, question_title, active, required } = questionUpdate;
+      // Process and store new locations
+      const storedLocations = await processAndStoreLocation(locationData, existingSurvey, req.user);
 
-        // Check if the provided question_id exists
-        const existingQuestion = await Question.findOne({ _id: _id, active: 1 });
+      // Soft delete existing questions and answers related to the survey
+      await Question.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
+      await Answer.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
 
-        // if (!existingQuestion) {
-        //   return res.status(404).json({ message: `Question not found or already soft-deleted` });
-        // }
-
-        if (active === 0) {
-          // Soft delete the question
-          await Question.updateOne({ _id: _id }, { active: 0 });
-
-          // Check for dependencies
-          const dependentQuestions = await Question.find({
-            "question_dependency.parent_id": _id,
-            active: 1,
-          });
-
-          if (dependentQuestions.length > 0) {
-            // Soft delete dependent questions
-            for (const dependentQuestion of dependentQuestions) {
-              await Question.updateOne({ _id: dependentQuestion._id }, { active: 0 });
-            }
-          }
-        } else {
-          // Update the question information
-          await Question.updateOne({ _id: _id }, { question_title, active, required });
-        }
-      }
-
+      // Process and store new questions
+      const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
+        
       res.status(200).json({ message: 'Survey, locations, and questions updated successfully!' });
     } else {
       res.status(403).json({ message: 'Unauthorized access' });
@@ -486,61 +410,6 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
 });
 
 
-// router.post('/api/v1/getInitialQuestions', async (req, res) => {
-//   try {
-//     const { survey_id, phase, answers } = req.body;
-
-//     // Validate survey existence and active status
-//     const existingSurvey = await surveyModel.findOne({
-//       _id: survey_id,
-//       active: 1,
-//     });
-
-//     if (!existingSurvey) {
-//       return res.status(404).json({ message: "The survey does not exist or is not active." });
-//     }
-
-//     // Fetch questions for the first phase
-//     const firstPhaseQuestions = await Question.find({
-//       survey_id: survey_id,
-//       active: 1,
-//       phase: 1,
-//     })
-//       .populate({
-//         path: 'answers',
-//         model: 'answer',
-//         select: 'answer image',
-//       })
-//       .populate({
-//         path: 'question_type',
-//         model: 'question_controller',
-//         select: 'question_type',
-//       })
-//       .select('question_title answers question_type required');
-
-//     if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
-//       return res.status(404).json({ message: "No questions found for the first phase." });
-//     }
-
-//     // Flatten the question_type field
-//     const flattenedQuestions = firstPhaseQuestions.map(question => {
-//       return {
-//         _id: question._id,
-//         question_title: question.question_title,
-//         answers: question.answers,
-//         question_type: question.question_type.question_type,
-//       };
-//     });
-
-//     res.json({ questions: flattenedQuestions });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// });
-
-
-//get questions from the specific phase
 
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
@@ -796,7 +665,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
               let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
               let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
               let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active });
-              let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
+             // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
 
               if (active == 1) {
                   res.json({ message: "The survey and its data were activated successfully" });
