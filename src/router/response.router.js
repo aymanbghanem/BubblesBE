@@ -133,7 +133,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
         res.json({message:"The survey that you try to answer does not exist"})
     }
     } catch (error) {
-        res.json({ message: 'Catch error' + error });
+        res.json({ message: 'Internal server error'});
     }
 });
 
@@ -189,6 +189,27 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
     }
 });
 
-
+router.get('/api/v1/getResponseById',auth,async(req,res)=>{
+    try {
+        let role = req.user.user_role
+        let user_id = req.headers['user_id']
+        if(role == 'admin' || role == "survey-reader"){
+           let userResponses = await responseModel.find({
+            user_id:user_id,
+            active:1
+           })
+           if(userResponses.length > 0){
+            res.json({message:userResponses})
+           }
+           else{
+            res.json({message:"No data found"})
+           }
+        }else{
+            res.json({ message: "Sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        res.json({message:"catch error"+error})
+    }
+})
 module.exports = router
 
