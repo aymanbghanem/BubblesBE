@@ -829,7 +829,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     }
     else if (role == "survey-reader") {
       let surveys = await surveyReaderModel
-        .find({ department_id: department_id, reader_id: req.user._id })
+        .find({ department_id: department_id, reader_id: req.user._id ,active:1})
         .populate([
           {
             path: 'company_id',

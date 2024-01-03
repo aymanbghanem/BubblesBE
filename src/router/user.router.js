@@ -299,7 +299,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
             ]);
         }
         if (user) {
-            console.log(readerUser)
+          
             let response = {
                 _id: user._id,
                 user_name: user.user_name,
