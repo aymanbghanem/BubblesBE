@@ -806,27 +806,30 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
         }
         ]
       )
-
+     
       // Flatten the data structure
-      let flattenedSurveys = surveys.map(item => {
+      let flattenedSurveys = await Promise.all(surveys.map(async (item) => {
+        let responseCount = await responseModel.countDocuments({
+            survey_id: item._id
+        });
+    
         return {
-          _id: item._id,
-          survey_title: item.survey_title,
-          department_name: item.department_id.department_name, // Include department_name directly
-          responses: item.responses,
-          created_by: item.created_by.user_name,
-          active: item.active,
-          survey_description: item.survey_description,
-          //item.company_id && item.logo != "" ? `${item.company_id.company_name}/${item.logo}` : ""
-          logo: item.company_id && item.logo != "" ? `${item.company_id.company_name}/${item.logo}` : "",
-          submission_pwd: item.submission_pwd,
-          background_color: item.background_color,
-          question_text_color: item.question_text_color,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          __v: item.__v
+            _id: item._id,
+            survey_title: item.survey_title,
+            department_name: item.department_id.department_name, // Include department_name directly
+            responses: responseCount, // Use the counted responses
+            created_by: item.created_by.user_name,
+            active: item.active,
+            survey_description: item.survey_description,
+            logo: item.company_id && item.logo !== "" ? `${item.company_id.company_name}/${item.logo}` : "",
+            submission_pwd: item.submission_pwd,
+            background_color: item.background_color,
+            question_text_color: item.question_text_color,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            __v: item.__v
         };
-      });
+    }));
 
       if (flattenedSurveys.length > 0) {
         res.json({ message: flattenedSurveys });
