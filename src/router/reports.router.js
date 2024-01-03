@@ -4,7 +4,8 @@ const surveyModels = require("../models/survey.models");
 const locationModels = require("../models/location.models");
 const reportsModel = require("../models/reports.model");
 const responseModel = require("../models/response.model")
-const auth = require('../middleware/auth')
+const auth = require('../middleware/auth');
+const companyModels = require("../models/company.models");
 
 
 router.post('/api/v1/createReport', auth, async (req, res) => {
@@ -103,7 +104,26 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             else {
                 res.json({ message: "No data found" })
             }
-        } else {
+        }
+        else if(role=='superadmin'){
+             let companyCount = await companyModels.countDocuments({active:1})
+             let surveyCount = await surveyModels.countDocuments({active:1})
+             const activeCompanies = await companyModels.find({ active: 1 });
+
+             const companySurveyCounts = new Map();
+         
+             for (const company of activeCompanies) {
+                 const surveyCount = await surveyModels.countDocuments({ company_id: company._id, active: 1 });
+                 companySurveyCounts.set(company.company_name, surveyCount);
+             }
+         
+             const result = Array.from(companySurveyCounts).map(([company_name, surveys]) => ({
+                company_name,
+                surveys
+             }));
+             res.json({"company_count":companyCount,"survey_count":surveyCount,"company_surveys":result})
+        }
+        else {
             res.json({ message: "sorry, you are unauthorized" })
         }
     } catch (error) {
