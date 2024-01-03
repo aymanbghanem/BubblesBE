@@ -145,6 +145,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 email_address: email_address,
                 user_role: 'survey-reader',
                 token: token,
+                created_by: req.user._id
             };
             // Create a new user
             user = await userModels.create({
@@ -277,6 +278,8 @@ router.get('/api/v1/userById', async (req, res) => {
 router.get('/api/v1/userInfo', auth, async (req, res) => {
     try {
         let id = req.user._id;
+        let readerUser
+        console.log(req.user.user_role)
         let user = await userModels.findById({ _id: id, active: 1 }).populate([
             {
                 path: 'company_id',
@@ -287,12 +290,21 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 select: 'department_name',
             },
         ]);
-
+        if(req.user.user_role == 'survey-reader'){
+           readerUser = await userModels.findById({ _id: id, active: 1 }).populate([
+                {
+                    path: 'created_by',
+                    select: 'user_name -_id',
+                }
+            ]);
+        }
         if (user) {
+            console.log(readerUser)
             let response = {
                 _id: user._id,
                 user_name: user.user_name,
                 user_role: user.user_role,
+                created_by:readerUser?readerUser.created_by.user_name:"",
                 token: user.token,
                 email_address: user.email_address,
                 company_name: user.company_id ? user.company_id.company_name || " " : " ",

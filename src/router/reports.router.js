@@ -16,29 +16,51 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
         if (role == 'admin' || role == 'owner' || role == 'survey-reader') {
             let surveyExist = await surveyModels.findOne({ _id: survey_id, active: 1 })
             if (surveyExist) {
-                let locationExist = await locationModels.findOne({ _id: location_id, active: 1 })
-                if (locationExist) {
-                    let reportRecord = await reportsModel.create({
-                        survey_id,
-                        location_id,
-                        question_id,
-                        created_by,
-                        company_id: surveyExist.company_id,
-                        department_id: surveyExist.department_id,
-                        start_date: start_date ? start_date : new Date(),
-                        end_date: end_date ? end_date : new Date(),
-                        chart_type,
-                    })
-                    if (reportRecord) {
-                        res.json({ message: "Report successfully created", reportRecord })
+                if(location_id!=null){
+                    let locationExist = await locationModels.findOne({ _id: location_id, active: 1 })
+                    if (locationExist) {
+                        let reportRecord = await reportsModel.create({
+                            survey_id,
+                            location_id,
+                            question_id,
+                            created_by,
+                            company_id: surveyExist.company_id,
+                            department_id: surveyExist.department_id,
+                            start_date: start_date ? start_date : new Date(),
+                            end_date: end_date ? end_date : new Date(),
+                            chart_type,
+                        })
+                        if (reportRecord) {
+                            res.json({ message: "Report successfully created", reportRecord })
+                        }
+                        else {
+                            res.json({ message: "sorry,something wrong" })
+                        }
                     }
                     else {
-                        res.json({ message: "sorry,something wrong" })
+                        res.json({ message: "The location you are looking for does not exist" })
                     }
                 }
-                else {
-                    res.json({ message: "The location you are looking for does not exist" })
+                else{
+                          let reportRecord = await reportsModel.create({
+                            survey_id,
+                            location_id,
+                            question_id,
+                            created_by,
+                            company_id: surveyExist.company_id,
+                            department_id: surveyExist.department_id,
+                            start_date: start_date ? start_date : new Date(),
+                            end_date: end_date ? end_date : new Date(),
+                            chart_type,
+                        })
+                        if (reportRecord) {
+                            res.json({ message: "Report successfully created", reportRecord })
+                        }
+                        else {
+                            res.json({ message: "sorry,something wrong" })
+                        }
                 }
+                
             }
             else {
                 res.json({ message: "The survey you are looking for does not exist" })
