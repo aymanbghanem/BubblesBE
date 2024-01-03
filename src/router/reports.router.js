@@ -78,9 +78,10 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
 router.get('/api/v1/getReport', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
-        let created_by = req.user._id
+        let created_by = req.user._id;
+
         if (role === "owner" || role == "admin" || role == "survey-reader") {
-            let reports = await reportsModel.find({ created_by: created_by, active: 1 });
+            let reports = await reportsModel.find({ created_by, active: 1 });
 
             if (reports.length > 0) {
                 // Array to store the results with counts for each answer and additional information
@@ -90,16 +91,23 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     let startDateString = new Date(report.start_date).toISOString().split('T')[0];
                     let endDateString = new Date(report.end_date).toISOString().split('T')[0];
 
-                    let responses = await responseModel.find({
+                    let responseQuery = {
                         survey_id: report.survey_id,
-                        location_id: report.location_id,
                         question_id: report.question_id
-                    });
+                    };
+
+                    if (report.location_id) {
+                        responseQuery.location_id = report.location_id;
+                    }
+
+                    let responses = await responseModel.find(responseQuery);
+
                     // Filter responses based on date conditions
                     let filteredResponses = responses.filter(response => {
                         let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
                         return createdAtDateOnly >= startDateString && createdAtDateOnly <= endDateString;
                     });
+
                     if (filteredResponses.length > 0) {
                         // Count the responses for each answer and update the resultMap
                         let resultMap = new Map();
@@ -107,52 +115,51 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                             let answer = response.user_answer;
                             resultMap.set(answer, (resultMap.get(answer) || 0) + 1);
                         });
+
                         // Convert resultMap to an array of objects for easier JSON serialization
                         let answerArray = Array.from(resultMap.entries()).map(([answer, count]) => ({ answer, count }));
+
                         // Add additional information like report ID and chart type
                         resultArray.push({
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: answerArray
                         });
-                        // Your response structure
-                        res.status(200).json({ resultArray });
-                    }
-                    else {
-                        res.json({ message: "No data found" })
                     }
                 }
-            }
-            else {
-                res.json({ message: "No data found" })
-            }
-        }
-        else if(role=='superadmin'){
-             let companyCount = await companyModels.countDocuments({active:1})
-             let surveyCount = await surveyModels.countDocuments({active:1})
-             const activeCompanies = await companyModels.find({ active: 1 });
 
-             const companySurveyCounts = new Map();
-         
-             for (const company of activeCompanies) {
-                 const surveyCount = await surveyModels.countDocuments({ company_id: company._id, active: 1 });
-                 companySurveyCounts.set(company.company_name, surveyCount);
-             }
-         
-             const result = Array.from(companySurveyCounts).map(([company_name, surveys]) => ({
+                // Your response structure
+                res.status(200).json({ resultArray });
+            } else {
+                res.json({ message: "No data found" });
+            }
+        } else if (role == 'superadmin') {
+            let companyCount = await companyModels.countDocuments({ active: 1 });
+            let surveyCount = await surveyModels.countDocuments({ active: 1 });
+            const activeCompanies = await companyModels.find({ active: 1 });
+
+            const companySurveyCounts = new Map();
+
+            for (const company of activeCompanies) {
+                const surveyCount = await surveyModels.countDocuments({ company_id: company._id, active: 1 });
+                companySurveyCounts.set(company.company_name, surveyCount);
+            }
+
+            const result = Array.from(companySurveyCounts).map(([company_name, surveys]) => ({
                 company_name,
                 surveys
-             }));
-             res.json({"company_count":companyCount,"survey_count":surveyCount,"company_surveys":result})
-        }
-        else {
-            res.json({ message: "sorry, you are unauthorized" })
+            }));
+
+            res.json({ "company_count": companyCount, "survey_count": surveyCount, "company_surveys": result });
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         console.error("Error:", error);
-        res.json({ message: "catch error " + error });
+        res.json({ message: "Catch error: " + error });
     }
 });
+
 
 
 module.exports = router
