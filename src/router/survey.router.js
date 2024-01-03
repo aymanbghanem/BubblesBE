@@ -580,7 +580,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
       if (type && type.question_type) {
         let parentQuestionType = type.question_type;
 
-        if (parentQuestionType === 'Single choice') {
+        if (parentQuestionType === 'Single choice' || parentQuestionType === 'Multiple choice') {
           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
         } else if (parentQuestionType === 'Range') {
           let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
