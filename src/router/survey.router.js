@@ -16,6 +16,7 @@ const qrModel = require("../models/qr.model");
 const mongoose = require('mongoose');
 const questions_controllerModels = require("../models/questions_controller.models");
 const responseModel = require("../models/response.model");
+const userModels = require("../models/user.models");
 require('dotenv').config()
 
 // Create new survey 
@@ -480,7 +481,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             };
           });
 
-          res.json({ questions: flattenedQuestions,surveyData});
+          res.json({ questions: flattenedQuestions, surveyData });
         }
         else {
           let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
@@ -537,12 +538,12 @@ router.post('/api/v1/getQuestions', async (req, res) => {
                     image: answer.image,
                     required: question.required
                   })),
-                 
+
                 });
               }
             }
-            
-            return res.json({ questions: responses,surveyData });
+
+            return res.json({ questions: responses, surveyData });
           }
           else {
             res.json({ message: "No more questions" });
@@ -717,15 +718,20 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     const userRole = req.user.user_role;
 
     if (userRole === "admin") {
-      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
-        path: "company_id",
-        select: "company_name"
-      })
+      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate([
+        {
+          path: "company_id",
+          select: "company_name"
+        }, {
+          path: "created_by",
+          select: "user_name"
+        }
+      ])
         .select('survey_title  survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
       if (survey) {
         let company_name = survey.company_id.company_name;
-
+        let created_by = survey.created_by.user_name;
         // Fetch locations
         const locations = await fetchLocations(survey_id);
 
@@ -758,6 +764,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           submission_pwd: survey.submission_pwd,
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
+          created_by: created_by,
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
           locations: buildTree(locations, null),
           questions: simplifiedQuestions
@@ -849,31 +856,33 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
           }
         ]);
 
-      // Transform the data structure
-      let transformedSurveys = surveys.map(item => {
+      let transformedSurveys = await Promise.all(surveys.map(async (item) => {
+        let created = await userModels.findOne({
+          _id: item.survey_id.created_by
+        }).select('user_name -_id');
+
         return {
           _id: item.survey_id._id,
           survey_title: item.survey_id.survey_title,
           department_name: item.department_id.department_name,
           responses: item.survey_id.responses,
-          created_by: item.survey_id.created_by.user_name,
+          created_by: created.user_name,
           active: item.survey_id.active,
           survey_description: item.survey_id.survey_description,
-          logo: item.company_id && item.survey_id.logo != "" ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
+          logo: (item.company_id && item.survey_id.logo !== "") ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
           submission_pwd: item.survey_id.submission_pwd,
           background_color: item.survey_id.background_color,
           question_text_color: item.survey_id.question_text_color,
           createdAt: item.survey_id.createdAt,
           updatedAt: item.survey_id.updatedAt,
         };
-      });
+      }));
 
       if (transformedSurveys.length > 0) {
         res.json({ message: transformedSurveys });
       } else {
         res.json({ message: "No data found" });
       }
-
 
     } else {
       res.json({ message: "sorry, you are unauthorized" })
