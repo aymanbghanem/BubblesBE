@@ -719,7 +719,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     const survey_id = req.headers['survey_id'];
     const userRole = req.user.user_role;
 
-    if (userRole === "admin") {
+    if (userRole === "admin" || userRole =="owner") {
       const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate([
         {
           path: "company_id",
@@ -776,7 +776,79 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
       } else {
         res.json({ message: "The survey you are looking for does not exist" });
       }
-    } else {
+    } 
+    else if(userRole == 'survey-reader'){
+       
+        let survey = await surveyReaderModel
+          .findOne({survey_id:survey_id,active:1})
+          .populate([
+            {
+              path: 'company_id',
+              select: 'company_name -_id',
+            },
+            {
+              path: 'department_id',
+              select: 'department_name',
+            },
+            {
+              path: 'reader_id',
+              select: 'user_name -_id',
+            },
+            {
+              path: 'survey_id',
+              select: 'survey_title symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+            }
+          ]);
+           
+          if(survey){
+            console.log(survey)
+            let company_name = survey.company_id.company_name;
+            let created_by = survey.created_by.user_name;
+            // Fetch locations
+            const locations = await fetchLocations(survey_id);
+    
+            const questions = await Question.find({ survey_id: survey_id, active: 1 }).populate([
+              {
+                path: 'answers',
+                model: 'answer',
+                select: 'answer image'
+              },
+              {
+                path: 'question_type',
+                model: 'question_controller',
+                select: 'question_type'
+              }
+            ]);
+    
+            // Extract only the question_type property from each question
+            const simplifiedQuestions = questions.map(question => {
+              return {
+                ...question.toObject(),
+                question_type: question.question_type.question_type
+              };
+            });
+            let response = {
+              survey_title: survey.survey_id.survey_title,
+              survey_description: survey.survey_id.survey_description,
+              title_font_size: survey.survey_id.title_font_size,
+              description_font_size: survey.survey_id.description_font_size,
+              submission_pwd: survey.survey_id.submission_pwd,
+              background_color: survey.survey_id.background_color,
+              question_text_color: survey.survey_id.question_text_color,
+              created_by: created_by,
+              logo: (survey.survey_id.logo != "" && survey.survey_id.logo != " ") ? `${company_name}/${survey.survey_id.logo}` : " " || "",
+              locations: buildTree(locations, null),
+              questions: simplifiedQuestions
+            };
+    
+            res.json({ message: response });
+          }
+          else{
+            res.json({ message: "The survey you are looking for does not exist" });
+          }  
+      
+    }
+    else {
       res.status(403).json({ message: "Sorry, you are unauthorized" });
     }
   } catch (error) {
@@ -791,6 +863,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     let role = req.user.user_role
     let id = req.user._id
     let department_id = req.user.department_id
+    let company_id = req.user.company_id
     if (role == "admin") {
       // Retrieve the surveys in the admin's department
       let surveys = await surveyModel.find({ department_id: department_id }).populate(
@@ -891,7 +964,54 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
         res.json({ message: "No data found" });
       }
 
-    } else {
+    } 
+    else if(role=="owner"){
+    
+        // Retrieve the surveys in the admin's department
+        let surveys = await surveyModel.find({ company_id: company_id }).populate(
+          [{
+            path: 'company_id',
+            select: 'company_name -_id',
+          },
+          {
+            path: 'created_by',
+            select: 'user_name -_id',
+          }
+          ]
+        )
+       
+        // Flatten the data structure
+        let flattenedSurveys = await Promise.all(surveys.map(async (item) => {
+          let responseCount = await responseModel.countDocuments({
+              survey_id: item._id
+          });
+      
+          return {
+              _id: item._id,
+              survey_title: item.survey_title,
+              responses: responseCount, // Use the counted responses
+              created_by: item.created_by.user_name,
+              active: item.active,
+              symbol_size:item.symbol_size,
+              survey_description: item.survey_description,
+              logo: item.company_id && item.logo !== "" ? `${item.company_id.company_name}/${item.logo}` : "",
+              submission_pwd: item.submission_pwd,
+              background_color: item.background_color,
+              question_text_color: item.question_text_color,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              __v: item.__v
+          };
+      }));
+  
+        if (flattenedSurveys.length > 0) {
+          res.json({ message: flattenedSurveys });
+        } else {
+          res.json({ message: "No data found" });
+        }
+      
+    }
+    else {
       res.json({ message: "sorry, you are unauthorized" })
     }
   } catch (error) {
