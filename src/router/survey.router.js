@@ -236,6 +236,7 @@ async function processAndStoreSurvey(surveyData, user) {
         survey_title: surveyData.survey_title,
         survey_description: surveyData.survey_description,
         logo: surveyData.logo,
+        symbol_size : surveyData.symbol_size,
         department_id: user.department_id,
         created_by: user._id,
         company_id: user.company_id,
@@ -421,7 +422,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       path: "company_id",
       select: "company_name"
     })
-      .select('survey_title  survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+      .select('survey_title symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
     if (!survey) {
       return res.status(404).json({ message: "The survey does not exist or is not active." });
@@ -444,6 +445,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           title_font_size: survey.title_font_size,
           description_font_size: survey.description_font_size,
           background_color: survey.background_color,
+          symbol_size:survey.symbol_size,
           question_text_color: survey.question_text_color,
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
         }
@@ -727,7 +729,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           select: "user_name"
         }
       ])
-        .select('survey_title  survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+        .select('survey_title symbol_size  survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
       if (survey) {
         let company_name = survey.company_id.company_name;
@@ -820,6 +822,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
             responses: responseCount, // Use the counted responses
             created_by: item.created_by.user_name,
             active: item.active,
+            symbol_size:item.symbol_size,
             survey_description: item.survey_description,
             logo: item.company_id && item.logo !== "" ? `${item.company_id.company_name}/${item.logo}` : "",
             submission_pwd: item.submission_pwd,
@@ -855,7 +858,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
           },
           {
             path: 'survey_id',
-            select: 'survey_title responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+            select: 'survey_title symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
           }
         ]);
 
@@ -871,6 +874,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
           responses: item.survey_id.responses,
           created_by: created.user_name,
           active: item.survey_id.active,
+          symbol_size : item.survey_id.symbol_size,
           survey_description: item.survey_id.survey_description,
           logo: (item.company_id && item.survey_id.logo !== "") ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
           submission_pwd: item.survey_id.submission_pwd,

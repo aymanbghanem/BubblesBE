@@ -50,6 +50,10 @@ const surveySchema = new Schema({
     },
     description_font_size: {
         type: String
+    },
+    symbol_size: {
+        type:String,
+
     }
 
 }, { timestamps: true })
