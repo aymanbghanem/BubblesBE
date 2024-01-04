@@ -801,7 +801,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           ]);
            
           if(survey){
-            console.log(survey)
+           
             let company_name = survey.company_id.company_name;
             let created_by = survey.created_by.user_name;
             // Fetch locations
