@@ -2,6 +2,10 @@ const { Schema, model } = require('mongoose');
 
 const questionsSchema = new Schema({
     id: Number,
+    temp:{
+        type: Schema.Types.ObjectId,
+        ref: 'question',
+    },
     question_title: String,
     phase: Number,
     required: {
