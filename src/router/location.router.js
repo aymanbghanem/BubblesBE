@@ -340,7 +340,7 @@ router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
                 });
 
                 const leafLocations = await Promise.all(mainRoots.map(async (root) => {
-                    return await getLeafLocations(root._id);
+                    return await getLeafLocations(root._id, root.location_name);
                 }));
 
                 res.json({ message: leafLocations.flat() }); // Flattening the result array
@@ -355,7 +355,7 @@ router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
     }
 });
 
-const getLeafLocations = async (parentId) => {
+const getLeafLocations = async (parentId, parentPath) => {
     const location = await locationModels.findOne({ _id: parentId, active: 1 });
 
     if (!location) {
@@ -363,23 +363,28 @@ const getLeafLocations = async (parentId) => {
     }
 
     const subLocations = await locationModels.find({ parent_id: parentId, active: 1 });
-    const leafLocations = await Promise.all(subLocations.map(async (subLocation) => {
-        return await getLeafLocations(subLocation._id);
-    }));
+    const leafLocations = [];
 
-    // If location has no subLocations, or all its subLocations are leaf nodes, include it in the result
-    if (subLocations.length === 0 || leafLocations.every(leaf => leaf === null)) {
+    for (const subLocation of subLocations) {
+        const subLocationPath = parentPath ? `${parentPath.replace(/\s+/g, '')}/${subLocation.location_name}` : subLocation.location_name;
+        const subLocationLeaf = await getLeafLocations(subLocation._id, subLocationPath);
+        leafLocations.push(...subLocationLeaf);
+    }
+
+    // If location has no subLocations, include it in the result
+    if (subLocations.length === 0) {
         return [{
             _id: location._id,
             location_name: location.location_name,
             parentId: location.parent_id,
             active: location.active,
             description: location.location_description,
+            location_path: parentPath ? `${parentPath.replace(/\s+/g, '')}` : location.location_name,
         }];
     }
 
-    // Filter out null values and return only non-null leaf nodes
-    return leafLocations.filter(Boolean).flat();
+    // Return the array of leaf locations for the current path
+    return leafLocations.filter(Boolean);
 };
 
 
