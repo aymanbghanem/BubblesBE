@@ -269,32 +269,60 @@ const getLocationsTree = async (parentId) => {
     };
 };
 
-router.get('/api/v1/getLocations',auth,async(req,res)=>{
+router.get('/api/v1/getLocations', auth, async (req, res) => {
     try {
-        let survey_id = req.headers['survey_id']
-        let role = req.user.user_role
-        if(role=="admin" || role=="owner"||role=="survey-reader"){
-           let existingSurvey = await surveyModel.findOne({_id:survey_id})
-           if(existingSurvey){
-            let locations = await locationModels.find({
-                survey_id:survey_id,
-                active:1
-            }).select('location_name')
-            if(locations.length>0){
-               res.json({message:locations})
-            }else{
-                res.json({message:"There is no location for this survey"})
+        let survey_id = req.headers['survey_id'];
+        let role = req.user.user_role;
+
+        if (role == "admin" || role == "owner" || role == "survey-reader") {
+            let existingSurvey = await surveyModel.findOne({ _id: survey_id });
+
+            if (existingSurvey) {
+                let locations = await locationModels.find({
+                    survey_id: survey_id,
+                    active: 1
+                }).select('_id location_name parent_id');
+
+                if (locations.length > 0) {
+                    const locationTree = await buildLocationTree(locations);
+
+                    res.json({ message: locationTree });
+                } else {
+                    res.json({ message: "There is no location for this survey" });
+                }
+            } else {
+                res.json({ message: "The survey you are looking for does not exist" });
             }
-           }else{
-            res.json({message:"The survey you are looking for it is locations does not exist"})
-           }
-        }else{
-            res.json({message:"sorry, you are unauthorized"})
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        res.json({message:"catch error "+error})
+        res.json({ message: "Catch error " + error });
     }
-})
+});
+
+const buildLocationTree = async (locations) => {
+    const locationTree = [];
+
+    const getLocationPath = async (locationId) => {
+        const path = [];
+        let currentLocation = await locationModels.findOne({ _id: locationId, active: 1 });
+
+        while (currentLocation) {
+            path.unshift(currentLocation.location_name);
+            currentLocation = await locationModels.findOne({ _id: currentLocation.parent_id, active: 1 });
+        }
+
+        return path.join('/');
+    };
+
+    for (const location of locations) {
+        const path = await getLocationPath(location._id);
+        locationTree.push({ _id:location._id,location_name: location.location_name, location_path: path });
+    }
+
+    return locationTree;
+};
 
 router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
     try {
@@ -353,6 +381,7 @@ const getLeafLocations = async (parentId) => {
     // Filter out null values and return only non-null leaf nodes
     return leafLocations.filter(Boolean).flat();
 };
+
 
 router.put('/api/v1/updateLocation', auth, async(req, res) => {
     try {
