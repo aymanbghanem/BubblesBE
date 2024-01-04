@@ -87,6 +87,8 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                 let resultArray = [];
 
                 for (const report of reports) {
+                    let survey = await surveyModels.findOne({ _id:report.survey_id,active:1}).select('survey_title')
+               
                     let startDateString = new Date(report.start_date).toISOString().split('T')[0];
                     let endDateString = new Date(report.end_date).toISOString().split('T')[0];
 
@@ -120,9 +122,10 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                         // Add additional information like report ID and chart type
                         resultArray.push({
+                            survey_title:survey.survey_title,
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
-                            answers: answerArray
+                            answers: answerArray,
                         });
                     }
                 }
