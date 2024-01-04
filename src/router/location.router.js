@@ -275,7 +275,7 @@ router.get('/api/v1/getLocations', auth, async (req, res) => {
         let role = req.user.user_role;
 
         if (role == "admin" || role == "owner" || role == "survey-reader") {
-            let existingSurvey = await surveyModel.findOne({ _id: survey_id });
+            let existingSurvey = await surveyModel.findOne({ _id: survey_id, active:1});
 
             if (existingSurvey) {
                 let locations = await locationModels.find({

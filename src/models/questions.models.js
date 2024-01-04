@@ -33,13 +33,14 @@ const questionsSchema = new Schema({
             type: Schema.Types.ObjectId,
             ref: 'question',
         },
+        comparisonOptions:String,
         sign:String,
         related_answer: String,
         text: String,
         question_title: String,
         parent_dummy_id: String // Add this field to match your code
     }],
-    
+ 
 }, { timestamps: true });
 
 module.exports = model('question', questionsSchema);

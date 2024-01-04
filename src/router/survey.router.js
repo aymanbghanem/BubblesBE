@@ -257,7 +257,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
   const storedQuestions = [];
 
   for (const questionData of questionsData) {
-    const { id, flag, question_title, answers, question_type, ...otherFields } = questionData;
+    const { id,comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
 
     // Case-insensitive lookup for question type
     const questionTypeObject = await QuestionController.findOne({
@@ -269,6 +269,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
       id,
       flag,
       question_title,
+      comparisonOptions,
       survey_id,
       department_id,
       question_type: questionTypeId,
@@ -309,11 +310,6 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
       );
       await savedQuestion.save();
     }
-
-    if (child_questions && Array.isArray(child_questions)) {
-      savedQuestion.child_questions = await processAndStoreChildQuestions(child_questions, storedQuestions);
-      await savedQuestion.save();
-    }
   }
 
   return storedQuestions;
@@ -322,7 +318,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
   const updatedDependencies = [];
 
   for (const dependencyData of dependencies) {
-    const { sign, flag, parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
+    const { sign, comparisonOptions,flag, parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
 
     const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
 
@@ -331,6 +327,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
         ...otherFields,
         sign,
         flag,
+        comparisonOptions,
         parent_id: correspondingQuestion._id,
         related_answer,
       };
@@ -729,7 +726,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           select: "user_name"
         }
       ])
-        .select('survey_title symbol_size  survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+        .select('survey_title symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
       if (survey) {
         let company_name = survey.company_id.company_name;
@@ -759,6 +756,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
         });
 
         let response = {
+          
           survey_title: survey.survey_title,
           survey_description: survey.survey_description,
           title_font_size: survey.title_font_size,
@@ -796,7 +794,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
             },
             {
               path: 'survey_id',
-              select: 'survey_title symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+              select: 'survey_title  symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
             }
           ]);
            
@@ -828,6 +826,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
               };
             });
             let response = {
+              
               survey_title: survey.survey_id.survey_title,
               survey_description: survey.survey_id.survey_description,
               title_font_size: survey.survey_id.title_font_size,
