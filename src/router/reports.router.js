@@ -74,7 +74,6 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
     }
 })
 
-
 router.get('/api/v1/getReport', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
@@ -93,7 +92,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                     let responseQuery = {
                         survey_id: report.survey_id,
-                        question_id: report.question_id
+                        question_id: report.question_id,
                     };
 
                     if (report.location_id) {
@@ -160,7 +159,26 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
     }
 });
 
-
+router.put('/api/v1/deleteReport',auth,async(req,res)=>{
+    try {
+        let role = req.user.user_role
+        let report_id = req.headers['report_id']
+        if(role == 'admin' || role == 'owner' || role == 'survey-reader'){
+           let report = await reportsModel.findOneAndUpdate({_id:report_id,active:1},{active:0})
+           if(report){
+            res.json({message:"The report sucssfully deleted"})
+           }
+           else{
+            res.json({message:"sorry , the report you are trying to delete does not exist"})
+           }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized"})
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 
 module.exports = router
 
