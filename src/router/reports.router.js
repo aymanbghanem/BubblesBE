@@ -14,6 +14,7 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
         let role = req.user.user_role
         let created_by = req.user._id
         let { survey_id, location_id, question_id, start_date, end_date, chart_type } = req.body
+        
         if (role == 'admin' || role == 'owner' || role == 'survey-reader') {
             let surveyExist = await surveyModels.findOne({ _id: survey_id, active: 1 })
             if (surveyExist) {
@@ -27,8 +28,8 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
                             created_by,
                             company_id: surveyExist.company_id,
                             department_id: surveyExist.department_id,
-                            start_date: start_date ? start_date : new Date(),
-                            end_date: end_date ? end_date : new Date(),
+                            start_date: start_date ? start_date : null,
+                            end_date: end_date ? end_date : null,
                             chart_type,
                         })
                         if (reportRecord) {
@@ -50,8 +51,8 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
                             created_by,
                             company_id: surveyExist.company_id,
                             department_id: surveyExist.department_id,
-                            start_date: start_date ? start_date : new Date(),
-                            end_date: end_date ? end_date : new Date(),
+                            start_date: start_date ? start_date : null,
+                            end_date: end_date ? end_date : null,
                             chart_type,
                         })
                         if (reportRecord) {
@@ -165,7 +166,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
     }
 });
 
-router.put('/api/v1/deleteReport',auth,async(req,res)=>{
+router.post('/api/v1/deleteReport',auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         let report_id = req.headers['report_id']

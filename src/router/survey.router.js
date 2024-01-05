@@ -408,7 +408,7 @@ async function processAndStoreAnswersUpdate(answerArray, questionId, questionTyp
 
   const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
     const newAnswer = new Answer({
-      answer: answerText.text,
+      answer: answerText.answer ||answerText.text ,
       image: answerText.image,
       question_id: questionId,
       survey_id: survey_id,
@@ -425,68 +425,64 @@ async function processAndStoreQuestionsUpdate(questionsData, survey_id, departme
   const storedQuestions = [];
 
   for (const questionData of questionsData) {
-    const { _id,temp,id, comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
+    const { _id,temp, comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
      let customId = _id
-     console.log(temp)
-     if(temp==undefined)[
-      console.log("hi misk")
-     ]
-    // const questionTypeObject = await QuestionController.findOne({
-    //   question_type: new RegExp(`^${question_type}$`, 'i'),
-    // });
-    // const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
+    const questionTypeObject = await QuestionController.findOne({
+      question_type: new RegExp(`^${question_type}$`, 'i'),
+    });
+    const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
-    // const newQuestion = new Question({
-    //   temp:_id,
-    //   flag,
-    //   question_title,
-    //   comparisonOptions,
-    //   survey_id,
-    //   department_id,
-    //   question_type: questionTypeId,
-    //   ...otherFields,
-    // });
+    const newQuestion = new Question({
+      temp:_id,
+      flag,
+      question_title,
+      comparisonOptions,
+      survey_id,
+      department_id,
+      question_type: questionTypeId,
+      ...otherFields,
+    });
    
-    // const questionTypeLowerCase = question_type.toLowerCase();
+    const questionTypeLowerCase = question_type.toLowerCase();
 
-    // if (["text", "single choice", "multiple choice", "range"].includes(questionTypeLowerCase)) {
-    //   const questionController = await QuestionController.findOne({
-    //     question_type: new RegExp(`^${question_type}$`, 'i'),
-    //   });
+    if (["text", "single choice", "multiple choice", "range"].includes(questionTypeLowerCase)) {
+      const questionController = await QuestionController.findOne({
+        question_type: new RegExp(`^${question_type}$`, 'i'),
+      });
 
-    //   if (!questionController) {
-    //     throw new Error(`Question type "${question_type}" not found in question_controller`);
-    //   }
+      if (!questionController) {
+        throw new Error(`Question type "${question_type}" not found in question_controller`);
+      }
 
-    //   if (questionTypeLowerCase !== "text") {
-    //     const answerIdsAndTexts = await processAndStoreAnswersUpdate(
-    //       answers,
-    //       newQuestion._id,
-    //       questionTypeLowerCase,
-    //       survey_id
-    //     );
-    //     newQuestion.answers = answerIdsAndTexts.map((answerData) => answerData.id);
-    //   }
-    // } else {
-    //   throw new Error(`Unsupported question type: ${question_type}`);
-    // }
+      if (questionTypeLowerCase !== "text") {
+        const answerIdsAndTexts = await processAndStoreAnswersUpdate(
+          answers,
+          newQuestion._id,
+          questionTypeLowerCase,
+          survey_id
+        );
+        newQuestion.answers = answerIdsAndTexts.map((answerData) => answerData.id);
+      }
+    } else {
+      throw new Error(`Unsupported question type: ${question_type}`);
+    }
 
-    // const savedQuestion = await newQuestion.save();
-    // storedQuestions.push(savedQuestion);
+    const savedQuestion = await newQuestion.save();
+    storedQuestions.push(savedQuestion);
 
-    // // Save the parent question first
-    // if (questionData.question_dependency && Array.isArray(questionData.question_dependency)) {
-    //   const updatedDependencies = await processAndStoreQuestionDependenciesUpdate(
-    //     customId, // using the custom _id from the input data
-    //     questionData.question_dependency,
-    //     storedQuestions
-    //   );
-    //   savedQuestion.question_dependency = updatedDependencies;
-    //   await savedQuestion.save();
-    // }
+    // Save the parent question first
+    if (questionData.question_dependency && Array.isArray(questionData.question_dependency)) {
+      const updatedDependencies = await processAndStoreQuestionDependenciesUpdate(
+        customId, // using the custom _id from the input data
+        questionData.question_dependency,
+        storedQuestions
+      );
+      savedQuestion.question_dependency = updatedDependencies;
+      await savedQuestion.save();
+    }
   }
 
- // return storedQuestions;
+  return storedQuestions;
 }
 
 async function processAndStoreQuestionDependenciesUpdate(old_id, dependencies, storedQuestions) {
