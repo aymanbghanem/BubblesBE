@@ -166,7 +166,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
     }
 });
 
-router.post('/api/v1/deleteReport',auth,async(req,res)=>{
+router.put('/api/v1/deleteReport',auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         let report_id = req.headers['report_id']
