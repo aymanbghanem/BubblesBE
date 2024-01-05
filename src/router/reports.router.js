@@ -79,7 +79,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
         let role = req.user.user_role;
         let created_by = req.user._id;
 
-        if (role === "owner" || role == "admin" || role == "survey-reader") {
+        if (role == "owner" || role == "admin" || role == "survey-reader") {
             let reports = await reportsModel.find({ created_by, active: 1 });
 
             if (reports.length > 0) {
