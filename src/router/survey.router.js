@@ -428,6 +428,9 @@ async function processAndStoreQuestionsUpdate(questionsData, survey_id, departme
     const { _id,temp,id, comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
      let customId = _id
      console.log(temp)
+     if(temp==undefined)[
+      console.log("hi misk")
+     ]
     // const questionTypeObject = await QuestionController.findOne({
     //   question_type: new RegExp(`^${question_type}$`, 'i'),
     // });
