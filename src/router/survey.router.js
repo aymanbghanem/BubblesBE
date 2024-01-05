@@ -320,6 +320,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
         comparisonOptions,
         parent_id: correspondingQuestion._id,
         related_answer,
+        parent_dummy_id:correspondingQuestion
       };
       updatedDependencies.push(newDependency);
     } else {
@@ -491,7 +492,7 @@ async function processAndStoreQuestionDependenciesUpdate(old_id, dependencies, s
   for (const dependencyData of dependencies) {
     const { sign, comparisonOptions, flag, parent_id, related_answer, ...otherFields } = dependencyData;
 
-    const correspondingQuestion = storedQuestions.find(question => question.temp.toString() === old_id);
+    const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
 
     if (correspondingQuestion) {
       const savedCorrespondingQuestion = storedQuestions.find(question => question.temp.toString() === parent_id);
@@ -516,7 +517,6 @@ async function processAndStoreQuestionDependenciesUpdate(old_id, dependencies, s
 
   return updatedDependencies;
 }
-
 
 
 router.post('/api/v1/getQuestions', async (req, res) => {
@@ -1156,8 +1156,6 @@ function buildTree(locations, parentId) {
 
   return tree;
 }
-
-
 module.exports = router
 
 

@@ -135,6 +135,15 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                             chartType: report.chart_type,
                             answers: answerArray,
                         });
+                    } 
+                    else {
+                        // No matching responses, add default response data
+                        resultArray.push({
+                            survey_title: survey.survey_title,
+                            reportId: report._id, // assuming report has an _id field
+                            chartType: report.chart_type,
+                            answers: [], // You can customize this as needed
+                        });
                     }
                 }
 
@@ -142,7 +151,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             } else {
                 res.json({ message: "No data found" });
             }
-        } else if (role == 'superadmin') {
+        }else if (role == 'superadmin') {
             let companyCount = await companyModels.countDocuments({ active: 1 });
             let surveyCount = await surveyModels.countDocuments({ active: 1 });
             const activeCompanies = await companyModels.find({ active: 1 });
