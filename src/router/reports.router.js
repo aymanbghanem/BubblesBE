@@ -89,10 +89,10 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                 let resultArray = [];
 
                 for (const report of reports) {
-                    let survey = await surveyModels.findOne({ _id:report.survey_id,active:1}).select('survey_title')
-                    let question = await questionsModels.findOne({_id:report.question_id,active:1}).select('question_title')
-                    let startDateString = new Date(report.start_date).toISOString().split('T')[0];
-                    let endDateString = new Date(report.end_date).toISOString().split('T')[0];
+                    let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
+                    let question = await questionsModels.findOne({ _id: report.question_id, active: 1 }).select('question_title')
+                    let startDateString = startDate ? new Date(report.start_date).toISOString().split('T')[0] : null;
+                    let endDateString = endDate ? new Date(report.end_date).toISOString().split('T')[0] : null;
 
                     let responseQuery = {
                         survey_id: report.survey_id,
@@ -108,7 +108,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     // Filter responses based on date conditions
                     let filteredResponses = responses.filter(response => {
                         let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
-                        return createdAtDateOnly >= startDateString && createdAtDateOnly <= endDateString;
+                        return (!startDateString || createdAtDateOnly >= startDateString) && (!endDateString || createdAtDateOnly <= endDateString);
                     });
 
                     if (filteredResponses.length > 0) {
@@ -125,8 +125,8 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                         // Add additional information like report ID and chart type
                         resultArray.push({
-                            survey_title:survey.survey_title,
-                            question_title:question.question_title,
+                            survey_title: survey.survey_title,
+                            question_title: question.question_title,
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: answerArray,
@@ -134,7 +134,6 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     }
                 }
 
-                // Your response structure
                 res.status(200).json({ resultArray });
             } else {
                 res.json({ message: "No data found" });
@@ -171,7 +170,8 @@ router.put('/api/v1/deleteReport',auth,async(req,res)=>{
         let role = req.user.user_role
         let report_id = req.headers['report_id']
         if(role == 'admin' || role == 'owner' || role == 'survey-reader'){
-           let report = await reportsModel.findOneAndUpdate({_id:report_id,active:1},{active:0})
+            let report = await reportsModel.updateOne({_id:report_id,active:1},{active:0})
+            
            if(report){
             res.json({message:"The report sucssfully deleted"})
            }
