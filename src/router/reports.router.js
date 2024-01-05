@@ -90,9 +90,8 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                 for (const report of reports) {
                     let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
-                    let question = await questionsModels.findOne({ _id: report.question_id, active: 1 }).select('question_title')
-                    let startDateString = startDate ? new Date(report.start_date).toISOString().split('T')[0] : null;
-                    let endDateString = endDate ? new Date(report.end_date).toISOString().split('T')[0] : null;
+                    let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
+                    let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
 
                     let responseQuery = {
                         survey_id: report.survey_id,
@@ -105,15 +104,21 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                     let responses = await responseModel.find(responseQuery);
 
-                    // Filter responses based on date conditions
                     let filteredResponses = responses.filter(response => {
                         let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
-                        return (!startDateString || createdAtDateOnly >= startDateString) && (!endDateString || createdAtDateOnly <= endDateString);
+                        let responseDate = new Date(createdAtDateOnly);
+                    
+                        // If startDateString is provided, check if the response date is greater than or equal to it
+                        let isAfterStartDate = !startDateString || responseDate >= new Date(startDateString);
+                    
+                        // If endDateString is provided, check if the response date is less than or equal to it
+                        let isBeforeEndDate = !endDateString || responseDate <= new Date(endDateString);
+                    
+                        return isAfterStartDate && isBeforeEndDate;
                     });
-
+                    
                     if (filteredResponses.length > 0) {
                         // Count the responses for each answer and update the resultMap
-                        console.log(filteredResponses)
                         let resultMap = new Map();
                         filteredResponses.forEach(response => {
                             let answer = response.user_answer;
@@ -126,7 +131,6 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         // Add additional information like report ID and chart type
                         resultArray.push({
                             survey_title: survey.survey_title,
-                            question_title: question.question_title,
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: answerArray,
