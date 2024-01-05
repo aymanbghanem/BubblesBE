@@ -189,27 +189,38 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getResponseById',auth,async(req,res)=>{
+router.get('/api/v1/getResponseById', auth, async (req, res) => {
     try {
-        let role = req.user.user_role
-        let user_id = req.headers['user_id']
-        if(role == 'admin' || role == "survey-reader" || role=='owner'){
-           let userResponses = await responseModel.find({
-            user_id:user_id,
-            active:1
-           })
-           if(userResponses.length > 0){
-            res.json({message:userResponses})
-           }
-           else{
-            res.json({message:"No data found"})
-           }
-        }else{
+        let role = req.user.user_role;
+        let user_id = req.headers['user_id'];
+        if (role == 'admin' || role == "survey-reader" || role == 'owner') {
+            let userResponses = await responseModel.find({
+                user_id: user_id,
+                active: 1
+            });
+
+            if (userResponses.length > 0) {
+                // Fetch question titles for each response
+                let responsesWithQuestions = await Promise.all(userResponses.map(async (response) => {
+                    let question = await questionModel.findOne(response.question_id);
+                    return {
+                        ...response.toObject(),
+                        question_title: question ? question.question_title : 'Question Not Found'
+                    };
+                }));
+
+                console.log(responsesWithQuestions);
+                res.json({ message: responsesWithQuestions });
+            } else {
+                res.json({ message: "No data found" });
+            }
+        } else {
             res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        res.json({message:"catch error"+error})
+        res.json({ message: "Catch error: " + error });
     }
-})
+});
+
 module.exports = router
 
