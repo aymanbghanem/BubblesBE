@@ -9,6 +9,7 @@ const responseModel = require('../models/response.model')
 const questionModel = require('../models/questions.models');
 const surveyModels = require("../models/survey.models");
 const locationModels = require("../models/location.models");
+const notifyModels = require("../models/notify.models");
 require('dotenv').config()
 
 router.post('/api/v1/createResponse', async (req, res) => {
@@ -17,8 +18,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
          let location_id = req.query.location_id;
          let user_number = req.query.user_number
          const user_id = new ObjectId();
-        // const { survey_id } = req.body;
-        // const { location_id, user_number } = req.headers;
+        
         const responseArray = req.body.answered_questions;
 
         let surveyInfo = await surveyModels.findOne({_id:survey_id , active:1})
@@ -27,6 +27,12 @@ router.post('/api/v1/createResponse', async (req, res) => {
             if(locationExist){
                 let department_id = surveyInfo.department_id
                 let company_id = surveyInfo.company_id
+
+                let existingNotify = await notifyModels.find({
+                    survey_id:survey_id,
+                    active:1
+                })
+                
                 for (const responseObj of responseArray) {
                     const { _id, answers } = responseObj;
                     let question_id = _id;
@@ -44,7 +50,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                             select: 'question_type',
                         },
                     ]).select('answers question_type');
-        
+                   
                     const { question_type } = questionType;
         
                     if (['text', 'range','Range','Text'].includes(question_type.question_type)) {

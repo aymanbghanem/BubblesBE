@@ -21,6 +21,7 @@ const notifySchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'answer'
     },
+    answer_text:String,
     survey_reader_id: {
         type: Schema.Types.ObjectId,
         ref: 'user'

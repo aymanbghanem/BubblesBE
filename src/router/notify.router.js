@@ -62,40 +62,88 @@ router.get('/api/v1/getNotifyData', auth, async (req, res) => {
     }
 });
 
+router.get('/api/getReaderBySurvey', auth, async (req, res) => {
+    try {
+        let survey_id = req.headers['survey_id'];
+        let role = req.user.user_role;
+
+        if (role == "admin") {
+            let existingSurvey = await surveyModel.findOne({_id:survey_id,active:1})
+            if(existingSurvey){
+                let readers = await surveyReaderModel.find({ survey_id: survey_id, active: 1 })
+                .populate({
+                    path: 'reader_id',
+                    model: 'user',
+                    select: 'user_name _id', // Specify the fields you want to select
+                });
+
+            // Extract only the necessary fields
+            let formattedReaders = readers.map(reader => ({
+                user_id: reader.reader_id._id,
+                user_name: reader.reader_id.user_name,
+            }));
+             if(formattedReaders.length>0){
+                res.json(formattedReaders);
+             }
+            else{
+                res.json({message:"No data found"});
+            }
+            }
+            else{
+                res.json({message:"The survey you are looking for does not exist"})
+            }
+         
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        res.json({ message: "Catch error " + error });
+    }
+});
+
 
 router.post('/api/v1/addNotifier', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let { survey_id, location_id, surveyReaders_id, question_id, answer_id } = req.body;
-
-        if (role === "admin") {
+        let existLocation;
+        let  existAnswer;
+        if (role == "admin") {
             // Check if the survey, location, question, and answer exist and are active
             let existSurvey = await surveyModel.findOne({ _id: survey_id, active: 1 });
-            let existLocation = await Location.findOne({ _id: location_id, active: 1 });
+            if(location_id){
+                 existLocation = await Location.findOne({ _id: location_id, active: 1 });
+            }
+            
             let existQuestion = await Question.findOne({ _id: question_id, active: 1 });
-            let existAnswer = await Answer.findOne({ _id: answer_id, active: 1 });
+            if(answer_id){
+                existAnswer = await Answer.findOne({ _id: answer_id, active: 1 });
+            }
+          
 
             // Check if all survey reader ids exist and are active
-            let existReaders = await userModels.find({ _id: { $in: surveyReaders_id }, active: 1 });
+            let existReaders = await surveyReaderModel.findOne({ reader_id: surveyReaders_id, active: 1 });
 
-            if (existSurvey && existLocation && existQuestion && existAnswer && existReaders.length === surveyReaders_id.length) {
+            if (existSurvey && existQuestion && existReaders) {
                 // Save data in the notify table
+                
                 const notifyData = {
-                    location_id: existLocation._id,
+                    location_id: location_id?existLocation._id:null,
                     survey_id: existSurvey._id,
                     question_id: existQuestion._id,
-                    answer_id: existAnswer._id,
-                    survey_reader_id: existReaders.map(reader => reader._id)
+                    answer_id: answer_id ?existAnswer._id:null ,
+                    answer_text : answer_id? existAnswer.answer:null,
+                    survey_reader_id: surveyReaders_id
                 };
-                const surveyReaderData = {
-                    company_id:req.user.company_id,
-                    department_id:req.user.department_id,
-                    reader_id : existReaders.map(reader => reader._id),
-                    created_by: req.user._id,
-                    survey_id:existSurvey._id
-                }   
+                // const surveyReaderData = {
+                //     company_id:req.user.company_id,
+                //     department_id:req.user.department_id,
+                //     reader_id : existReaders.map(reader => reader._id),
+                //     created_by: req.user._id,
+                //     survey_id:existSurvey._id
+                // }   
                 const notifyEntry = await notifyModels.create(notifyData);
-                const surveyReaderEntry = await surveyReaderModel.create(surveyReaderData);
+                // const surveyReaderEntry = await surveyReaderModel.create(surveyReaderData);
 
                 res.json({ message: "Data saved successfully", notifyEntry });
             } else {

@@ -387,7 +387,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       await Answer.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
 
       // Process and store new questions
-      const storedQuestions = await processAndStoreQuestionsUpdate(questionsUpdates, surveyId, department);
+      const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
 
       // Soft delete existing questions and answers related to the survey
      // const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department, true);
@@ -402,121 +402,6 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
   }
 });
 
-async function processAndStoreAnswersUpdate(answerArray, questionId, questionType, survey_id) {
-  // Fetch question type ID from QuestionController table based on the provided question type
-  const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
-  const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
-
-  const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
-    const newAnswer = new Answer({
-      answer: answerText.answer ||answerText.text ,
-      image: answerText.image,
-      question_id: questionId,
-      survey_id: survey_id,
-      question_type: questionTypeId,
-    });
-    const savedAnswer = await newAnswer.save();
-    return { id: savedAnswer._id, text: answerText.text, answer_id: savedAnswer._id };
-  }));
-
-  return answerIdsAndTexts;
-}
-
-async function processAndStoreQuestionsUpdate(questionsData, survey_id, department_id) {
-  const storedQuestions = [];
-
-  for (const questionData of questionsData) {
-    const { _id,temp, comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
-     let customId = _id
-    const questionTypeObject = await QuestionController.findOne({
-      question_type: new RegExp(`^${question_type}$`, 'i'),
-    });
-    const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
-
-    const newQuestion = new Question({
-      temp:_id,
-      flag,
-      question_title,
-      comparisonOptions,
-      survey_id,
-      department_id,
-      question_type: questionTypeId,
-      ...otherFields,
-    });
-   
-    const questionTypeLowerCase = question_type.toLowerCase();
-
-    if (["text", "single choice", "multiple choice", "range"].includes(questionTypeLowerCase)) {
-      const questionController = await QuestionController.findOne({
-        question_type: new RegExp(`^${question_type}$`, 'i'),
-      });
-
-      if (!questionController) {
-        throw new Error(`Question type "${question_type}" not found in question_controller`);
-      }
-
-      if (questionTypeLowerCase !== "text") {
-        const answerIdsAndTexts = await processAndStoreAnswersUpdate(
-          answers,
-          newQuestion._id,
-          questionTypeLowerCase,
-          survey_id
-        );
-        newQuestion.answers = answerIdsAndTexts.map((answerData) => answerData.id);
-      }
-    } else {
-      throw new Error(`Unsupported question type: ${question_type}`);
-    }
-
-    const savedQuestion = await newQuestion.save();
-    storedQuestions.push(savedQuestion);
-
-    // Save the parent question first
-    if (questionData.question_dependency && Array.isArray(questionData.question_dependency)) {
-      const updatedDependencies = await processAndStoreQuestionDependenciesUpdate(
-        customId, // using the custom _id from the input data
-        questionData.question_dependency,
-        storedQuestions
-      );
-      savedQuestion.question_dependency = updatedDependencies;
-      await savedQuestion.save();
-    }
-  }
-
-  return storedQuestions;
-}
-
-async function processAndStoreQuestionDependenciesUpdate(old_id, dependencies, storedQuestions) {
-  const updatedDependencies = [];
-
-  for (const dependencyData of dependencies) {
-    const { sign, comparisonOptions, flag, parent_id, related_answer, ...otherFields } = dependencyData;
-
-    const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
-
-    if (correspondingQuestion) {
-      const savedCorrespondingQuestion = storedQuestions.find(question => question.temp.toString() === parent_id);
-
-      if (savedCorrespondingQuestion) {
-        const newDependency = {
-          ...otherFields,
-          sign,
-          flag,
-          comparisonOptions,
-          parent_id: savedCorrespondingQuestion._id.toString(), // Use the string version of the _id
-          related_answer,
-        };
-        updatedDependencies.push(newDependency);
-      } else {
-        console.error(`Saved parent question with mongo id ${parent_id} not found.`);
-      }
-    } else {
-      console.error(`Parent question with mongo id ${old_id} not found.`);
-    }
-  }
-
-  return updatedDependencies;
-}
 
 
 router.post('/api/v1/getQuestions', async (req, res) => {

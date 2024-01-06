@@ -42,7 +42,7 @@ const questionsSchema = new Schema({
         related_answer: String,
         text: String,
         question_title: String,
-        parent_dummy_id: Number // Add this field to match your code
+        parent_dummy_id: String // Add this field to match your code
     }],
  
 }, { timestamps: true });
