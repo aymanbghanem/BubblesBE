@@ -105,6 +105,7 @@ router.get('/api/getReaderBySurvey', auth, async (req, res) => {
 router.post('/api/v1/addNotifier', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
+        let created_by = req.user._id
         let { survey_id, location_id, surveyReaders_id, question_id, answer_id } = req.body;
         let existLocation;
         let  existAnswer;
@@ -133,18 +134,10 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
                     question_id: existQuestion._id,
                     answer_id: answer_id ?existAnswer._id:null ,
                     answer_text : answer_id? existAnswer.answer:null,
-                    survey_reader_id: surveyReaders_id
+                    survey_reader_id: surveyReaders_id,
+                    created_by
                 };
-                // const surveyReaderData = {
-                //     company_id:req.user.company_id,
-                //     department_id:req.user.department_id,
-                //     reader_id : existReaders.map(reader => reader._id),
-                //     created_by: req.user._id,
-                //     survey_id:existSurvey._id
-                // }   
                 const notifyEntry = await notifyModels.create(notifyData);
-                // const surveyReaderEntry = await surveyReaderModel.create(surveyReaderData);
-
                 res.json({ message: "Data saved successfully", notifyEntry });
             } else {
                 res.json({ message: "One or more entities do not exist or are inactive" });
@@ -158,5 +151,61 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
 });
 
 
+router.get('/api/v1/getNotifies', auth, async (req, res) => {
+    try {
+        let role = req.user.user_role;
+        if (role === 'admin') {
+            let notifiers = await notifyModels.find({
+                created_by: req.user._id,
+                active: 1
+            }).populate([
+                {
+                    path: 'survey_reader_id',
+                    select: 'user_name -_id',
+                },
+                {
+                    path: 'survey_id',
+                    select: 'survey_title',
+                },
+                {
+                    path: 'question_id',
+                    select: 'question_title',
+                },
+                {
+                    path: 'location_id',
+                    select: 'location_name',
+                }
+            ]);
+
+            if (notifiers.length > 0) {
+                const flattenedNotifiers = notifiers.map(notifier => ({
+                    _id: notifier._id,
+                    active: notifier.active,
+                    location_name: notifier.location_id ? notifier.location_id.location_name : null,
+                    survey_title: notifier.survey_id ? notifier.survey_id.survey_title : null,
+                    question_title: notifier.question_id ? notifier.question_id.question_title : null,
+                    answer_text: notifier.answer_text,
+                    survey_reader_name: notifier.survey_reader_id ? notifier.survey_reader_id.user_name : null,
+                }));
+                res.json(flattenedNotifiers);
+            } else {
+                res.json({ message: "No data found" });
+            }
+        } else {
+            res.json({ message: "Sorry, you are unauthorized" });
+        }
+    } catch (error) {
+        res.json({ message: "Catch error " + error });
+    }
+});
+
+
+// router.put('/api/v1/deleteNotify',auth,async(req,res)=>{
+//     try {
+//         let 
+//     } catch (error) {
+//         res.json({message:"catch error "+error})
+//     }
+// })
 
 module.exports = router

@@ -7,7 +7,7 @@ const notifySchema = new Schema({
     },
     location_id: {
         type: Schema.Types.ObjectId,
-        ref: 'survey'
+        ref: 'location'
     },
     survey_id: {
         type: Schema.Types.ObjectId,
