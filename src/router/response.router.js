@@ -62,7 +62,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                             location_id: isLocationMatch ? notify.location_id : null,
                                             department_id: department_id,
                                             company_id: company_id,
-                                            answer_text: isAnswerTextMatch ? notify.answer_text : null,
+                                            answer_text: individualAnswer,
                                             survey_reader_id:notify.survey_reader_id
                                             // Add other properties as needed
                                         });
