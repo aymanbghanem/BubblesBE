@@ -10,34 +10,68 @@ const questionModel = require('../models/questions.models');
 const surveyModels = require("../models/survey.models");
 const locationModels = require("../models/location.models");
 const notifyModels = require("../models/notify.models");
+const notificationModel = require("../models/notification.model");
 require('dotenv').config()
 
 router.post('/api/v1/createResponse', async (req, res) => {
     try {
-         let survey_id = req.query.survey_id
-         let location_id = req.query.location_id;
-         let user_number = req.query.user_number
-         const user_id = new ObjectId();
-        
+        let survey_id = req.query.survey_id
+        let location_id = req.query.location_id;
+        let user_number = req.query.user_number
+        const user_id = new ObjectId();
+
         const responseArray = req.body.answered_questions;
 
-        let surveyInfo = await surveyModels.findOne({_id:survey_id , active:1})
-        if(surveyInfo){
-            let locationExist = await locationModels.findOne({_id:location_id , active:1})
-            if(locationExist){
+        let surveyInfo = await surveyModels.findOne({ _id: survey_id, active: 1 })
+        if (surveyInfo) {
+            let locationExist = await locationModels.findOne({ _id: location_id, active: 1 })
+            if (locationExist) {
                 let department_id = surveyInfo.department_id
                 let company_id = surveyInfo.company_id
 
                 let existingNotify = await notifyModels.find({
-                    survey_id:survey_id,
-                    active:1
+                    survey_id: survey_id,
+                    active: 1
                 })
-                
+
                 for (const responseObj of responseArray) {
                     const { _id, answers } = responseObj;
                     let question_id = _id;
                     let user_answer = answers;
-        
+    
+                    for (const notify of existingNotify) {
+                        // Check if the question is in existingNotify
+                        const isQuestionInNotify = notify.question_id.equals(question_id);
+                
+                        if (isQuestionInNotify) {
+                            // Check if it's an array of answers
+                            if (Array.isArray(user_answer)) {
+                                // Iterate through each element in the array
+                                for (const individualAnswer of user_answer) {
+                                    // Check conditions for creating a notification based on location
+                                    const isLocationMatch = notify.location_id === null || notify.location_id.equals(location_id);
+                
+                                    // Check conditions for creating a notification based on answer text
+                                    const isAnswerTextMatch = notify.answer_text === null || notify.answer_text === individualAnswer;
+                
+                                    // If both location and answer text conditions are met, create a notification
+                                    if (isLocationMatch && isAnswerTextMatch) {
+                                        await notificationModel.create({
+                                            survey_id,
+                                            question_id,
+                                            location_id: isLocationMatch ? notify.location_id : null,
+                                            department_id: department_id,
+                                            company_id: company_id,
+                                            answer_text: isAnswerTextMatch ? notify.answer_text : null,
+                                            survey_reader_id:notify.survey_reader_id
+                                            // Add other properties as needed
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                
                     const questionType = await questionModel.findOne({ _id: question_id, active: 1 }).populate([
                         {
                             path: 'answers',
@@ -50,21 +84,21 @@ router.post('/api/v1/createResponse', async (req, res) => {
                             select: 'question_type',
                         },
                     ]).select('answers question_type');
-                   
+
                     const { question_type } = questionType;
-        
-                    if (['text', 'range','Range','Text'].includes(question_type.question_type)) {
+
+                    if (['text', 'range', 'Range', 'Text'].includes(question_type.question_type)) {
                         // If the question type is 'text' or 'range', store the response directly
                         await responseModel.create({
                             survey_id,
                             question_id,
                             location_id,
-                            user_number:user_number||"",
-                            department_id:department_id,
-                            company_id:company_id,
+                            user_number: user_number || "",
+                            department_id: department_id,
+                            company_id: company_id,
                             user_id,
-                            user_answer : user_answer[0],
-                            question_type : question_type.question_type
+                            user_answer: user_answer[0],
+                            question_type: question_type.question_type
                         });
                     } else if (question_type.question_type === 'Multiple choice') {
                         if (Array.isArray(user_answer)) {
@@ -74,7 +108,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                 const matchedAnswer = questionType.answers.find(answer =>
                                     answer.answer == selectedAnswer
                                 );
-        
+
                                 if (matchedAnswer) {
                                     // If a matching answer is found, store the response with the answer's ID
                                     await responseModel.create({
@@ -82,14 +116,14 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                         question_id,
                                         answer_id: matchedAnswer._id,
                                         location_id,
-                                        user_number:user_number||"",
+                                        user_number: user_number || "",
                                         user_id,
-                                        department_id:department_id,
-                                        company_id:company_id,
+                                        department_id: department_id,
+                                        company_id: company_id,
                                         user_answer: selectedAnswer,
-                                        question_type : question_type.question_type
+                                        question_type: question_type.question_type
                                     });
-                                } 
+                                }
                             }
                         } else {
                             // If it's a single answer, store the response as usual
@@ -97,32 +131,32 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                 survey_id,
                                 question_id,
                                 location_id,
-                                user_number:user_number||"",
+                                user_number: user_number || "",
                                 user_id,
-                                department_id:department_id,
-                                company_id:company_id,
+                                department_id: department_id,
+                                company_id: company_id,
                                 user_answer,
-                                question_type : question_type.question_type
+                                question_type: question_type.question_type
                             });
                         }
-                    } else if (question_type.question_type === 'Single choice')  {
+                    } else if (question_type.question_type === 'Single choice') {
                         // For other question types, compare user's answer with existing answers using strict equality
                         const matchedAnswer = questionType.answers.find(answer =>
                             answer.answer === user_answer[0]
                         );
-        
+
                         if (matchedAnswer) {
                             await responseModel.create({
                                 survey_id,
                                 question_id,
                                 answer_id: matchedAnswer._id,
                                 location_id,
-                                user_number:user_number||"",
+                                user_number: user_number || "",
                                 user_id,
-                                department_id:department_id,
-                                company_id:company_id,
-                                user_answer : user_answer[0],
-                                question_type : question_type.question_type
+                                department_id: department_id,
+                                company_id: company_id,
+                                user_answer: user_answer[0],
+                                question_type: question_type.question_type
                             });
                         } else {
                             console.log(user_answer);
@@ -131,15 +165,15 @@ router.post('/api/v1/createResponse', async (req, res) => {
                 }
                 res.json({ message: 'Stored responses successfully' });
             }
-            else{
-                res.json({message:"The location you are looking for does not exist"})
+            else {
+                res.json({ message: "The location you are looking for does not exist" })
             }
-    } 
-    else{
-        res.json({message:"The survey that you try to answer does not exist"})
-    }
+        }
+        else {
+            res.json({ message: "The survey that you try to answer does not exist" })
+        }
     } catch (error) {
-        res.json({ message: 'Internal server error'});
+        res.json({ message: 'Internal server error ' + error });
     }
 });
 
