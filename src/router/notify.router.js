@@ -200,12 +200,32 @@ router.get('/api/v1/getNotifies', auth, async (req, res) => {
 });
 
 
-// router.put('/api/v1/deleteNotify',auth,async(req,res)=>{
-//     try {
-//         let 
-//     } catch (error) {
-//         res.json({message:"catch error "+error})
-//     }
-// })
+router.put('/api/v1/activeAndInactiveNotify',auth,async(req,res)=>{
+    try {
+        let id = req.headers['notifier_id']
+        let role = req.user.user_role
+        let {active} = req.body
+        if(role == 'admin'){
+            let notifier = await notifyModels.findOne({_id:id})
+            if(notifier){
+                notifier = await notifyModels.updateOne({_id:id},{active:active})
+                if(active==0){
+                    res.json({message:"The data deleted successfully"})
+                }
+                else{
+                    res.json({message:"The data activated successfully"})
+                }
+            }
+            else{
+                res.json({message:"No data found"})
+            }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized"})
+        }
+    } catch (error) {
+            res.json({message:"catch error "+error})
+    }
+})
 
 module.exports = router
