@@ -230,7 +230,7 @@ async function processAndStoreAnswers(answerArray, questionId, questionType, sur
 
   const answerIdsAndTexts = await Promise.all(answerArray.map(async answerText => {
     const newAnswer = new Answer({
-      answer: answerText.text,
+      answer: answerText.text || answerText.answer,
       image: answerText.image,
       question_id: questionId,
       survey_id: survey_id,
@@ -247,7 +247,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
   const storedQuestions = [];
 
   for (const questionData of questionsData) {
-    const { id,comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
+    const { _id,id,comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
 
     // Case-insensitive lookup for question type
     const questionTypeObject = await QuestionController.findOne({
@@ -387,11 +387,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       await Answer.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
 
       // Process and store new questions
-      //const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
-
-      // Soft delete existing questions and answers related to the survey
-     // const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department, true);
-
+      const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
 
       res.status(200).json({ message: 'Survey, locations, and questions updated successfully!' });
     } else {
