@@ -124,7 +124,7 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
 
             // Check if all survey reader ids exist and are active
             let existReaders = await surveyReaderModel.findOne({ reader_id: surveyReaders_id, active: 1 });
-
+            let readerData = await userModels.findOne({_id:surveyReaders_id, active : 1}).select('email_address -_id')
             if (existSurvey && existQuestion && existReaders) {
                 // Save data in the notify table
                 
@@ -136,7 +136,7 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
                     answer_text : answer_id? existAnswer.answer:null,
                     survey_reader_id: surveyReaders_id,
                     created_by,
-                    reader_email:surveyReaders.email_address
+                    reader_email:readerData.email_address
 
                 };
                 const notifyEntry = await notifyModels.create(notifyData);
