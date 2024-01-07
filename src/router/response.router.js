@@ -11,6 +11,7 @@ const surveyModels = require("../models/survey.models");
 const locationModels = require("../models/location.models");
 const notifyModels = require("../models/notify.models");
 const notificationModel = require("../models/notification.model");
+const surveyReaderModel = require("../models/surveyReader.model");
 require('dotenv').config()
 
 router.post('/api/v1/createResponse', async (req, res) => {
@@ -180,7 +181,8 @@ router.post('/api/v1/createResponse', async (req, res) => {
 router.get('/api/v1/getResponses', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
-        if (role == 'admin' || role == "survey-reader") {
+        let id = req.user._id
+        if (role == 'admin') {
             let department_id = req.user.department_id;
 
             let responses = await responseModel.find({ department_id, active: 1 }).populate([
@@ -221,7 +223,53 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
             } else {
                 res.json({ message: "No data found" });
             }
-        } else {
+        }
+        else if(role == 'survey-reader'){
+            let surveys = await surveyReaderModel.find({
+                reader_id: id,
+                active: 1
+            }).select('survey_id');
+
+            if (surveys && surveys.length > 0) {
+                const surveyIds = surveys.map(survey => survey.survey_id);
+
+                let responses = await responseModel.find({ survey_id: { $in: surveyIds }, active: 1 }).populate([
+                    {
+                        path: 'survey_id',
+                        model: 'survey',
+                        select: 'survey_title -_id'
+                    },
+                    {
+                        path: 'question_id',
+                        model: 'question',
+                        select: 'question_title -_id'
+                    },
+                    {
+                        path: 'location_id',
+                        model: 'location',
+                        select: 'location_name -_id'
+                    },
+                ]).select('user_answer createdAt active user_id');
+
+                if (responses) {
+                    const formattedResponses = responses.map(response => ({
+                        _id: response._id,
+                        survey_title: response.survey_id.survey_title,
+                        location_name: response.location_id.location_name,
+                        createdAt: response.createdAt,
+                        user_id: response.user_id,
+                        user_answer: response.user_answer
+                    }));
+
+                    res.json({ message: formattedResponses });
+                } else {
+                    res.json({ message: "No responses found for the surveys" });
+                }
+            } else {
+                res.json({ message: "No surveys found for the survey-reader" });
+            }
+        }
+        else {
             res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {

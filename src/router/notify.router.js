@@ -157,7 +157,6 @@ router.get('/api/v1/getNotifies', auth, async (req, res) => {
         if (role === 'admin') {
             let notifiers = await notifyModels.find({
                 created_by: req.user._id,
-                active: 1
             }).populate([
                 {
                     path: 'survey_reader_id',
