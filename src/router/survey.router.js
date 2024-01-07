@@ -763,6 +763,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
           created_by: created_by,
+          symbol_size:survey.symbol_size,
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
           locations: buildTree(locations, null),
           questions: simplifiedQuestions
@@ -832,6 +833,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
               submission_pwd: survey.survey_id.submission_pwd,
               background_color: survey.survey_id.background_color,
               question_text_color: survey.survey_id.question_text_color,
+              symbol_size:survey.survey_id.symbol_size,
               created_by: created_by,
               logo: (survey.survey_id.logo != "" && survey.survey_id.logo != " ") ? `${company_name}/${survey.survey_id.logo}` : " " || "",
               locations: buildTree(locations, null),
