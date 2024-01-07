@@ -29,6 +29,9 @@ const notifySchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'user'
     },
+    reader_email:{
+        type:String
+    }
 
 }, { timestamps: true })
 

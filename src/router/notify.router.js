@@ -135,7 +135,9 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
                     answer_id: answer_id ?existAnswer._id:null ,
                     answer_text : answer_id? existAnswer.answer:null,
                     survey_reader_id: surveyReaders_id,
-                    created_by
+                    created_by,
+                    reader_email:surveyReaders.email_address
+
                 };
                 const notifyEntry = await notifyModels.create(notifyData);
                 res.json({ message: "Data saved successfully", notifyEntry });

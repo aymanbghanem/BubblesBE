@@ -14,6 +14,13 @@ var jwt = require('jsonwebtoken');
 require('dotenv').config()
 
 
+const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+
+
+
 const addOwner = async (company) => {
     const existingOwner = await userModels.findOne({
         user_role: 'owner',
@@ -36,6 +43,10 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         const { user_name, email_address, company_name, department_name, survey } = req.body;
         if (!config.roles.includes(role)) {
             return res.json({ message: "sorry, you are unauthorized" });
+        }
+
+        if (!validateEmail(email_address)) {
+            return res.json({ message: "Invalid email address" });
         }
 
         const existingUser = await userModels.findOne({
@@ -203,7 +214,11 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         let { user_name, email_address, password } = req.body;
         user_name = user_name.toLowerCase();
         let newPassword = await generateMixedID()
-        //console.log(newPassword)
+
+        if (!validateEmail(email_address)) {
+            return res.json({ message: "Invalid email address" });
+        }
+
         let hashedPassword;
         // Check if either the email_address or user_name already exists
         const existingUser = await userModels.findOne({
