@@ -320,7 +320,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
         comparisonOptions,
         parent_id: correspondingQuestion._id,
         related_answer,
-        parent_dummy_id:correspondingQuestion
+        parent_dummy_id:(correspondingQuestion.id).toString()
       };
       updatedDependencies.push(newDependency);
     } else {
@@ -387,7 +387,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       await Answer.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
 
       // Process and store new questions
-      const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
+      //const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
 
       // Soft delete existing questions and answers related to the survey
      // const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department, true);
