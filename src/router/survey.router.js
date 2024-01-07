@@ -745,13 +745,21 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           }
         ]);
 
-        // Extract only the question_type property from each question
         const simplifiedQuestions = questions.map(question => {
+          // Extract answer ID and text for each answer in the answers array
+          const modifiedAnswers = question.answers.map(answer => ({
+            answerID: answer._id,
+            text: answer.answer,
+            image: answer.image
+          }));
+        
           return {
             ...question.toObject(),
+            answers: modifiedAnswers, // Replace the existing answers array
             question_type: question.question_type.question_type
           };
         });
+        
 
         let response = {
           
@@ -817,13 +825,21 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
               }
             ]);
     
-            // Extract only the question_type property from each question
             const simplifiedQuestions = questions.map(question => {
+              // Extract answer ID and text for each answer in the answers array
+              const modifiedAnswers = question.answers.map(answer => ({
+                answerID: answer._id,
+                text: answer.answer,
+                image: answer.image
+              }));
+            
               return {
                 ...question.toObject(),
+                answers: modifiedAnswers, // Replace the existing answers array
                 question_type: question.question_type.question_type
               };
             });
+            
             let response = {
               
               survey_title: survey.survey_id.survey_title,
