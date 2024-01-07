@@ -439,6 +439,12 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
         }
         if (phase == 1) {
+          // dynamicPage/6596835ea9a94b294cc77340/6596835ea9a94b294cc77365
+          // let qr = await qrModel.create({
+          //   location_id:location_Id,
+          //   survey_id:survey_id,
+          //   link :`dynamicPage/${survey_id}/${location_Id}`
+          // })
           // Fetch questions for the first phase
           const firstPhaseQuestions = await Question.find({
             survey_id: survey_id,
