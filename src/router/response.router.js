@@ -45,6 +45,8 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         const isQuestionInNotify = notify.question_id.equals(question_id);
                 
                         if (isQuestionInNotify) {
+                            let question_title = await questionModel.findOne({_id:question_id}).select('question_title -_id')
+                            console.log(question_title)
                             // Check if it's an array of answers
                             if (Array.isArray(user_answer)) {
                                 // Iterate through each element in the array
@@ -67,6 +69,8 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                             survey_reader_id:notify.survey_reader_id
                                             // Add other properties as needed
                                         });
+                                        
+
                                     }
                                 }
                             }

@@ -32,6 +32,9 @@ const notifySchema = new Schema({
     reader_email:{
         type:String,
         default:null
+    },
+    reader_name:{
+        type:String
     }
 
 }, { timestamps: true })
