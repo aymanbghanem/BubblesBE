@@ -450,6 +450,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             survey_id: survey_id,
             active: 1,
             phase: 1,
+            question_dependency:[]
           })
             .populate({
               path: 'answers',
@@ -580,7 +581,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
         } else if (parentQuestionType === 'Range') {
           let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');
           threshold = threshold.answer;
-          const thresholdAnswer = parseFloat(threshold);
+          const thresholdAnswer = parseFloat(relatedAnswer);
           const userAnswer = parseFloat(matchingAnsweredQuestion.answers[0]);
 
           if (!isNaN(thresholdAnswer) && !isNaN(userAnswer)) {
@@ -612,10 +613,10 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
     const currentDependency = dependencies[i];
     const currentDependencySatisfied = await checkDependencySatisfaction(currentDependency, answeredQuestions, results);
 
-    if (currentDependency.sign === "&") {
+    if (currentDependency.sign == "&") {
       // Special handling for "and" relation
       andResult = andResult && currentDependencySatisfied;
-    } else if (currentDependency.sign === "or" || currentDependency.sign === null) {
+    } else if (currentDependency.sign == "or" || currentDependency.sign == null) {
       // "or" relation when sign is explicitly set to "or" or when it's null
       overallSatisfied = overallSatisfied || currentDependencySatisfied;
 
@@ -625,7 +626,7 @@ async function checkMultipleDependenciesSatisfaction(dependencies, answeredQuest
       }
     }
 
-    if (!currentDependencySatisfied && currentDependency.sign !== "&") {
+    if (!currentDependencySatisfied && currentDependency.sign != "&") {
       // If any non-"and" dependency is not satisfied, set overall result to false
       overallSatisfied = false;
     }
