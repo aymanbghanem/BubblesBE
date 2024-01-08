@@ -136,15 +136,15 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                             answers: answerArray,
                         });
                     } 
-                    // else {
-                    //     // No matching responses, add default response data
-                    //     resultArray.push({
-                    //         survey_title: survey.survey_title,
-                    //         reportId: report._id, // assuming report has an _id field
-                    //         chartType: report.chart_type,
-                    //         answers: [], // You can customize this as needed
-                    //     });
-                    // }
+                    else {
+                        // No matching responses, add default response data
+                        resultArray.push({
+                            survey_title: survey.survey_title,
+                            reportId: report._id, // assuming report has an _id field
+                            chartType: report.chart_type,
+                            answers: [], // You can customize this as needed
+                        });
+                    }
                 }
 
                 res.status(200).json({ resultArray });
