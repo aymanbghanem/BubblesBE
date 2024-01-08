@@ -840,11 +840,18 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
                 text: answer.answer,
                 image: answer.image
               }));
-            
+              const modifiedDependencies = question.question_dependency.map(dep => ({
+                id: dep._id,
+                parent_id: dep.parent_id,
+                related_answer: dep.related_answer,
+                question_title: dep.question_title,
+                parent_dummy_id: dep.parent_dummy_id
+              }));
               return {
                 ...question.toObject(),
                 answers: modifiedAnswers, // Replace the existing answers array
-                question_type: question.question_type.question_type
+                question_type: question.question_type.question_type,
+                question_dependency: modifiedDependencies
               };
             });
             
