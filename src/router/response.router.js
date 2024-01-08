@@ -12,6 +12,7 @@ const locationModels = require("../models/location.models");
 const notifyModels = require("../models/notify.models");
 const notificationModel = require("../models/notification.model");
 const surveyReaderModel = require("../models/surveyReader.model");
+const sendNotificationEmail = require("../middleware/notification");
 require('dotenv').config()
 
 router.post('/api/v1/createResponse', async (req, res) => {
@@ -43,10 +44,12 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     for (const notify of existingNotify) {
                         // Check if the question is in existingNotify
                         const isQuestionInNotify = notify.question_id.equals(question_id);
-                
+                        let location_id = notify.location_id
+
                         if (isQuestionInNotify) {
                             let question_title = await questionModel.findOne({_id:question_id}).select('question_title -_id')
-                            console.log(question_title)
+                            let location_name = await locationModels.findOne({_id:location_id}).select('location_name -_id')
+                           // console.log(location_name)
                             // Check if it's an array of answers
                             if (Array.isArray(user_answer)) {
                                 // Iterate through each element in the array
@@ -69,7 +72,9 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                             survey_reader_id:notify.survey_reader_id
                                             // Add other properties as needed
                                         });
-                                        
+
+                                    //    await sendNotificationEmail(notify.reader_name,notify.reader_email,"User Response Alert"
+                                    //     ,question_title,location_name,answer)
 
                                     }
                                 }

@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendEmail(user_name,to, subject,password,message) {
+async function sendNotificationEmail(user_name,to, subject,question,location,answer) {
   const info = await transporter.sendMail({
     from: `"Digital Feed Back "`,
     to: to,
@@ -30,8 +30,10 @@ async function sendEmail(user_name,to, subject,password,message) {
      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
        <h1 style="color: #333;">Digital Feed Back 👋</h1>
        <p style="color: #555;">Dear ${user_name},</p>
-       <p style="color: #555;">This is an email ${message}.</p>
-       <p style="color: #555;">Your new password : <strong>${password}</strong></p>
+       <p style="color: #555;">User has answered the following question:</p>
+       <p style="color: #555;"><strong>${question}</strong></p>
+        ${location != null ? `For this location ${location} `:''}
+        ${answer != null ? `For this answer ${answer}`:''}
        <p style="color: #555;">Thank you for your attention!</p>
        <p style="color: #555;">Best regards,</p>
        <p style="color: #333;">Digital support</p>
@@ -45,4 +47,4 @@ async function sendEmail(user_name,to, subject,password,message) {
   return(info.messageId);
 }
 
-module.exports = sendEmail
+module.exports = sendNotificationEmail

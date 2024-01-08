@@ -701,20 +701,20 @@ router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
 
 router.post('/api/v1/resetPassword', async (req, res) => {
     try {
-        let { user_name } = req.body
+        let { email_address } = req.body
         let newPassword = await generateMixedID()
         //console.log(newPassword)
         let response;
         let existingUser = await userModels.findOne({
-            user_name: user_name
+            email_address: email_address
         })
         if (existingUser) {
             await hashPassword(newPassword, async (hash) => {
                 hashedPassword = hash;
-                existingUser = await userModels.findOneAndUpdate({ user_name: user_name }, { password: newPassword }, { new: true })
+                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: newPassword }, { new: true })
             })
 
-            //let user_name = existingUser.user_name
+             let user_name = existingUser.user_name
             //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
             res.json({ message: response, existingUser })
         }
