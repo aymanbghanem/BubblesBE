@@ -261,17 +261,23 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                 ]).select('user_answer createdAt active user_id');
 
                 if (responses) {
-                    const formattedResponses = responses.map(response => ({
+                    // Group responses by user_id
+                    const groupedResponses = _.groupBy(responses, 'user_id');
+    
+                    // Select only the first response for each user_id
+                    const uniqueResponses = _.map(groupedResponses, group => group[0]);
+    
+                    // Transform the unique responses array
+                    const formattedResponses = uniqueResponses.map(response => ({
                         _id: response._id,
                         survey_title: response.survey_id.survey_title,
                         location_name: response.location_id.location_name,
                         createdAt: response.createdAt,
-                        user_id: response.user_id,
-                        user_answer: response.user_answer
+                        user_id: response.user_id
                     }));
-
+    
                     res.json({ message: formattedResponses });
-                } else {
+                }else {
                     res.json({ message: "No responses found for the surveys" });
                 }
             } else {

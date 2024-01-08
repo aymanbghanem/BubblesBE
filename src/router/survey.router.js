@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-
+const _ = require('lodash');
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 const surveyModel = require('../models/survey.models')
@@ -465,7 +465,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             .select('question_title answers question_type required');
 
           if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
-            return res.status(404).json({ message: "No questions found for the first phase." });
+            return res.status(404).json({ questions:[]});
           }
 
           // Flatten the question_type field
@@ -894,10 +894,12 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     let id = req.user._id
     let department_id = req.user.department_id
     let company_id = req.user.company_id
-    if (role == "admin") {
+    if (role == 'admin') {
+      let department_id = req.user.department_id;
+    
       // Retrieve the surveys in the admin's department
-      let surveys = await surveyModel.find({ department_id: department_id }).populate(
-        [{
+      let surveys = await surveyModel.find({ department_id: department_id }).populate([
+        {
           path: 'company_id',
           select: 'company_name -_id',
         },
@@ -908,24 +910,28 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
         {
           path: 'created_by',
           select: 'user_name -_id',
-        }
-        ]
-      )
-     
-      // Flatten the data structure
-      let flattenedSurveys = await Promise.all(surveys.map(async (item) => {
-        let responseCount = await responseModel.countDocuments({
-            survey_id: item._id
-        });
+        },
+      ]);
     
-        return {
+      // Flatten the data structure
+      let flattenedSurveys = await Promise.all(
+        surveys.map(async (item) => {
+          // Filter responses for the current survey
+          let surveyResponses = await responseModel
+            .find({ survey_id: item._id, active: 1 })
+            .distinct('user_id');
+    
+          // Count distinct user_id responses for the survey
+          let responseCount = surveyResponses.length;
+    
+          return {
             _id: item._id,
             survey_title: item.survey_title,
             department_name: item.department_id.department_name, // Include department_name directly
-            responses: responseCount, // Use the counted responses
+            responses:responseCount,
             created_by: item.created_by.user_name,
             active: item.active,
-            symbol_size:item.symbol_size,
+            symbol_size: item.symbol_size,
             survey_description: item.survey_description,
             logo: item.company_id && item.logo !== "" ? `${item.company_id.company_name}/${item.logo}` : "",
             submission_pwd: item.submission_pwd,
@@ -933,19 +939,25 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
             question_text_color: item.question_text_color,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
-            __v: item.__v
-        };
-    }));
-
+            __v: item.__v,
+          };
+        })
+      );
+    
       if (flattenedSurveys.length > 0) {
         res.json({ message: flattenedSurveys });
       } else {
         res.json({ message: "No data found" });
       }
     }
+    
+    
     else if (role == "survey-reader") {
+      let department_id = req.user.department_id;
+    
+      // Retrieve the surveys for the survey-reader
       let surveys = await surveyReaderModel
-        .find({ department_id: department_id, reader_id: req.user._id ,active:1})
+        .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
         .populate([
           {
             path: 'company_id',
@@ -964,20 +976,28 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
             select: 'survey_title symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
           }
         ]);
-
+    
       let transformedSurveys = await Promise.all(surveys.map(async (item) => {
+        // Filter responses for the current survey
+        let surveyResponses = await responseModel
+          .find({ survey_id: item.survey_id._id, active: 1 })
+          .distinct('user_id');
+    
+        // Count distinct user_id responses for the survey
+        let responseCount = surveyResponses.length;
+    
         let created = await userModels.findOne({
           _id: item.survey_id.created_by
         }).select('user_name -_id');
-
+    
         return {
           _id: item.survey_id._id,
           survey_title: item.survey_id.survey_title,
           department_name: item.department_id.department_name,
-          responses: item.survey_id.responses,
+          responses: responseCount,
           created_by: created.user_name,
           active: item.survey_id.active,
-          symbol_size : item.survey_id.symbol_size,
+          symbol_size: item.survey_id.symbol_size,
           survey_description: item.survey_id.survey_description,
           logo: (item.company_id && item.survey_id.logo !== "") ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
           submission_pwd: item.survey_id.submission_pwd,
@@ -987,60 +1007,63 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
           updatedAt: item.survey_id.updatedAt,
         };
       }));
-
+    
       if (transformedSurveys.length > 0) {
         res.json({ message: transformedSurveys });
       } else {
         res.json({ message: "No data found" });
       }
-
-    } 
-    else if(role=="owner"){
-    
-        // Retrieve the surveys in the admin's department
-        let surveys = await surveyModel.find({ company_id: company_id }).populate(
-          [{
-            path: 'company_id',
-            select: 'company_name -_id',
-          },
-          {
-            path: 'created_by',
-            select: 'user_name -_id',
-          }
-          ]
-        )
-       
-        // Flatten the data structure
-        let flattenedSurveys = await Promise.all(surveys.map(async (item) => {
-          let responseCount = await responseModel.countDocuments({
-              survey_id: item._id
-          });
-      
-          return {
-              _id: item._id,
-              survey_title: item.survey_title,
-              responses: responseCount, // Use the counted responses
-              created_by: item.created_by.user_name,
-              active: item.active,
-              symbol_size:item.symbol_size,
-              survey_description: item.survey_description,
-              logo: item.company_id && item.logo !== "" ? `${item.company_id.company_name}/${item.logo}` : "",
-              submission_pwd: item.submission_pwd,
-              background_color: item.background_color,
-              question_text_color: item.question_text_color,
-              createdAt: item.createdAt,
-              updatedAt: item.updatedAt,
-              __v: item.__v
-          };
-      }));
-  
-        if (flattenedSurveys.length > 0) {
-          res.json({ message: flattenedSurveys });
-        } else {
-          res.json({ message: "No data found" });
-        }
-      
     }
+    
+    else if (role == "owner") {
+      // Retrieve the surveys for the owner
+      let surveys = await surveyModel.find({ company_id: company_id }).populate(
+        [{
+          path: 'company_id',
+          select: 'company_name -_id',
+        },
+        {
+          path: 'created_by',
+          select: 'user_name -_id',
+        }
+        ]
+      );
+    
+      // Flatten the data structure
+      let flattenedSurveys = await Promise.all(surveys.map(async (item) => {
+        // Filter responses for the current survey
+        let surveyResponses = await responseModel
+          .find({ survey_id: item._id, active: 1 })
+          .distinct('user_id');
+    
+        // Count distinct user_id responses for the survey
+        let responseCount = surveyResponses.length;
+    
+        return {
+          _id: item._id,
+          survey_title: item.survey_title,
+          responses: responseCount,
+          created_by: item.created_by.user_name,
+          active: item.active,
+          symbol_size: item.symbol_size,
+          survey_description: item.survey_description,
+          logo: (item.company_id && item.logo !== "") ? `${item.company_id.company_name}/${item.logo}` : "",
+          submission_pwd: item.submission_pwd,
+          background_color: item.background_color,
+          question_text_color: item.question_text_color,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        
+        };
+      }));
+    
+      if (flattenedSurveys.length > 0) {
+        res.json({ message: flattenedSurveys });
+      } else {
+        res.json({ message: "No data found" });
+      }
+    }
+    
     else {
       res.json({ message: "sorry, you are unauthorized" })
     }
