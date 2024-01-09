@@ -33,25 +33,32 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
                 const { company_name } = companyData;
                 const caseInsensitiveRegex = new RegExp(`^${company_name}$`, 'i');
 
-                const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex,active:1 });
+                const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex, active: 1 });
 
                 if (existingCompany) {
-                    addedCompanies.push({ message: `The company name '${company_name}' already exists`, company: existingCompany });
+                    addedCompanies.push({
+                        status: 409,
+                        message: `The company name '${company_name}' already exists`,
+                        company: existingCompany
+                    });
                 } else {
                     const newCompany = await companyModel.create({
                         company_name: company_name,
                     });
-                    addedCompanies.push({ message: `Successfully added company '${company_name}'`, company: newCompany });
+                    addedCompanies.push({
+                        status: 200,
+                        message: `Successfully added company '${company_name}'`,
+                        company: newCompany
+                    });
                 }
             }
 
             res.json({ addedCompanies });
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(403).json({ message: "Sorry, you are unauthorized" });
         }
-
     } catch (error) {
-        res.status(500).json({ message: "Catch error: " + error });
+        res.status(500).json({message: "Catch error: " + error });
     }
 });
 
