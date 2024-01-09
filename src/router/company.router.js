@@ -36,12 +36,12 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
                 const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex, active: 1 });
 
                 if (existingCompany) {
-                    res.status(409).json({message: `The company name '${company_name}' already exists` });
+                    res.status(200).json({message: `The company name '${company_name}' already exists` });
                 } else {
                     const newCompany = await companyModel.create({
                         company_name: company_name,
                     });
-                    res.status(200).json({message: `Successfully added company '${company_name}'`,company:newCompany });
+                    res.status(201).json({message: `Successfully added company '${company_name}'`,company:newCompany });
 
                 }
             }
