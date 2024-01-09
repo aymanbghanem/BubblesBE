@@ -9,7 +9,20 @@ const companySchema = new Schema({
         type: Number,
         default: 1
     },
-    company_logo:String
+    company_logo:String,
+    basic:{
+        type: Number,
+        default:1
+    },
+    dashboard:{
+        type: Number,
+        default:0
+    }
+    ,
+    notifier:{
+        type: Number,
+        default:0
+    }
     
 }, { timestamps: true })
 
