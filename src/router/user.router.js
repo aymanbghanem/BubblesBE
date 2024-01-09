@@ -348,7 +348,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         let users;
 
         if (role === 'superadmin') {
-            users = await userModels.find({ user_role: 'owner',active:1  }).populate({
+            users = await userModels.find({ user_role: 'owner'}).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
@@ -740,17 +740,35 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
         }
 
         if (role === "superadmin") {
-            const deletedUsers = await userModels.updateMany(
-                { _id: { $in: user_ids }, active: 1 },
-                { $set: { active: 0 } }
-            );
-
-            if (deletedUsers.modifiedCount === deletedUsers.matchedCount) {
-                return res.json({ message: "Users deleted successfully" });
-            } else {
-                return res.json({ message: "No valid users found to delete" });
+            // Find the currently active owners
+            let user = await userModels.findOne({_id:user_ids[0]}).select('company_id -_id')
+            if(user){
+                const currentActiveOwners = await userModels.find({
+                    user_role: 'owner',
+                    active: 1,
+                    company_id:user.company_id,
+                });
+    
+                // Check if there is more than one active owner
+                if (currentActiveOwners.length > 0 && active === 1) {
+                    return res.json({ message: "Cannot activate user, another owner is already active" });
+                }
+            
+                // Update all users in user_ids to be active or inactive based on the 'active' parameter
+                const updatedUsers = await userModels.updateMany(
+                    { _id: { $in: user_ids } },
+                    { $set: { active: active } }
+                );
+            
+                if (updatedUsers.modifiedCount === updatedUsers.matchedCount) {
+                    return res.json({ message: active === 1 ? "User activated successfully" : "User deactivated successfully" });
+                }
             }
-        } else {
+            else {
+                return res.json({ message: "No valid users found to update" });
+            }
+        }
+         else {
             const deletedUsers = await userModels.updateMany(
                 { _id: { $in: user_ids } },
                 { $set: { active: active } }
