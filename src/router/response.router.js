@@ -26,6 +26,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
 
         let surveyInfo = await surveyModels.findOne({ _id: survey_id, active: 1 })
         if (surveyInfo) {
+            let response_message = surveyInfo.response_message
             let locationExist = await locationModels.findOne({ _id: location_id, active: 1 })
             if (locationExist) {
                 let department_id = surveyInfo.department_id
@@ -173,7 +174,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         }
                     }
                 }
-                res.json({ message: 'Stored responses successfully' });
+                res.json({ message: 'Stored responses successfully',response_message });
             }
             else {
                 res.json({ message: "The location you are looking for does not exist" })

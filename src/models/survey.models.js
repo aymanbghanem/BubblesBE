@@ -54,6 +54,9 @@ const surveySchema = new Schema({
     symbol_size: {
         type:String,
 
+    },
+    response_message:{
+        type:String,
     }
 
 }, { timestamps: true })

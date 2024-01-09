@@ -212,7 +212,8 @@ async function processAndStoreSurvey(surveyData, user) {
         question_text_color: surveyData.question_text_color,
         submission_pwd: surveyData.submission_pwd,
         title_font_size: surveyData.title_font_size,
-        description_font_size: surveyData.description_font_size
+        description_font_size: surveyData.description_font_size,
+        response_message:surveyData.response_message
       });
 
       return survey;
