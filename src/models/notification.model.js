@@ -9,25 +9,26 @@ const notificationSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'location'
     },
-    survey_id: {
+    department_id: {
         type: Schema.Types.ObjectId,
-        ref: 'survey'
+        ref: 'department'
     },
-    question_id: {
-        type: Schema.Types.ObjectId,
-        ref: 'question'
-    },
-    answer_id: {
-        type: Schema.Types.ObjectId,
-        ref: 'answer'
-    },
-    answer_text:String,
     survey_reader_id: {
         type: Schema.Types.ObjectId,
         ref: 'user'
+    },
+    processed:{
+        type:Number,
+        default:0
+    },
+    response_id:{
+        type: Schema.Types.ObjectId,
+        ref: 'response'
+    },
+    created_by:{
+        type: Schema.Types.ObjectId,
+        ref: 'user'
     }
-
-
 }, { timestamps: true })
 
 module.exports = model('notification', notificationSchema)

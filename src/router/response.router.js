@@ -21,7 +21,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
         let location_id = req.query.location_id;
         let user_number = req.query.user_number
         const user_id = new ObjectId();
-
+        let responseRecord;
         const responseArray = req.body.answered_questions;
 
         let surveyInfo = await surveyModels.findOne({ _id: survey_id, active: 1 })
@@ -42,46 +42,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     let question_id = _id;
                     let user_answer = answers;
     
-                    for (const notify of existingNotify) {
-                        // Check if the question is in existingNotify
-                        const isQuestionInNotify = notify.question_id.equals(question_id);
-                        let location_id = notify.location_id
-
-                        if (isQuestionInNotify) {
-                            let question_title = await questionModel.findOne({_id:question_id}).select('question_title -_id')
-                            let location_name = await locationModels.findOne({_id:location_id}).select('location_name -_id')
-                            console.log(location_name)
-                            // Check if it's an array of answers
-                            if (Array.isArray(user_answer)) {
-                                // Iterate through each element in the array
-                                for (const individualAnswer of user_answer) {
-                                    // Check conditions for creating a notification based on location
-                                    const isLocationMatch = notify.location_id === null || notify.location_id.equals(location_id);
-                
-                                    // Check conditions for creating a notification based on answer text
-                                    const isAnswerTextMatch = notify.answer_text === null || notify.answer_text === individualAnswer;
-                
-                                    // If both location and answer text conditions are met, create a notification
-                                    if (isLocationMatch && isAnswerTextMatch) {
-                                        await notificationModel.create({
-                                            survey_id,
-                                            question_id,
-                                            location_id: isLocationMatch ? notify.location_id : null,
-                                            department_id: department_id,
-                                            company_id: company_id,
-                                            answer_text: individualAnswer,
-                                            survey_reader_id:notify.survey_reader_id
-                                            // Add other properties as needed
-                                        });
-
-                                       await sendNotificationEmail(notify.reader_name,notify.reader_email,"User Response Alert"
-                                        ,question_title,location_name,answer)
-
-                                    }
-                                }
-                            }
-                        }
-                    }
+                  
                 
                     const questionType = await questionModel.findOne({ _id: question_id, active: 1 }).populate([
                         {
@@ -98,9 +59,9 @@ router.post('/api/v1/createResponse', async (req, res) => {
 
                     const { question_type } = questionType;
 
-                    if (['text', 'range', 'Range', 'Text'].includes(question_type.question_type)) {
+                    if (['text', 'range', 'Range', 'Text','Single choice'].includes(question_type.question_type)) {
                         // If the question type is 'text' or 'range', store the response directly
-                        await responseModel.create({
+                        responseRecord =  await responseModel.create({
                             survey_id,
                             question_id,
                             location_id,
@@ -122,7 +83,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
 
                                 if (matchedAnswer) {
                                     // If a matching answer is found, store the response with the answer's ID
-                                    await responseModel.create({
+                              responseRecord =  await responseModel.create({
                                         survey_id,
                                         question_id,
                                         answer_id: matchedAnswer._id,
@@ -138,7 +99,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                             }
                         } else {
                             // If it's a single answer, store the response as usual
-                            await responseModel.create({
+                            responseRecord = await responseModel.create({
                                 survey_id,
                                 question_id,
                                 location_id,
@@ -150,27 +111,45 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                 question_type: question_type.question_type
                             });
                         }
-                    } else if (question_type.question_type === 'Single choice') {
-                        // For other question types, compare user's answer with existing answers using strict equality
-                        const matchedAnswer = questionType.answers.find(answer =>
-                            answer.answer === user_answer[0]
-                        );
+                    } 
+                    for (const notify of existingNotify) {
+                        // Check if the question is in existingNotify
+                        console.log(responseRecord.question_id)
+                        const isQuestionInNotify = notify.question_id.equals(responseRecord.question_id);
+                        let location_id = notify.location_id
 
-                        if (matchedAnswer) {
-                            await responseModel.create({
-                                survey_id,
-                                question_id,
-                                answer_id: matchedAnswer._id,
-                                location_id,
-                                user_number: user_number || "",
-                                user_id,
-                                department_id: department_id,
-                                company_id: company_id,
-                                user_answer: user_answer[0],
-                                question_type: question_type.question_type
-                            });
-                        } else {
-                            console.log(user_answer);
+                        if (isQuestionInNotify) {
+                            let question_title = await questionModel.findOne({_id:question_id}).select('question_title -_id')
+                            let location_name = await locationModels.findOne({_id:location_id}).select('location_name -_id')
+                            console.log(location_name)
+                            // Check if it's an array of answers
+                            if (Array.isArray(user_answer)) {
+                                // Iterate through each element in the array
+                                for (const individualAnswer of user_answer) {
+                                    // Check conditions for creating a notification based on location
+                                    const isLocationMatch = notify.location_id === null || notify.location_id.equals(location_id);
+                
+                                    // Check conditions for creating a notification based on answer text
+                                    const isAnswerTextMatch = notify.answer_text === null || notify.answer_text === individualAnswer;
+                
+                                    // If both location and answer text conditions are met, create a notification
+                                    if (isLocationMatch && isAnswerTextMatch) {
+                                        await notificationModel.create({
+                                            location_id: isLocationMatch ? notify.location_id : null,
+                                            department_id: department_id,
+                                            company_id: company_id,
+                                            survey_reader_id:notify.survey_reader_id,
+                                            response_id:responseRecord._id,
+                                            created_by : notify.created_by
+                                            // Add other properties as needed
+                                        });
+
+                                    //    await sendNotificationEmail(notify.reader_name,notify.reader_email,"User Response Alert"
+                                    //     ,question_title,location_name,answer)
+
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -187,6 +166,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
         res.json({ message: 'Internal server error ' + error });
     }
 });
+
 
 router.get('/api/v1/getResponses', auth, async (req, res) => {
     try {
