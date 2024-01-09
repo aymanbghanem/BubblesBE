@@ -73,8 +73,8 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                             // Add other properties as needed
                                         });
 
-                                    //    await sendNotificationEmail(notify.reader_name,notify.reader_email,"User Response Alert"
-                                    //     ,question_title,location_name,answer)
+                                       await sendNotificationEmail(notify.reader_name,notify.reader_email,"User Response Alert"
+                                        ,question_title,location_name,answer)
 
                                     }
                                 }
@@ -297,17 +297,28 @@ router.get('/api/v1/getResponseById', auth, async (req, res) => {
             });
 
             if (userResponses.length > 0) {
-                // Fetch question titles for each response
-                let responsesWithQuestions = await Promise.all(userResponses.map(async (response) => {
-                    let question = await questionModel.findOne(response.question_id);
+                // Group responses by question_id
+                let groupedResponses = userResponses.reduce((acc, response) => {
+                    let key = response.question_id;
+                    if (!acc[key]) {
+                        acc[key] = [];
+                    }
+                    acc[key].push(response);
+                    return acc;
+                }, {});
+
+                // Fetch question titles and combined answers for each question
+                let responsesWithQuestions = await Promise.all(Object.keys(groupedResponses).map(async (questionId) => {
+                    let question = await questionModel.findOne({ _id: questionId }); // Corrected line
+                    let combinedAnswers = groupedResponses[questionId].map(response => response.user_answer);
+
                     return {
-                        ...response.toObject(),
-                        question_title: question ? question.question_title : 'Question Not Found'
-                        
+                        question_id: questionId,
+                        question_title: question ? question.question_title : 'Question Not Found',
+                        user_answer: combinedAnswers,
                     };
                 }));
 
-                console.log(responsesWithQuestions);
                 res.json({ message: responsesWithQuestions });
             } else {
                 res.json({ message: "No data found" });
@@ -319,6 +330,7 @@ router.get('/api/v1/getResponseById', auth, async (req, res) => {
         res.json({ message: "Catch error: " + error });
     }
 });
+
 
 module.exports = router
 
