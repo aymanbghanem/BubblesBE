@@ -42,11 +42,11 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
         const { user_name, email_address, company_name, department_name, survey } = req.body;
         if (!config.roles.includes(role)) {
-            return res.json({ message: "sorry, you are unauthorized" });
+            return res.status(200).json({ message: "sorry, you are unauthorized" });
         }
 
         if (!validateEmail(email_address)) {
-            return res.json({ message: "Invalid email address" });
+            return res.status(200).json({ message: "Invalid email address" });
         }
 
         const existingUser = await userModels.findOne({
@@ -56,7 +56,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         });
 
         if (existingUser) {
-            return res.json({ message: "The email address or username already exists" });
+            return res.status(200).json({ message: "The email address or username already exists" });
         }
 
         let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
@@ -87,7 +87,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                     });
 
                     //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-                    return res.json({
+                    return res.status(201).json({
                         message: "Successfully added",
                         token: user.token,
                         user_role: user.user_role,
@@ -98,7 +98,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 }
             }
             else {
-                res.json({ message: "The company does not exist" })
+                res.status(200).json({ message: "The company does not exist" })
             }
         }
 
@@ -114,7 +114,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
 
             if (!department) {
-                return res.json({ message: "The department does not exist within your company" });
+                return res.status(200).json({ message: "The department does not exist within your company" });
             }
 
             // Continue with the user creation
@@ -132,7 +132,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 department_id: department._id,
             });
 
-            return res.json({
+            return res.status(201).json({
                 message: "Successfully added",
                 token: user.token,
                 user_role: user.user_role,
@@ -189,7 +189,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
             }
 
-            return res.json({
+            return res.status(201).json({
                 message: "Successfully added",
                 user: {
                     token: user.token,
@@ -202,7 +202,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
         }
         else {
-            return res.json({ message: "sorry, you are unauthorized" });
+            return res.status(200).json({ message: "sorry, you are unauthorized" });
         }
     } catch (error) {
         return res.json({ message: error.message });
