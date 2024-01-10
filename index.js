@@ -21,6 +21,7 @@ const app = express()
 app.use(cors())
 app.use(express.static("logo"));
 app.use(express.static("answersImage"));
+app.use(express.static("report"));
 app.use(express.json());
 
 

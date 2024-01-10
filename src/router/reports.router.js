@@ -7,7 +7,8 @@ const responseModel = require("../models/response.model")
 const auth = require('../middleware/auth');
 const companyModels = require("../models/company.models");
 const questionsModels = require("../models/questions.models");
-
+const ExcelJS = require('exceljs');
+const fs = require('fs');
 
 router.post('/api/v1/createReport', auth, async (req, res) => {
     try {
@@ -199,6 +200,81 @@ router.put('/api/v1/deleteReport',auth,async(req,res)=>{
         res.json({message:"catch error "+error})
     }
 })
+
+function getDynamicFileName() {
+    const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
+    return `responses_${timestamp}.xlsx`;
+}
+
+router.get('/api/v1/exportReport', auth, async (req, res) => {
+    try {
+        let role = req.user.user_role;
+        if (role === 'admin') {
+            let department_id = req.user.department_id;
+
+            let responses = await responseModel.find({ department_id, active: 1 }).populate([
+                {
+                    path: 'survey_id',
+                    model: 'survey',
+                    select: 'survey_title -_id'
+                },
+                {
+                    path: 'question_id',
+                    model: 'question',
+                    select: 'question_title -_id'
+                },
+                {
+                    path: 'location_id',
+                    model: 'location',
+                    select: 'location_name -_id'
+                },
+            ]).select('user_answer createdAt active user_id');
+
+            if (responses && responses.length > 0) {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Responses');
+
+                // Add headers to the worksheet
+                worksheet.columns = [
+                    { header: 'Response ID', key: '_id', width: 15 },
+                    { header: 'Survey Title', key: 'survey_title', width: 30 },
+                    { header: 'Location Name', key: 'location_name', width: 30 },
+                    { header: 'Question title', key: 'question_title', width: 50 },
+                    { header: 'User answer', key: 'user_answer', width: 30 },
+                    { header: 'Created At', key: 'createdAt', width: 20 },
+                    { header: 'User ID', key: 'user_id', width: 30 },
+                ];
+
+                // Add data to the worksheet
+                responses.forEach(response => {
+                    const formattedResponse = {
+                        _id: response._id,
+                        survey_title: response.survey_id.survey_title,
+                        location_name: response.location_id.location_name,
+                        createdAt: response.createdAt,
+                        user_id: response.user_id,
+                        user_answer: response.user_answer,
+                        question_title: response.question_id.question_title
+                    };
+                    worksheet.addRow(formattedResponse);
+                });
+
+                // Create dynamic file name
+                const dynamicFileName = getDynamicFileName();
+
+                // Save the workbook to a file with the dynamic name
+                const filePath = `C:\\Users\\misk.sawalha\\OneDrive - Paltel Group\\Documents\\innovation\\digitalFeedback\\report\\${dynamicFileName}`;
+                await workbook.xlsx.writeFile(filePath);
+
+                res.json({ message: `http://localhost:2107/${dynamicFileName}` });
+            } else {
+                res.json({ message: "No data found" });
+            }
+        }
+    } catch (error) {
+        res.json({ message: "Catch error " + error });
+    }
+});
 
 module.exports = router
 
