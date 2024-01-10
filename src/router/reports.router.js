@@ -9,6 +9,9 @@ const companyModels = require("../models/company.models");
 const questionsModels = require("../models/questions.models");
 const ExcelJS = require('exceljs');
 const fs = require('fs');
+const userModels = require("../models/user.models");
+const departmentModels = require("../models/department.models");
+const _ = require('lodash');
 
 router.post('/api/v1/createReport', auth, async (req, res) => {
     try {
@@ -81,8 +84,8 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let created_by = req.user._id;
-
-        if (role == "owner" || role == "admin" || role == "survey-reader") {
+        let count = 0 ;
+        if (role == "owner"|| role == "survey-reader") {
             let reports = await reportsModel.find({ created_by, active: 1 });
 
             if (reports.length > 0) {
@@ -152,25 +155,110 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             } else {
                 res.json({ message: "No data found" });
             }
-        }else if (role == 'superadmin') {
+        }
+        
+        else if (role == 'superadmin') {
             let companyCount = await companyModels.countDocuments({ active: 1 });
             let surveyCount = await surveyModels.countDocuments({ active: 1 });
+            let userCount = await userModels.countDocuments({active:1})
+            let locationCount = await locationModels.countDocuments({active:1})
+            let departmentCount = await departmentModels.countDocuments({active:1})
             const activeCompanies = await companyModels.find({ active: 1 });
+            
+            let responses = await responseModel.find()
 
-            const companySurveyCounts = new Map();
+            if (responses) {
+                // Group responses by user_id
+                const groupedResponses = _.groupBy(responses, 'user_id');
 
-            for (const company of activeCompanies) {
-                const surveyCount = await surveyModels.countDocuments({ company_id: company._id, active: 1 });
-                companySurveyCounts.set(company.company_name, surveyCount);
+                // Select only the first response for each user_id
+                const uniqueResponses = _.map(groupedResponses, group => group[0]);
+
+                // Transform the unique responses array
+                 count = uniqueResponses.length
+
+                
             }
 
-            const result = Array.from(companySurveyCounts).map(([company_name, surveys]) => ({
-                company_name,
-                surveys
-            }));
+            res.json({ "company_count": companyCount, "survey_count": surveyCount,"user_count":userCount,
+                       "location_count":locationCount, "department_count":departmentCount,responses:count
+                    });
+        } 
+        else if(role == "admin"){
+            let reports = await reportsModel.find({ created_by, active: 1 });
 
-            res.json({ "company_count": companyCount, "survey_count": surveyCount, "company_surveys": result });
-        } else {
+            if (reports.length > 0) {
+                // Array to store the results with counts for each answer and additional information
+                let resultArray = [];
+
+                for (const report of reports) {
+                    let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
+                    let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
+                    let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
+
+                    let responseQuery = {
+                        survey_id: report.survey_id,
+                        question_id: report.question_id,
+                    };
+
+                    if (report.location_id) {
+                        responseQuery.location_id = report.location_id;
+                    }
+
+                    let responses = await responseModel.find(responseQuery);
+
+                    let filteredResponses = responses.filter(response => {
+                        let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
+                        let responseDate = new Date(createdAtDateOnly);
+                    
+                        // If startDateString is provided, check if the response date is greater than or equal to it
+                        let isAfterStartDate = !startDateString || responseDate >= new Date(startDateString);
+                    
+                        // If endDateString is provided, check if the response date is less than or equal to it
+                        let isBeforeEndDate = !endDateString || responseDate <= new Date(endDateString);
+                    
+                        return isAfterStartDate && isBeforeEndDate;
+                    });
+                    
+                    if (filteredResponses.length > 0) {
+                        // Count the responses for each answer and update the resultMap
+                        let resultMap = new Map();
+                        filteredResponses.forEach(response => {
+                            let answer = response.user_answer;
+                            resultMap.set(answer, (resultMap.get(answer) || 0) + 1);
+                        });
+
+                        // Convert resultMap to an array of objects for easier JSON serialization
+                        let answerArray = Array.from(resultMap.entries()).map(([answer, count]) => ({ answer, count }));
+
+                        // Add additional information like report ID and chart type
+                        resultArray.push({
+                            survey_title: survey.survey_title,
+                            reportId: report._id, // assuming report has an _id field
+                            chartType: report.chart_type,
+                            answers: answerArray,
+                        });
+                    } 
+                    else {
+                        // No matching responses, add default response data
+                        resultArray.push({
+                            survey_title: survey.survey_title,
+                            reportId: report._id, // assuming report has an _id field
+                            chartType: report.chart_type,
+                            answers: [], // You can customize this as needed
+                        });
+                    }
+                }
+
+                res.status(200).json({ resultArray });
+            }
+            
+            
+            else {
+                res.json({ message: "No data found" });
+            }
+        }
+        else {
             res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
@@ -202,8 +290,10 @@ router.put('/api/v1/deleteReport',auth,async(req,res)=>{
 })
 
 function getDynamicFileName() {
+    let randomFraction = Math.random()*1000;
+
     const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
-    return `responses_${timestamp}.xlsx`;
+    return `responses_${timestamp}_${randomFraction}.xlsx`;
 }
 
 router.get('/api/v1/exportReport', auth, async (req, res) => {
@@ -236,13 +326,12 @@ router.get('/api/v1/exportReport', auth, async (req, res) => {
 
                 // Add headers to the worksheet
                 worksheet.columns = [
-                    { header: 'Response ID', key: '_id', width: 15 },
                     { header: 'Survey Title', key: 'survey_title', width: 30 },
                     { header: 'Location Name', key: 'location_name', width: 30 },
                     { header: 'Question title', key: 'question_title', width: 50 },
                     { header: 'User answer', key: 'user_answer', width: 30 },
                     { header: 'Created At', key: 'createdAt', width: 20 },
-                    { header: 'User ID', key: 'user_id', width: 30 },
+                    { header: 'User ID', key: 'user_id', width: 40 },
                 ];
 
                 // Add data to the worksheet
