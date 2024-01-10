@@ -57,6 +57,7 @@ const surveySchema = new Schema({
     },
     response_message:{
         type:String,
+        default:""
     }
 
 }, { timestamps: true })
