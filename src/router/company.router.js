@@ -21,16 +21,8 @@ require('dotenv').config()
 router.post('/api/v1/addCompany', auth, async (req, res) => {
     try {
         if (req.user.user_role === 'superadmin') {
-            const { companies } = req.body;
+            const { company_name ,features  } = req.body;
 
-            if (!Array.isArray(companies)) {
-                return res.status(400).json({ message: "Invalid input format. 'companies' should be an array of object." });
-            }
-
-            const addedCompanies = [];
-
-            for (const companyData of companies) {
-                const { company_name } = companyData;
                 const caseInsensitiveRegex = new RegExp(`^${company_name}$`, 'i');
 
                 const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex, active: 1 });
@@ -40,11 +32,12 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
                 } else {
                     const newCompany = await companyModel.create({
                         company_name: company_name,
+                        
                     });
                     res.status(201).json({message: `Successfully added company '${company_name}'`,company:newCompany });
 
                 }
-            }
+            
         } else {
             res.status(403).json({ message: "Sorry, you are unauthorized" });
         }
