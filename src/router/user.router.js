@@ -41,6 +41,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         let newPassword = await generateMixedID()
 
         const { user_name, email_address, company_name, department_name, survey } = req.body;
+        user_name = user_name.toLowerCase()
         if (!config.roles.includes(role)) {
             return res.status(200).json({ message: "sorry, you are unauthorized" });
         }
