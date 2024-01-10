@@ -727,7 +727,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           select: "user_name"
         }
       ])
-        .select('survey_title symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+        .select('survey_title response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
       if (survey) {
         let company_name = survey.company_id.company_name;
@@ -814,7 +814,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
             },
             {
               path: 'survey_id',
-              select: 'survey_title  symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+              select: 'survey_title response_message symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
             }
           ]);
            
