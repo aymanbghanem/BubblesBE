@@ -10,19 +10,27 @@ const companySchema = new Schema({
         default: 1
     },
     company_logo:String,
-    basic:{
-        type: Number,
-        default:1
-    },
-    dashboard:{
-        type: Number,
-        default:0
-    }
-    ,
-    notifier:{
-        type: Number,
-        default:0
-    }
+
+        basic:{
+            type: Number,
+            default:1,
+            min:[0,'invalid number'],
+            max:[1,'invalid number']
+        },
+        dashboard:{
+            type: Number,
+            default:0,
+            min:[0,'invalid number'],
+            max:[1,'invalid number']
+        }
+        ,
+        notifier:{
+            type: Number,
+            default:0,
+            min:[0,'invalid number'],
+            max:[1,'invalid number']
+        }
+
     
 }, { timestamps: true })
 

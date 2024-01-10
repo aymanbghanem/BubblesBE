@@ -18,33 +18,38 @@ var jwt = require('jsonwebtoken');
 const responseModel = require("../models/response.model");
 require('dotenv').config()
 
+
+
 router.post('/api/v1/addCompany', auth, async (req, res) => {
     try {
         if (req.user.user_role === 'superadmin') {
-            const { company_name ,features  } = req.body;
+            const { company_name, dashboard,notifier } = req.body;
 
-                const caseInsensitiveRegex = new RegExp(`^${company_name}$`, 'i');
+            const caseInsensitiveRegex = new RegExp(`^${company_name}$`, 'i');
 
-                const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex, active: 1 });
+            const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex, active: 1 });
 
-                if (existingCompany) {
-                    res.status(200).json({message: `The company name '${company_name}' already exists` });
-                } else {
-                    const newCompany = await companyModel.create({
-                        company_name: company_name,
-                        
-                    });
-                    res.status(201).json({message: `Successfully added company '${company_name}'`,company:newCompany });
+            if (existingCompany) {
+                res.status(200).json({ message: `The company name '${company_name}' already exists` });
+            } else {
 
-                }
-            
+                const newCompany = await companyModel.create({
+                    company_name: company_name,
+                    dashboard:dashboard,
+                    notifier:notifier
+                });
+
+                res.status(201).json({ message: `Successfully added company '${company_name}'`, company: newCompany });
+            }
         } else {
             res.status(403).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        res.status(500).json({message: "Catch error: " + error });
+        res.status(500).json({ message: "Catch error: " + error });
     }
 });
+
+
 
 router.get('/api/v1/getCompanies',auth,async(req,res)=>{
     try {
