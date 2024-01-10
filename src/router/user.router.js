@@ -11,6 +11,8 @@ const surveyModel = require('../models/survey.models')
 const config = require('../../config')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
+const companyModels = require("../models/company.models");
+const departmentModels = require("../models/department.models");
 require('dotenv').config()
 
 
@@ -731,61 +733,74 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
     try {
         const role = req.user.user_role;
         const { user_ids, active } = req.body;
-
+        let id = user_ids
         if (!config.roles.includes(role)) {
           return  res.json({message:"sorry, you are unauthorized"})
         }
 
-        if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
-            return res.json({ message: "Please provide valid user IDs to delete" });
-        }
-
         if (role === "superadmin") {
             // Find the currently active owners
-            let user = await userModels.findOne({_id:user_ids[0]}).select('company_id -_id')
+            let user = await userModels.findOne({_id:id}).select('company_id -_id')
             if(user){
-                const currentActiveOwners = await userModels.find({
-                    user_role: 'owner',
-                    active: 1,
-                    company_id:user.company_id,
-                });
-    
-                // Check if there is more than one active owner
-                if (currentActiveOwners.length > 0 && active === 1) {
-                    return res.json({ message: "Cannot activate user, another owner is already active" });
+                let company = await companyModels.findOne({_id:user.company_id,active:1})
+                if(company){
+                    const currentActiveOwners = await userModels.find({
+                        user_role: 'owner',
+                        active: 1,
+                        company_id:user.company_id,
+                    });
+                    
+                    // Check if there is more than one active owner
+                    if (currentActiveOwners.length > 0 && active === 1) {
+                        return res.json({ message: "Cannot activate user, another owner is already active" });
+                    }
+                
+                    // Update all users in user_ids to be active or inactive based on the 'active' parameter
+                    const updatedUsers = await userModels.updateMany(
+                        { _id: id },
+                        { $set: { active: active } }
+                    );
+                
+                    if (updatedUsers.modifiedCount === updatedUsers.matchedCount) {
+                        return res.json({ message: active === 1 ? "User activated successfully" : "User deactivated successfully" });
+                    }
                 }
-            
-                // Update all users in user_ids to be active or inactive based on the 'active' parameter
-                const updatedUsers = await userModels.updateMany(
-                    { _id: { $in: user_ids } },
-                    { $set: { active: active } }
-                );
-            
-                if (updatedUsers.modifiedCount === updatedUsers.matchedCount) {
-                    return res.json({ message: active === 1 ? "User activated successfully" : "User deactivated successfully" });
+                else{
+                    res.json({message:"We cannot find any data related for this company"})
                 }
-            }
-            else {
-                return res.json({ message: "No valid users found to update" });
-            }
+                }
+                else {
+                    return res.json({ message: "No valid users found to update" });
+                }
+              
         }
          else {
-            const deletedUsers = await userModels.updateMany(
-                { _id: { $in: user_ids } },
-                { $set: { active: active } }
-            );
-
-            const deletedSurveyReader = await surveyReaderModel.updateMany(
-                { reader_id: { $in: user_ids } },
-                { $set: { active: active } }
-            );
-
-            if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 0) {
-                return res.json({ message: "Users deleted successfully" });
-            } else if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 1) {
-                return res.json({ message: "Users activated successfully" });
-            } else {
-                return res.json({ message: "No valid users found to delete" });
+            let user = await userModels.findOne({_id:id}).select('department_id -_id')
+            if(user){
+                let department = await departmentModels.findOne({_id:user.department_id,active:1})
+                if(department){
+                    const deletedUsers = await userModels.updateMany(
+                        { _id:id },
+                        { $set: { active: active } }
+                    );
+        
+                    const deletedSurveyReader = await surveyReaderModel.updateMany(
+                        { reader_id: id },
+                        { $set: { active: active } }
+                    );
+        
+                    if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 0) {
+                        return res.json({ message: "Users deleted successfully" });
+                    } else if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 1) {
+                        return res.json({ message: "Users activated successfully" });
+                    }
+                }
+               else{
+                res.json({message:"We cannot find any data related for this department"})
+               }
+            }
+           else {
+                return res.json({ message: "No valid user found to delete" });
             }
         }
     } catch (error) {
