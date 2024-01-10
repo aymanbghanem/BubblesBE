@@ -95,6 +95,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                 for (const report of reports) {
                     let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
+                    let question = await questionsModels.findOne({_id: report.question_id, active: 1}).select('question_title')
                     let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
                     let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
 
@@ -136,6 +137,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         // Add additional information like report ID and chart type
                         resultArray.push({
                             survey_title: survey.survey_title,
+                            question_title:question.question_title?question.question_title:"",
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: answerArray,
@@ -145,6 +147,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         // No matching responses, add default response data
                         resultArray.push({
                             survey_title: survey.survey_title,
+                            question_title:question.question_title?question.question_title:"",
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: [], // You can customize this as needed
@@ -209,6 +212,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                 for (const report of reports) {
                     let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
+                    let question = await questionsModels.findOne({_id: report.question_id}).select('question_title')
                     let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
                     let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
 
@@ -250,6 +254,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         // Add additional information like report ID and chart type
                         resultArray.push({
                             survey_title: survey.survey_title,
+                            question_title:question.question_title?question.question_title:"",
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: answerArray,
@@ -259,6 +264,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         // No matching responses, add default response data
                         resultArray.push({
                             survey_title: survey.survey_title,
+                            question_title:question.question_title?question.question_title:"",
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: [], // You can customize this as needed
@@ -278,7 +284,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             res.json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
-        console.error("Error:", error);
+        //console.error("Error:", error);
         res.json({ message: "Catch error: " + error });
     }
 });
