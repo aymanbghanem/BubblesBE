@@ -12,6 +12,7 @@ const fs = require('fs');
 const userModels = require("../models/user.models");
 const departmentModels = require("../models/department.models");
 const _ = require('lodash');
+const notificationModel = require("../models/notification.model");
 
 router.post('/api/v1/createReport', auth, async (req, res) => {
     try {
@@ -186,7 +187,22 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
         } 
         else if(role == "admin"){
             let reports = await reportsModel.find({ created_by, active: 1 });
+            let notification_count = await notificationModel.countDocuments({created_by, processed: 0})
+            let survey_count = await surveyModels.countDocuments({created_by, active: 1})
+            let responses = await responseModel.find()
 
+            if (responses) {
+                // Group responses by user_id
+                const groupedResponses = _.groupBy(responses, 'user_id');
+
+                // Select only the first response for each user_id
+                const uniqueResponses = _.map(groupedResponses, group => group[0]);
+
+                // Transform the unique responses array
+                 count = uniqueResponses.length
+
+                
+            }
             if (reports.length > 0) {
                 // Array to store the results with counts for each answer and additional information
                 let resultArray = [];
@@ -250,7 +266,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     }
                 }
 
-                res.status(200).json({ resultArray });
+                res.status(200).json({ resultArray,notification_count,response_count:count,survey_count });
             }
             
             
