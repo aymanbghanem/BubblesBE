@@ -322,7 +322,7 @@ function getDynamicFileName() {
 router.get('/api/v1/exportReport', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
-        if (role === 'admin' || role == 'survey-reader') {
+       if (role === 'admin' || role == 'survey-reader') {
             let department_id = req.user.department_id;
 
             let responses = await responseModel.find({ department_id, active: 1 }).populate([
@@ -374,19 +374,31 @@ router.get('/api/v1/exportReport', auth, async (req, res) => {
                     });
                 });
 
-                // Create dynamic file name
                 const dynamicFileName = getDynamicFileName();
 
+                // Resolve the dynamic file path based on the current working directory
+                const filePath = path.resolve(__dirname, '..', '..', 'report', dynamicFileName);
+
                 // Save the workbook to a file with the dynamic name
-                  const filePath = path.resolve(__dirname, '..', '..', 'report', dynamicFileName);
-               //  const filePath = `C:\\Users\\misk.sawalha\\OneDrive - Paltel Group\\Documents\\innovation\\digitalFeedback\\report\\${dynamicFileName}`;
                 await workbook.xlsx.writeFile(filePath);
 
-                res.json({ message: `http://localhost:2107/${dynamicFileName}` });
-            } else {
+                // Set headers for file download
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                res.setHeader('Content-Disposition', `attachment; filename=${dynamicFileName}`);
+
+                // Send the file to the front end
+                res.sendFile(filePath, (err) => {
+                    // Delete the file after sending
+                    fs.unlinkSync(filePath);
+                    if (err) {
+                        res.json({ message: "Error sending file: " + err });
+                    }
+                });
+            }
+             else {
                 res.json({ message: "No data found" });
             }
-        }
+         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
     }
