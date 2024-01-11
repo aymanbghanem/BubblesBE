@@ -50,9 +50,9 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                     return result;
                 });
 
-                res.status(201).json(flattenedData);
+                res.json({message:flattenedData,type:2});
             } else {
-                res.status(200).json({ message: "No data found" });
+                res.json({ message: "No data found",type:0 });
             }
         }
         else if (role === 'admin') {
@@ -114,13 +114,13 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                     };
                 });
         
-                res.status(201).json(responseData);
+                res.json({message:responseData,type:2});
             } else {
-                res.status(200).json({ message: "No data found" });
+                res.json({ message: "No data found",type:0});
             }
         }
          else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0});
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -134,17 +134,17 @@ router.put('/api/v1/processedNotification', auth, async (req, res) => {
         if (role == 'survey-reader') {
             let notification = await notificationModel.findOneAndUpdate({ _id: notification_id, processed: 0 }, { processed: 1 })
             if (notification) {
-                res.status(201).json({ message: "The notification has been successfully processed" })
+                res.json({ message: "The notification has been successfully processed",type:1 })
             }
             else {
-                res.status(200).json({ message: "Processing failed: Notification not found or already processed" })
+                res.json({ message: "Processing failed: Notification not found or already processed",type:0 })
             }
         }
         else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" })
+            res.json({ message: "Sorry, you are unauthorized",type:0 })
         }
     } catch (error) {
-        res.status(200).json({ message: "An error occurred while processing the notification: " + error })
+        res.json({ message: "An error occurred while processing the notification: " + error })
     }
 })
 
