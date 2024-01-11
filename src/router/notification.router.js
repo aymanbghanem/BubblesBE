@@ -84,7 +84,7 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                 // Initialize groupedData to store results by survey reader
                 const groupedData = notifications.reduce((result, notification) => {
                     const { response_id, survey_reader_id,createdAt } = notification;
-                    const { processed, user_answer,survey_id,location_id } = response_id;
+                    const { processed, user_answer,survey_id,location_id ,user_id} = response_id;
         
                     if (survey_reader_id) {
                         const readerId = survey_reader_id._id.toString();
@@ -95,7 +95,8 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                             unprocessed: 0,
                             survey_title:survey_id.survey_title,
                             location_name:location_id.location_name,
-                            createdAt:createdAt
+                            createdAt:createdAt,
+                            user_id,
                         };
         
                         // Update counter for unprocessed notifications
@@ -115,7 +116,8 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                         reader_name: reader.readerName,
                         unprocessed: reader.unprocessed,
                         createdAt:reader.createdAt,
-                        location_name: reader.location_name
+                        location_name: reader.location_name,
+                        user_id:reader.user_id
                     };
                 });
         

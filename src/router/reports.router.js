@@ -319,12 +319,12 @@ function getDynamicFileName() {
     return `responses_${timestamp}_${randomFraction}.xlsx`;
 }
 
-router.get('/api/v1/exportReport', auth, async (req, res) => {
+router.get('/api/v1/exportReport', async (req, res) => {
     try {
-        let role = req.user.user_role;
-       if (role === 'admin' || role == 'survey-reader') {
-            let department_id = req.user.department_id;
-
+       let role = req.user.user_role;
+      if (role === 'admin' || role == 'survey-reader') {
+           let department_id = req.user.department_id;
+      
             let responses = await responseModel.find({ department_id, active: 1 }).populate([
                 {
                     path: 'survey_id',
@@ -398,7 +398,7 @@ router.get('/api/v1/exportReport', auth, async (req, res) => {
              else {
                 res.json({ message: "No data found" });
             }
-         }
+        }
     } catch (error) {
         res.json({ message: "Catch error " + error });
     }
