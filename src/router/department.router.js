@@ -31,7 +31,7 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
             }));
 
             if (existingDepartments.some(existingDepartment => existingDepartment)) {
-                res.json({ message: "This department already exist in your company", departments: existingDepartments });
+                res.status(200).json({ message: "This department already exist in your company", departments: existingDepartments });
             } else {
                 const createdDepartments = await Promise.all(departmentsData.map(async (department) => {
                     const createdDepartment = await departmentModel.create({
@@ -41,10 +41,10 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
                     return createdDepartment;
                 }));
 
-                res.json({ message: "Successfully added", departments: createdDepartments });
+                res.status(201).json({ message: "Successfully added", departments: createdDepartments });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         console.error(error);
@@ -60,14 +60,14 @@ router.get('/api/v1/getDepartments',auth,async(req,res)=>{
             let departments = await departmentModel.find({company_id:company_id})
             .select('department_name active') 
             if(departments.length>0){
-             res.json(departments)
+                res.status(201).json(departments)
             }
             else{
-                res.json({message:"No data found"})
+                res.status(200).json({message:"No data found"})
                }
         }
         else{
-            res.json({message:"sorry, you are unauthorized"})
+            res.status(200).json({message:"sorry, you are unauthorized"})
         }
       
     } catch (error) {
@@ -101,16 +101,16 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
 
             if (department) {
                 if(active==0){
-                    res.json({ message: "The department and associated entities deleted successfully" });
+                    res.status(201).json({ message: "The department and associated entities deleted successfully" });
                 }
                 else if(active==1){
-                    res.json({ message: "The department and associated entities activated successfully" });
+                    res.status(201).json({ message: "The department and associated entities activated successfully" });
                 }
             } else {
-                res.json({ message: "The department you are looking for not found" });
+                res.status(200).json({ message: "The department you are looking for not found" });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Error occurred during the delete operation: " + error.message });

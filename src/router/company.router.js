@@ -59,14 +59,14 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
         let companies = await companyModel.find().select('company_name active') 
 
         if(companies.length>0){
-            res.json(companies)
+            res.status(201).json(companies)
            }
            else{
-            res.json({message:"No data found"})
+            res.status(200).json({message:"No data found"})
            }
        }
        else{
-        res.json({message:"sorry, you are unauthorized"})
+        res.status(200).json({message:"sorry, you are unauthorized"})
        }
     } catch (error) {
         res.json({message:"catch error "+error})
@@ -100,16 +100,16 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
 
             if (company) {
                 if(active==1){
-                    res.json({ message: "The company and associated entities activated successfully" });
+                    res.status(201).json({ message: "The company and associated entities activated successfully" });
                 }
                 else{
-                    res.json({ message: "The company and associated entities deleted successfully" });
+                    res.status(201).json({ message: "The company and associated entities deleted successfully" });
                 }
             } else {
-                res.json({ message: "The company you are looking for not found" });
+                res.status(200).json({ message: "The company you are looking for not found" });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Error occurred during the delete operation: " + error.message });

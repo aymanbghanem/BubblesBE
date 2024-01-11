@@ -20,12 +20,12 @@ router.post('/api/v1/addQuestionType', auth, async (req, res) => {
             });
 
             if (existingType) {
-                res.json({ message: "This type already exists" });
+                res.status(200).json({ message: "This type already exists" });
             } else {
                 let newType = await questionControllerModel.create({
                     question_type: question_type
                 });
-                res.json({ message: 'The new question type added successfully' });
+                res.status(201).json({ message: 'The new question type added successfully' });
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized" });

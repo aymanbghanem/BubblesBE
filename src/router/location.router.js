@@ -286,15 +286,15 @@ router.get('/api/v1/getLocations', auth, async (req, res) => {
                 if (locations.length > 0) {
                     const locationTree = await buildLocationTree(locations);
 
-                    res.json({ message: locationTree });
+                    res.status(201).json({ message: locationTree });
                 } else {
-                    res.json({ message: "There is no location for this survey" });
+                    res.status(200).json({ message: "There is no location for this survey" });
                 }
             } else {
-                res.json({ message: "The survey you are looking for does not exist" });
+                res.status(200).json({ message: "The survey you are looking for does not exist" });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -343,12 +343,12 @@ router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
                     return await getLeafLocations(root._id, root.location_name);
                 }));
 
-                res.json({ message: leafLocations.flat() }); // Flattening the result array
+                res.status(201).json({ message: leafLocations.flat() }); // Flattening the result array
             } else {
-                res.json({ message: "The survey you are looking for its locations does not exist" });
+                res.status(200).json({ message: "The survey you are looking for its locations does not exist" });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error.message });

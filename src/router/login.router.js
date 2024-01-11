@@ -28,13 +28,13 @@ router.post('/api/v1/login', async (req, res) => {
             message: "login successfully",
             token: user.token,
         };
-          res.json({ response });
+        res.status(201).json({ response });
        // } else {
         //  res.json({ message: "Incorrect password" });
        // }
    //   });
     } else {
-      res.json({ message: "Incorrect user name" });
+      res.status(200).json({ message: "Incorrect user name" });
     }
   } catch (error) {
     // Handle errors

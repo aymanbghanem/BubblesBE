@@ -12,7 +12,6 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             let notifications = await notificationModel.find({
                 survey_reader_id: id,
                 active: 1,
-                processed:0
             }).populate([
                 {
                     path: 'response_id',
@@ -36,12 +35,14 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             if (notifications.length > 0) {
                 // Process and flatten the data before sending the response
                 const flattenedData = notifications.map(notification => {
-                    const { user_id, question_id, location_id, user_answer } = notification.response_id;
+                    const { user_id, question_id, location_id, user_answer,survey_id } = notification.response_id;
 
                     // Extract necessary fields
                     const result = {
                         notification_id:notification._id,
                         user_id,
+                        processed:notification.processed,
+                        survey_title:survey_id.survey_title,
                         createdAt:notification.createdAt,
                         location_name: location_id ? location_id.location_name : null
                     };
@@ -49,9 +50,9 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                     return result;
                 });
 
-                res.json(flattenedData);
+                res.status(201).json(flattenedData);
             } else {
-                res.json({ message: "No data found" });
+                res.status(200).json({ message: "No data found" });
             }
         }
         else if (role === 'admin') {
@@ -113,15 +114,13 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                     };
                 });
         
-                res.json(responseData);
+                res.status(201).json(responseData);
             } else {
-                res.json({ message: "No data found" });
+                res.status(200).json({ message: "No data found" });
             }
         }
-        
-
          else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -135,17 +134,17 @@ router.put('/api/v1/processedNotification', auth, async (req, res) => {
         if (role == 'survey-reader') {
             let notification = await notificationModel.findOneAndUpdate({ _id: notification_id, processed: 0 }, { processed: 1 })
             if (notification) {
-                res.json({ message: "The notification has been successfully processed" })
+                res.status(201).json({ message: "The notification has been successfully processed" })
             }
             else {
-                res.json({ message: "Processing failed: Notification not found or already processed" })
+                res.status(200).json({ message: "Processing failed: Notification not found or already processed" })
             }
         }
         else {
-            res.json({ message: "Sorry, you are unauthorized" })
+            res.status(200).json({ message: "Sorry, you are unauthorized" })
         }
     } catch (error) {
-        res.json({ message: "An error occurred while processing the notification: " + error })
+        res.status(200).json({ message: "An error occurred while processing the notification: " + error })
     }
 })
 

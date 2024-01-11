@@ -53,9 +53,9 @@ router.get('/api/v1/getNotifyData', auth, async (req, res) => {
             let answers = await Answer.find({ question_id: { $in: questions.map(question => question._id) } })
                 .select('_id answer');
 
-            res.json({ surveys, surveyReaders, locationData, questions, answers });
+                res.status(201).json({ surveys, surveyReaders, locationData, questions, answers });
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -83,18 +83,18 @@ router.get('/api/getReaderBySurvey', auth, async (req, res) => {
                 user_name: reader.reader_id.user_name,
             }));
              if(formattedReaders.length>0){
-                res.json(formattedReaders);
+                res.status(201).json(formattedReaders);
              }
             else{
-                res.json({message:"No data found"});
+                res.status(200).json({message:"No data found"});
             }
             }
             else{
-                res.json({message:"The survey you are looking for does not exist"})
+                res.status(200).json({message:"The survey you are looking for does not exist"})
             }
          
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -141,12 +141,12 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
 
                 };
                 const notifyEntry = await notifyModels.create(notifyData);
-                res.json({ message: "Data saved successfully", notifyEntry });
+                res.status(201).json({ message: "Data saved successfully", notifyEntry });
             } else {
-                res.json({ message: "One or more entities do not exist or are inactive" });
+                res.status(200).json({ message: "One or more entities do not exist or are inactive" });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Catch error: " + error });
@@ -189,12 +189,12 @@ router.get('/api/v1/getNotifies', auth, async (req, res) => {
                     answer_text: notifier.answer_text,
                     survey_reader_name: notifier.survey_reader_id ? notifier.survey_reader_id.user_name : null,
                 }));
-                res.json(flattenedNotifiers);
+                res.status(201).json(flattenedNotifiers);
             } else {
-                res.json({ message: "No data found" });
+                res.status(200).json({ message: "No data found" });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized" });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -212,18 +212,18 @@ router.put('/api/v1/activeAndInactiveNotify',auth,async(req,res)=>{
             if(notifier){
                 notifier = await notifyModels.updateOne({_id:id},{active:active})
                 if(active==0){
-                    res.json({message:"The data deleted successfully"})
+                    res.status(201).json({message:"The data deleted successfully"})
                 }
                 else{
-                    res.json({message:"The data activated successfully"})
+                    res.status(201).json({message:"The data activated successfully"})
                 }
             }
             else{
-                res.json({message:"No data found"})
+                res.status(200).json({message:"No data found"})
             }
         }
         else{
-            res.json({message:"sorry, you are unauthorized"})
+            res.status(200).json({message:"sorry, you are unauthorized"})
         }
     } catch (error) {
             res.json({message:"catch error "+error})
