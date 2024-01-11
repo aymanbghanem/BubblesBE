@@ -30,7 +30,7 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
             const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex, active: 1 });
 
             if (existingCompany) {
-                res.status(200).json({ message: `The company name '${company_name}' already exists` });
+                res.json({ message: `The company name '${company_name}' already exists`,type:0 });
             } else {
 
                 const newCompany = await companyModel.create({
@@ -39,10 +39,10 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
                     notifier:notifier
                 });
 
-                res.status(201).json({ message: `Successfully added company '${company_name}'`, company: newCompany });
+                res.json({ message: `Successfully added company '${company_name}'`,type:1});
             }
         } else {
-            res.status(403).json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0});
         }
     } catch (error) {
         res.status(500).json({ message: "Catch error: " + error });
@@ -59,14 +59,14 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
         let companies = await companyModel.find().select('company_name active') 
 
         if(companies.length>0){
-            res.status(201).json(companies)
+            res.json({message:companies,type:2})
            }
            else{
-            res.status(200).json({message:"No data found"})
+            res.json({message:"No data found",type:0})
            }
        }
        else{
-        res.status(200).json({message:"sorry, you are unauthorized"})
+        res.json({message:"sorry, you are unauthorized",type:0})
        }
     } catch (error) {
         res.json({message:"catch error "+error})
@@ -100,16 +100,16 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
 
             if (company) {
                 if(active==1){
-                    res.status(201).json({ message: "The company and associated entities activated successfully" });
+                    resizeBy.json({ message: "The company and associated entities activated successfully",type:1 });
                 }
                 else{
-                    res.status(201).json({ message: "The company and associated entities deleted successfully" });
+                    res.json({ message: "The company and associated entities deleted successfully",type:1 });
                 }
             } else {
-                res.status(200).json({ message: "The company you are looking for not found" });
+                res.json({ message: "The company you are looking for not found",type:0 });
             }
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0});
         }
     } catch (error) {
         res.json({ message: "Error occurred during the delete operation: " + error.message });

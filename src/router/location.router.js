@@ -343,7 +343,7 @@ router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
                     return await getLeafLocations(root._id, root.location_name);
                 }));
 
-                res.status(201).json({ message: leafLocations.flat() }); // Flattening the result array
+                res.json({ message: leafLocations.flat() }); // Flattening the result array
             } else {
                 res.status(200).json({ message: "The survey you are looking for its locations does not exist" });
             }
