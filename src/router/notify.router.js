@@ -229,7 +229,7 @@ router.put('/api/v1/activeAndInactiveNotify',auth,async(req,res)=>{
             }
         }
         else{
-            res.status(200).json({message:"sorry, you are unauthorized"})
+            res.json({message:"sorry, you are unauthorized",type:0})
         }
     } catch (error) {
             res.json({message:"catch error "+error})
