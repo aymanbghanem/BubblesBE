@@ -319,7 +319,7 @@ function getDynamicFileName() {
     return `responses_${timestamp}_${randomFraction}.xlsx`;
 }
 
-router.get('/api/v1/exportReport', async (req, res) => {
+router.get('/api/v1/exportReport',auth, async (req, res) => {
     try {
        let role = req.user.user_role;
       if (role === 'admin' || role == 'survey-reader') {
