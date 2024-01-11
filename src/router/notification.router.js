@@ -88,7 +88,6 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                         const readerId = survey_reader_id._id.toString();
                         const key = `${readerId}-${user_id}`; // Create a unique key based on reader and user_id
         
-                        // Initialize entry if not already set
                         result[key] = result[key] || {
                             readerName: survey_reader_id.user_name,
                             processed,
@@ -101,7 +100,6 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                     return result;
                 }, {});
         
-                // Process the groupedData and create a flattened response
                 const responseData = Object.keys(groupedData).map(key => {
                     const reader = groupedData[key];
         
