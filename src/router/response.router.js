@@ -121,7 +121,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         if (isQuestionInNotify) {
                             let question_title = await questionModel.findOne({_id:question_id}).select('question_title -_id')
                             let location_name = await locationModels.findOne({_id:location_id}).select('location_name -_id')
-                            console.log(location_name)
+                           
                             // Check if it's an array of answers
                             if (Array.isArray(user_answer)) {
                                 // Iterate through each element in the array
