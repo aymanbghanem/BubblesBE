@@ -18,49 +18,55 @@ const userModels = require("../models/user.models");
 const notifyModels = require("../models/notify.models")
 require('dotenv').config()
 
-router.get('/api/v1/getNotifyData', auth, async (req, res) => {
-    try {
-        let role = req.user.user_role;
-        if (role === "admin") {
-            // Find surveys created by the logged-in user
-            let surveys = await surveyModel.find({ created_by: req.user._id, active: 1 })
-                .select('survey_title');
+// router.get('/api/v1/getNotifyData', auth, async (req, res) => {
+//     try {
+//         let role = req.user.user_role;
+//         if (role === "admin") {
+//             // Find surveys created by the logged-in user
+//             let surveys = await surveyModel.find({ created_by: req.user._id, active: 1 })
+//                 .select('survey_title');
 
-            // Find survey readers created by the logged-in user
-            let surveyReaders = await userModels.find({ department_id: req.user.department_id,user_role:"survey-reader" })
-            .select('user_name ');
+//             // Find survey readers created by the logged-in user
+//             let surveyReaders = await userModels.find({ department_id: req.user.department_id,user_role:"survey-reader" })
+//             .select('user_name ');
 
-            let locations = await Location.find({ department_id: req.user.department_id, active: 1 })
-                .populate({
-                    path: 'survey_id',
-                    model: 'survey',
-                    select: 'created_by survey_title',
-                })
-                .select('_id created_by location_name');
+//             let locations = await Location.find({ department_id: req.user.department_id, active: 1 })
+//                 .populate({
+//                     path: 'survey_id',
+//                     model: 'survey',
+//                     select: 'created_by survey_title',
+//                 })
+//                 .select('_id created_by location_name');
 
-            locations = locations.filter(location => location.survey_id.created_by.toString() === req.user._id.toString());
+//             locations = locations.filter(location => location.survey_id.created_by.toString() === req.user._id.toString());
 
-            const locationData = locations.map(location => ({
-                location_id: location._id,
-                location_name: location.location_name,
-            }));
+//             const locationData = locations.map(location => ({
+//                 location_id: location._id,
+//                 location_name: location.location_name,
+//             }));
 
-            // Correct the model from Location to Question for the questions query
-            let questions = await Question.find({ survey_id: { $in: surveys.map(survey => survey._id) } })
-                .select('_id question_title');
+//             // Correct the model from Location to Question for the questions query
+//             let questions = await Question.find({ survey_id: { $in: surveys.map(survey => survey._id) } })
+//                 .select('_id question_title');
 
-            // Retrieve answers associated with the questions
-            let answers = await Answer.find({ question_id: { $in: questions.map(question => question._id) } })
-                .select('_id answer');
-
-                res.status(201).json({ surveys, surveyReaders, locationData, questions, answers });
-        } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
-        }
-    } catch (error) {
-        res.json({ message: "Catch error " + error });
-    }
-});
+//             // Retrieve answers associated with the questions
+//             let answers = await Answer.find({ question_id: { $in: questions.map(question => question._id) } })
+//                 .select('_id answer');
+//                 let data ={
+//                     surveys:surveys,
+//                     surveyReaders:surveyReaders,
+//                     locationData:locationData,
+//                     questions:questions,
+//                     answers:answers
+//                 }
+//                 res.json({message:data,type:2});
+//         } else {
+//             res.status(200).json({ message: "Sorry, you are unauthorized" });
+//         }
+//     } catch (error) {
+//         res.json({ message: "Catch error " + error });
+//     }
+// });
 
 router.get('/api/getReaderBySurvey', auth, async (req, res) => {
     try {
@@ -83,18 +89,18 @@ router.get('/api/getReaderBySurvey', auth, async (req, res) => {
                 user_name: reader.reader_id.user_name,
             }));
              if(formattedReaders.length>0){
-                res.status(201).json(formattedReaders);
+                res.json({message:formattedReaders,type:2});
              }
             else{
-                res.status(200).json({message:"No data found"});
+                res.status(200).json({message:"No data found",type:0});
             }
             }
             else{
-                res.status(200).json({message:"The survey you are looking for does not exist"})
+                res.status(200).json({message:"The survey you are looking for does not exist",type:0})
             }
          
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -141,12 +147,12 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
 
                 };
                 const notifyEntry = await notifyModels.create(notifyData);
-                res.status(201).json({ message: "Data saved successfully", notifyEntry });
+                res.json({ message: "Data saved successfully",type:1});
             } else {
-                res.status(200).json({ message: "One or more entities do not exist or are inactive" });
+                res.json({ message: "One or more entities do not exist or are inactive" ,type:0});
             }
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error: " + error });
@@ -189,12 +195,12 @@ router.get('/api/v1/getNotifies', auth, async (req, res) => {
                     answer_text: notifier.answer_text,
                     survey_reader_name: notifier.survey_reader_id ? notifier.survey_reader_id.user_name : null,
                 }));
-                res.status(201).json(flattenedNotifiers);
+                res.json({message:flattenedNotifiers,type:2});
             } else {
-                res.status(200).json({ message: "No data found" });
+                res.json({ message: "No data found" ,type:0});
             }
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.status(200).json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -212,14 +218,14 @@ router.put('/api/v1/activeAndInactiveNotify',auth,async(req,res)=>{
             if(notifier){
                 notifier = await notifyModels.updateOne({_id:id},{active:active})
                 if(active==0){
-                    res.status(201).json({message:"The data deleted successfully"})
+                    res.json({message:"The data deleted successfully",type:1})
                 }
                 else{
-                    res.status(201).json({message:"The data activated successfully"})
+                    res.json({message:"The data activated successfully",type:1})
                 }
             }
             else{
-                res.status(200).json({message:"No data found"})
+                res.json({message:"No data found",type:0})
             }
         }
         else{
