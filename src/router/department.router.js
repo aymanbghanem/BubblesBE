@@ -31,7 +31,7 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
             }));
 
             if (existingDepartments.some(existingDepartment => existingDepartment)) {
-                res.status(200).json({ message: "This department already exist in your company", departments: existingDepartments });
+                res.json({ message: "This department already exist in your company",type:0});
             } else {
                 const createdDepartments = await Promise.all(departmentsData.map(async (department) => {
                     const createdDepartment = await departmentModel.create({
@@ -41,10 +41,10 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
                     return createdDepartment;
                 }));
 
-                res.status(201).json({ message: "Successfully added", departments: createdDepartments });
+                res.json({ message: "Successfully added", type:1});
             }
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized" ,type:0 });
         }
     } catch (error) {
         console.error(error);
@@ -60,14 +60,14 @@ router.get('/api/v1/getDepartments',auth,async(req,res)=>{
             let departments = await departmentModel.find({company_id:company_id})
             .select('department_name active') 
             if(departments.length>0){
-                res.status(201).json(departments)
+                res.json({message:departments,type:2})
             }
             else{
-                res.status(200).json({message:"No data found"})
+                res.status(200).json({message:"No data found",type:0})
                }
         }
         else{
-            res.status(200).json({message:"sorry, you are unauthorized"})
+            res.status(200).json({message:"sorry, you are unauthorized",type:0})
         }
       
     } catch (error) {
@@ -87,7 +87,7 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
             
 
             // Deactivate surveys and related entities
-            let surveys = await surveyModel.find({ department_id: department_id, active: 1 });
+            let surveys = await surveyModel.find({ department_id: department_id});
             for (const survey of surveys) {
                 await Promise.all([
                     surveyModel.updateOne({ _id: survey._id}, { active: active }),
@@ -101,16 +101,16 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
 
             if (department) {
                 if(active==0){
-                    res.status(201).json({ message: "The department and associated entities deleted successfully" });
+                    res.json({ message: "The department and associated entities deleted successfully",type:1});
                 }
                 else if(active==1){
-                    res.status(201).json({ message: "The department and associated entities activated successfully" });
+                    res.json({ message: "The department and associated entities activated successfully",type:1 });
                 }
             } else {
-                res.status(200).json({ message: "The department you are looking for not found" });
+                res.json({ message: "The department you are looking for not found",type:0 });
             }
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Error occurred during the delete operation: " + error.message });
