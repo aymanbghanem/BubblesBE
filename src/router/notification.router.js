@@ -54,11 +54,10 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                 res.json({ message: "No data found" });
             }
         }
-        else if (role == 'admin') {
+        else if (role === 'admin') {
             let notifications = await notificationModel.find({
                 created_by: id,
                 active: 1,
-                processed: 0
             }).populate([
                 {
                     path: 'response_id',
@@ -66,8 +65,7 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                         {
                             path: 'location_id',
                             model: 'location'
-                        }
-                        ,
+                        },
                         {
                             path: 'survey_id',
                             model: 'survey'
@@ -76,48 +74,44 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                 },
                 {
                     path: 'survey_reader_id',
-                    model: 'user' // assuming 'user' is the model name for the user schema
+                    model: 'user'
                 }
             ]);
         
             if (notifications.length > 0) {
-                // Initialize groupedData to store results by survey reader
+                // Initialize groupedData to store results by survey reader and user_id
                 const groupedData = notifications.reduce((result, notification) => {
-                    const { response_id, survey_reader_id,createdAt } = notification;
-                    const { processed, user_answer,survey_id,location_id ,user_id} = response_id;
+                    const { response_id, survey_reader_id, createdAt,processed } = notification;
+                    const {user_answer, survey_id, location_id, user_id } = response_id;
         
                     if (survey_reader_id) {
                         const readerId = survey_reader_id._id.toString();
+                        const key = `${readerId}-${user_id}`; // Create a unique key based on reader and user_id
         
                         // Initialize entry if not already set
-                        result[readerId] = result[readerId] || {
-                            readerName: survey_reader_id.user_name, // replace 'name' with the actual field in your user schema
-                            unprocessed: 0,
-                            survey_title:survey_id.survey_title,
-                            location_name:location_id.location_name,
-                            createdAt:createdAt,
-                            user_id,
-                        };
-        
-                        // Update counter for unprocessed notifications
-                        if (!processed) {
-                            result[readerId].unprocessed++;
-                        }
+                        result[key] = result[key] || {
+                            readerName: survey_reader_id.user_name,
+                            processed,
+                            survey_title: survey_id.survey_title,
+                            location_name: location_id.location_name,
+                            createdAt: createdAt,
+                            user_id: user_id,
+                        };    
                     }
                     return result;
                 }, {});
         
                 // Process the groupedData and create a flattened response
-                const responseData = Object.keys(groupedData).map(readerId => {
-                    const reader = groupedData[readerId];
+                const responseData = Object.keys(groupedData).map(key => {
+                    const reader = groupedData[key];
         
                     return {
-                        survey_title:reader.survey_title,
+                        survey_title: reader.survey_title,
                         reader_name: reader.readerName,
-                        unprocessed: reader.unprocessed,
-                        createdAt:reader.createdAt,
+                        processed : reader.processed,
+                        createdAt: reader.createdAt,
                         location_name: reader.location_name,
-                        user_id:reader.user_id
+                        user_id: reader.user_id
                     };
                 });
         
@@ -127,7 +121,7 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             }
         }
         
-        
+
          else {
             res.json({ message: "Sorry, you are unauthorized" });
         }
