@@ -368,7 +368,10 @@ router.get('/api/v1/exportReport', auth, async (req, res) => {
                         question_title: response.question_id.question_title
                     };
                 
-                    worksheet.addRow(formattedResponse).eachCell({ alignment: { vertical: 'center' } });
+                    const row = worksheet.addRow(formattedResponse);
+                    row.eachCell({ includeEmpty: true }, cell => {
+                        cell.alignment = { vertical: 'center' };
+                    });
                 });
 
                 // Create dynamic file name
