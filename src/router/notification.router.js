@@ -36,14 +36,13 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             if (notifications.length > 0) {
                 // Process and flatten the data before sending the response
                 const flattenedData = notifications.map(notification => {
-                    const { user_id, question_id, location_id, user_answer,survey_id } = notification.response_id;
+                    const { user_id, question_id, location_id, user_answer } = notification.response_id;
 
                     // Extract necessary fields
                     const result = {
                         notification_id:notification._id,
                         user_id,
                         createdAt:notification.createdAt,
-                        survey_title:survey_id.survey_title,
                         location_name: location_id ? location_id.location_name : null
                     };
 
@@ -65,13 +64,10 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
                     path: 'response_id',
                     populate: [
                         {
-                            path: 'question_id',
-                            model: 'question'
-                        },
-                        {
                             path: 'location_id',
                             model: 'location'
-                        },
+                        }
+                        ,
                         {
                             path: 'survey_id',
                             model: 'survey'
@@ -85,55 +81,50 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             ]);
         
             if (notifications.length > 0) {
-                // Initialize groupedData to store results by question ID and reader
+                // Initialize groupedData to store results by survey reader
                 const groupedData = notifications.reduce((result, notification) => {
-                    const { response_id, survey_reader_id } = notification;
-                    const { processed, user_answer,survey_id } = response_id;
+                    const { response_id, survey_reader_id,createdAt } = notification;
+                    const { processed, user_answer,survey_id,location_id } = response_id;
         
                     if (survey_reader_id) {
                         const readerId = survey_reader_id._id.toString();
-                        const questionId = response_id.question_id ? response_id.question_id._id.toString() : null;
         
                         // Initialize entry if not already set
-                        result[questionId] = result[questionId] || {};
-                        result[questionId][readerId] = result[questionId][readerId] || {
+                        result[readerId] = result[readerId] || {
                             readerName: survey_reader_id.user_name, // replace 'name' with the actual field in your user schema
                             unprocessed: 0,
-                            questionTitle: questionId ? response_id.question_id.question_title : null,
-                            answer: user_answer
+                            survey_title:survey_id.survey_title,
+                            location_name:location_id.location_name,
+                            createdAt:createdAt
                         };
         
                         // Update counter for unprocessed notifications
                         if (!processed) {
-                            result[questionId][readerId].unprocessed++;
+                            result[readerId].unprocessed++;
                         }
                     }
                     return result;
                 }, {});
         
                 // Process the groupedData and create a flattened response
-                const responseData = Object.keys(groupedData).reduce((flattenedResult, questionId) => {
-                    const question = groupedData[questionId];
+                const responseData = Object.keys(groupedData).map(readerId => {
+                    const reader = groupedData[readerId];
         
-                    Object.keys(question).forEach(readerId => {
-                        const reader = question[readerId];
-        
-                        flattenedResult.push({
-                           
-                            reader_name: reader.readerName,
-                            unprocessed: reader.unprocessed,
-                           
-                        });
-                    });
-        
-                    return flattenedResult;
-                }, []);
+                    return {
+                        survey_title:reader.survey_title,
+                        reader_name: reader.readerName,
+                        unprocessed: reader.unprocessed,
+                        createdAt:reader.createdAt,
+                        location_name: reader.location_name
+                    };
+                });
         
                 res.json(responseData);
             } else {
                 res.json({ message: "No data found" });
             }
         }
+        
         
          else {
             res.json({ message: "Sorry, you are unauthorized" });
