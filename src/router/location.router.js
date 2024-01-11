@@ -216,14 +216,14 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
                 clone:0,
             }).select('location_name ')
             if (locations.length != 0) {
-                res.json({ message: locations })
+                res.json({ message: locations,type:2 })
             }
             else {
-                res.json({ message: 'no data found' })
+                res.json({ message: 'no data found',type:0 })
             }
         }
         else {
-            res.json({ message: "Sorry, you are unauthorized." });
+            res.json({ message: "Sorry, you are unauthorized.",type:0 });
         }
     } catch (error) {
         res.json({ message: "catch error " + error })
@@ -235,12 +235,12 @@ router.get('/api/v1/getLocationInfo',async (req, res) => {
       
          let parentId = req.headers['location_id']
         const mainRoot = await locationModels.findOne({ _id: parentId, parent_id: null, active: 1 });
-        console.log(mainRoot)
+       
         if (mainRoot) {
             const locationTree = await getLocationsTree(mainRoot._id);
-            res.json({ location_tree: locationTree });
+            res.json({ message: locationTree ,type:2 });
         } else {
-            res.json({ message: "Main root not found" });
+            res.json({ message: "Main root not found",type:0 });
         }
     } catch (error) {
         res.json({ message: "catch error " + error });
@@ -286,15 +286,15 @@ router.get('/api/v1/getLocations', auth, async (req, res) => {
                 if (locations.length > 0) {
                     const locationTree = await buildLocationTree(locations);
 
-                    res.status(201).json({ message: locationTree });
+                    res.json({ message: locationTree,type:2 });
                 } else {
-                    res.status(200).json({ message: "There is no location for this survey" });
+                    res.json({ message: "There is no location for this survey",type:0 });
                 }
             } else {
-                res.status(200).json({ message: "The survey you are looking for does not exist" });
+                res.json({ message: "The survey you are looking for does not exist",type:0 });
             }
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -343,12 +343,12 @@ router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
                     return await getLeafLocations(root._id, root.location_name);
                 }));
 
-                res.json({ message: leafLocations.flat() }); // Flattening the result array
+                res.json({ message: leafLocations.flat() ,type:2}); // Flattening the result array
             } else {
-                res.status(200).json({ message: "The survey you are looking for its locations does not exist" });
+                res.json({ message: "The survey you are looking for its locations does not exist",type:0 });
             }
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error.message });
@@ -388,72 +388,42 @@ const getLeafLocations = async (parentId, parentPath) => {
 };
 
 
-router.put('/api/v1/updateLocation', auth, async(req, res) => {
-    try {
-        let role = req.user.user_role;
+// router.put('/api/v1/updateLocation', auth, async(req, res) => {
+//     try {
+//         let role = req.user.user_role;
         
-        if (role === 'admin') {
-            const { location_updates } = req.body;
+//         if (role === 'admin') {
+//             const { location_updates } = req.body;
 
-            // Check if location_updates is an array
-            if (!Array.isArray(location_updates)) {
-                return res.status(400).json({ message: 'Invalid input. location_updates must be an array.' });
-            }
+//             // Check if location_updates is an array
+//             if (!Array.isArray(location_updates)) {
+//                 return res.json({ message: 'Invalid input. location_updates must be an array.' });
+//             }
 
-            // Iterate through each location update
-            for (const update of location_updates) {
-                const {id, name,active } = update;
+//             // Iterate through each location update
+//             for (const update of location_updates) {
+//                 const {id, name,active } = update;
 
-                // Check if the provided location_id exists
-                const existingLocation = await locationModels.findOne({ _id:id, active: 1 });
+//                 // Check if the provided location_id exists
+//                 const existingLocation = await locationModels.findOne({ _id:id, active: 1 });
 
-                if (!existingLocation) {
-                    return res.status(404).json({ message: `Location with ID ${id} not found` });
-                }
+//                 if (!existingLocation) {
+//                     return res.status(404).json({ message: `Location with ID ${id} not found` });
+//                 }
 
-                // Update the location name
-                await locationModels.updateOne({ _id:id }, { location_name: name,active:active,location_description:description });
-            }
+//                 // Update the location name
+//                 await locationModels.updateOne({ _id:id }, { location_name: name,active:active,location_description:description });
+//             }
 
-            res.status(200).json({ message: 'Locations updated successfully!' });
-        } else {
-            res.status(403).json({ message: 'Unauthorized access' });
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'Catch error ' + error });
-    }
-});
+//             res.status(200).json({ message: 'Locations updated successfully!' });
+//         } else {
+//             res.status(403).json({ message: 'Unauthorized access' });
+//         }
+//     } catch (error) {
+//         res.status(500).json({ message: 'Catch error ' + error });
+//     }
+// });
 
 
 module.exports = router
 
-
-
-
-/*
- 
-{
- "location_tree": [
-   [
-     { "id": "1", "name": "A", "parentId": null },
-     { "id": "2", "name": "B", "parentId": "1" },
-     { "id": "3", "name": "C", "parentId": "1" },
-     { "id": "4", "name": "D", "parentId": "2" },
-     { "id": "5", "name": "E", "parentId": "2" },
-     { "id": "6", "name": "F", "parentId": "3" },
-     { "id": "7", "name": "G", "parentId": "3" }
-   ],
-   [
-     { "id": "1", "name": "A", "parentId": null },
-     { "id": "2", "name": "B", "parentId": "1" },
-     { "id": "3", "name": "C", "parentId": "1" },
-     { "id": "4", "name": "D", "parentId": "2" },
-     { "id": "5", "name": "E", "parentId": "2" },
-     { "id": "6", "name": "F", "parentId": "3" },
-     { "id": "7", "name": "G", "parentId": "3" }
-   ]
- ]
-}
- 
-
-*/
