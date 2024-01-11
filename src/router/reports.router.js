@@ -13,6 +13,7 @@ const userModels = require("../models/user.models");
 const departmentModels = require("../models/department.models");
 const _ = require('lodash');
 const notificationModel = require("../models/notification.model");
+const path = require('path');
 
 router.post('/api/v1/createReport', auth, async (req, res) => {
     try {
@@ -185,7 +186,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             }
 
             res.json({ "company_count": companyCount, "survey_count": surveyCount,"user_count":userCount,
-                       "location_count":locationCount, "department_count":departmentCount,responses:count
+                       "location_count":locationCount, "department_count":departmentCount,response_count:count
                     });
         } 
         else if(role == "admin"){
@@ -348,14 +349,13 @@ router.get('/api/v1/exportReport', auth, async (req, res) => {
 
                 // Add headers to the worksheet
                 worksheet.columns = [
-                    { header: 'Survey Title', key: 'survey_title', width: 30 },
-                    { header: 'Location Name', key: 'location_name', width: 30 },
-                    { header: 'Question title', key: 'question_title', width: 50 },
-                    { header: 'User answer', key: 'user_answer', width: 30 },
-                    { header: 'Created At', key: 'createdAt', width: 20 },
-                    { header: 'User ID', key: 'user_id', width: 40 },
+                    { header: 'Survey Title', key: 'survey_title', width: 30, alignment: { vertical: 'center' } },
+                    { header: 'Location Name', key: 'location_name', width: 30, alignment: { vertical: 'center' } },
+                    { header: 'Question title', key: 'question_title', width: 50, alignment: { vertical: 'center' } },
+                    { header: 'User answer', key: 'user_answer', width: 30, alignment: { vertical: 'center' } },
+                    { header: 'Created At', key: 'createdAt', width: 20, alignment: { vertical: 'center' } },
+                    { header: 'User ID', key: 'user_id', width: 40, alignment: { vertical: 'center' } },
                 ];
-
                 // Add data to the worksheet
                 responses.forEach(response => {
                     const formattedResponse = {
@@ -367,15 +367,16 @@ router.get('/api/v1/exportReport', auth, async (req, res) => {
                         user_answer: response.user_answer,
                         question_title: response.question_id.question_title
                     };
-                    worksheet.addRow(formattedResponse);
+                
+                    worksheet.addRow(formattedResponse).eachCell({ alignment: { vertical: 'center' } });
                 });
 
                 // Create dynamic file name
                 const dynamicFileName = getDynamicFileName();
 
                 // Save the workbook to a file with the dynamic name
-               // const filePath = path.resolve(__dirname, '..', '..', 'report', dynamicFileName);
-                 const filePath = `C:\\Users\\misk.sawalha\\OneDrive - Paltel Group\\Documents\\innovation\\digitalFeedback\\report\\${dynamicFileName}`;
+                  const filePath = path.resolve(__dirname, '..', '..', 'report', dynamicFileName);
+               //  const filePath = `C:\\Users\\misk.sawalha\\OneDrive - Paltel Group\\Documents\\innovation\\digitalFeedback\\report\\${dynamicFileName}`;
                 await workbook.xlsx.writeFile(filePath);
 
                 res.json({ message: `http://localhost:2107/${dynamicFileName}` });
