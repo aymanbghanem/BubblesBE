@@ -277,7 +277,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             
             
             else {
-                res.json({ message: "No data found" });
+                res.status(200).json({notification_count,response_count:count,survey_count });
             }
         }
         else {
@@ -374,7 +374,8 @@ router.get('/api/v1/exportReport', auth, async (req, res) => {
                 const dynamicFileName = getDynamicFileName();
 
                 // Save the workbook to a file with the dynamic name
-                const filePath = `C:\\Users\\misk.sawalha\\OneDrive - Paltel Group\\Documents\\innovation\\digitalFeedback\\report\\${dynamicFileName}`;
+               // const filePath = path.resolve(__dirname, '..', '..', 'report', dynamicFileName);
+                 const filePath = `C:\\Users\\misk.sawalha\\OneDrive - Paltel Group\\Documents\\innovation\\digitalFeedback\\report\\${dynamicFileName}`;
                 await workbook.xlsx.writeFile(filePath);
 
                 res.json({ message: `http://localhost:2107/${dynamicFileName}` });
