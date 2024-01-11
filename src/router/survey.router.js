@@ -762,7 +762,8 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
             question_title: dep.question_title,
             parent_dummy_id: dep.parent_dummy_id,
             flag:dep.flag,
-            comparisonOptions:dep.comparisonOptions
+            comparisonOptions:dep.comparisonOptions,
+            sign:dep.sign
           }));
           return {
             ...question.toObject(),
