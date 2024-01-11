@@ -20,12 +20,12 @@ router.post('/api/v1/addQuestionType', auth, async (req, res) => {
             });
 
             if (existingType) {
-                res.status(200).json({ message: "This type already exists" });
+                res.json({ message: "This type already exists",type:0 });
             } else {
                 let newType = await questionControllerModel.create({
                     question_type: question_type
                 });
-                res.status(201).json({ message: 'The new question type added successfully' });
+                res.status(201).json({ message: 'The new question type added successfully',type:1 });
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized" });
@@ -41,14 +41,14 @@ router.get('/api/v1/getQuestionsTypes',auth,async(req,res)=>{
         if(role === 'admin'){
            let questionTypes = await questionControllerModel.find({active:1})
            if(questionTypes.length!=0){
-            res.status.json({message:questionTypes})
+            res.status.json({message:questionTypes,type:2})
            }
            else{
-            res.json({message:"No data found"})
+            res.json({message:"No data found",type:0})
            }
         }
         else{
-            res.json({message:"sorry, you are unauthorized"})
+            res.json({message:"sorry, you are unauthorized",type:0})
         }
     } catch (error) {
         res.json({message:"catch error "+error})
