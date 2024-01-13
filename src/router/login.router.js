@@ -22,12 +22,12 @@ router.post('/api/v1/login', async (req, res) => {
           //res.json({ message: "Incorrect password" });
       //  } else if (result) {
         //,{ expiresIn: '10m' }
-          let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
-          let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
-          let response = {
-            message: "login successfully",
-            token: user.token,
-        };
+        let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
+        let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
+        let response = {
+          message: "login successfully",
+          token: user.token,
+      };
         res.json({ message:response});
        // } else {
         //  res.json({ message: "Incorrect password" });
