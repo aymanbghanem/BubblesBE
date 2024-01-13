@@ -28,7 +28,7 @@ router.post('/api/v1/login', async (req, res) => {
             message: "login successfully",
             token: user.token,
         };
-        res.json({ message:response ,type:2 });
+        res.json({ message:response});
        // } else {
         //  res.json({ message: "Incorrect password" });
        // }
@@ -48,7 +48,7 @@ router.patch("/api/v1/logout", auth, async (req, res) => {
     let id = req.user._id;
     let user = await userModels.findByIdAndUpdate({ _id: id }, { token: null }, { new: true });
     let token = user.token
-    res.json({ message:token ,type:2 });
+    res.json({ message:token });
   } catch (error) {
     res.status(500).json({ message: "catch error " + error });
   }
