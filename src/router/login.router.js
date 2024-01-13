@@ -25,7 +25,7 @@ router.post('/api/v1/login', async (req, res) => {
           let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
           let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
     
-            token: user.token,
+          token=user.token,
           res.json({ message:token , type:2 });
        // } else {
         //  res.json({ message: "Incorrect password" });
