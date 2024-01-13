@@ -39,14 +39,14 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
                             chart_type,
                         })
                         if (reportRecord) {
-                            res.json({ message: "Report successfully created", reportRecord })
+                            res.json({ message: "Report successfully created",type:1})
                         }
                         else {
-                            res.json({ message: "sorry,something wrong" })
+                            res.json({ message: "sorry,something wrong" ,type:0})
                         }
                     }
                     else {
-                        res.json({ message: "The location you are looking for does not exist" })
+                        res.json({ message: "The location you are looking for does not exist" ,type:0})
                     }
                 }
                 else{
@@ -62,20 +62,20 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
                             chart_type,
                         })
                         if (reportRecord) {
-                            res.json({ message: "Report successfully created", reportRecord })
+                            res.json({ message: "Report successfully created",type:1 })
                         }
                         else {
-                            res.json({ message: "sorry,something wrong" })
+                            res.json({ message: "sorry,something wrong",type:0 })
                         }
                 }
                 
             }
             else {
-                res.json({ message: "The survey you are looking for does not exist" })
+                res.json({ message: "The survey you are looking for does not exist",type:0 })
             }
         }
         else {
-            res.json({ message: "sorry, you are unauthorized" })
+            res.json({ message: "sorry, you are unauthorized",type:0 })
         }
     } catch (error) {
         res.json({ message: "catch error " + error })
@@ -156,9 +156,9 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     }
                 }
 
-                res.status(200).json({ resultArray });
+                res.json({ message:resultArray ,type:2});
             } else {
-                res.json({ message: "No data found" });
+                res.json({ message: "No data found",type:0 });
             }
         }
         
@@ -184,10 +184,15 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                 
             }
-
-            res.json({ "company_count": companyCount, "survey_count": surveyCount,"user_count":userCount,
-                       "location_count":locationCount, "department_count":departmentCount,response_count:count
-                    });
+            let data = { 
+                "company_count": companyCount, 
+                "survey_count": surveyCount,
+                "user_count":userCount,
+                "location_count":locationCount, 
+                "department_count":departmentCount,
+                response_count:count,
+         }
+            res.json({ message:data , type:2});
         } 
         else if(role == "admin"){
             let reports = await reportsModel.find({ created_by, active: 1 });
@@ -282,7 +287,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             }
         }
         else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         //console.error("Error:", error);
@@ -298,14 +303,14 @@ router.put('/api/v1/deleteReport',auth,async(req,res)=>{
             let report = await reportsModel.updateOne({_id:report_id,active:1},{active:0})
             
            if(report){
-            res.json({message:"The report sucssfully deleted"})
+            res.json({message:"The report sucssfully deleted",type:1})
            }
            else{
-            res.json({message:"sorry , the report you are trying to delete does not exist"})
+            res.json({message:"sorry , the report you are trying to delete does not exist",type:0})
            }
         }
         else{
-            res.json({message:"sorry, you are unauthorized"})
+            res.json({message:"sorry, you are unauthorized",type:0})
         }
     } catch (error) {
         res.json({message:"catch error "+error})
@@ -334,14 +339,14 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
                 {
                     path: 'question_id',
                     model: 'question',
-                    select: 'question_title -_id'
+                    select: 'question_title  -_id'
                 },
                 {
                     path: 'location_id',
                     model: 'location',
                     select: 'location_name -_id'
                 },
-            ]).select('user_answer createdAt active user_id');
+            ]).select('user_answer createdAt question_type active user_id');
 
             if (responses && responses.length > 0) {
                 const workbook = new ExcelJS.Workbook();
@@ -349,11 +354,12 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
 
                 // Add headers to the worksheet
                 worksheet.columns = [
-                    { header: 'Survey Title', key: 'survey_title', width: 30, alignment: { vertical: 'center' } },
-                    { header: 'Location Name', key: 'location_name', width: 30, alignment: { vertical: 'center' } },
+                    { header: 'Survey title', key: 'survey_title', width: 30, alignment: { vertical: 'center' } },
+                    { header: 'Location name', key: 'location_name', width: 30, alignment: { vertical: 'center' } },
                     { header: 'Question title', key: 'question_title', width: 50, alignment: { vertical: 'center' } },
+                    { header: 'Question type', key: 'question_type', width: 20, alignment: { vertical: 'center' } },
                     { header: 'User answer', key: 'user_answer', width: 30, alignment: { vertical: 'center' } },
-                    { header: 'Created At', key: 'createdAt', width: 20, alignment: { vertical: 'center' } },
+                    { header: 'Created at', key: 'createdAt', width: 20, alignment: { vertical: 'center' } },
                     { header: 'User ID', key: 'user_id', width: 40, alignment: { vertical: 'center' } },
                 ];
                 // Add data to the worksheet
@@ -365,7 +371,8 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
                         createdAt: response.createdAt,
                         user_id: response.user_id,
                         user_answer: response.user_answer,
-                        question_title: response.question_id.question_title
+                        question_title: response.question_id.question_title,
+                        question_type:response.question_type
                     };
                 
                     const row = worksheet.addRow(formattedResponse);
@@ -396,7 +403,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
                 });
             }
              else {
-                res.json({ message: "No data found" });
+                res.json({ message: "No data found",type:0 });
             }
         }
     } catch (error) {

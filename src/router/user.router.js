@@ -45,11 +45,11 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         let { user_name, email_address, company_name, department_name, survey } = req.body;
         user_name = user_name.toLowerCase()
         if (!config.roles.includes(role)) {
-            return res.status(200).json({ message: "sorry, you are unauthorized" });
+            return res.json({ message: "sorry, you are unauthorized",type:0 });
         }
 
         if (!validateEmail(email_address)) {
-            return res.status(200).json({ message: "Invalid email address" });
+            return res.json({ message: "Invalid email address",type:0 });
         }
 
         const existingUser = await userModels.findOne({
@@ -59,7 +59,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         });
 
         if (existingUser) {
-            return res.status(200).json({ message: "The email address or username already exists" });
+            return res.json({ message: "The email address or username already exists",type:0 });
         }
 
         let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
@@ -74,7 +74,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             if (company) {
                 const ownerError = await addOwner(company);
                 if (ownerError) {
-                    return res.json({ message: ownerError });
+                    return res.json({ message: ownerError,type:0 });
                 }
                 else {
                     //  await hashPassword(newPassword, async (hash) => {
@@ -90,18 +90,19 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                     });
 
                     //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-                    return res.status(201).json({
+                    return res.json({
                         message: "Successfully added",
                         token: user.token,
                         user_role: user.user_role,
                         email_address: user.email_address,
-                        image: user.image
+                        image: user.image,
+                        type:2
                     });
                     //  })
                 }
             }
             else {
-                res.status(200).json({ message: "The company does not exist" })
+                res.json({ message: "The company does not exist",type:0 })
             }
         }
 
@@ -117,7 +118,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
 
             if (!department) {
-                return res.status(200).json({ message: "The department does not exist within your company" });
+                return res.json({ message: "The department does not exist within your company",type:0 });
             }
 
             // Continue with the user creation
@@ -140,7 +141,8 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 token: user.token,
                 user_role: user.user_role,
                 email_address: user.email_address,
-                image: user.image
+                image: user.image,
+                type:1
             });
 
             // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
@@ -192,20 +194,21 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
             }
 
-            return res.status(201).json({
+            return res.json({
                 message: "Successfully added",
                 user: {
                     token: user.token,
                     user_role: user.user_role,
                     email_address: user.email_address,
                     image: user.image
-                }
+                },
+                type:1
             });
             //  });
 
         }
         else {
-            return res.status(200).json({ message: "sorry, you are unauthorized" });
+            return res.json({ message: "sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         return res.json({ message: error.message });
@@ -219,7 +222,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         let newPassword = await generateMixedID()
 
         if (!validateEmail(email_address)) {
-            return res.json({ message: "Invalid email address" });
+            return res.json({ message: "Invalid email address" ,type:0});
         }
 
         let hashedPassword;
@@ -229,7 +232,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         });
 
         if (existingUser) {
-            res.json({ message: "The email address or username already exists" });
+            res.json({ message: "The email address or username already exists",type:0 });
         } else {
 
             await hashPassword(newPassword, async (hash) => {
@@ -249,6 +252,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     token: new_user.token,
                     user_role: new_user.user_role,
                     email_address: new_user.email_address,
+                    type:1
                 };
                 res.json({ response });
             });
@@ -284,9 +288,9 @@ router.get('/api/v1/userById', async (req, res) => {
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
             };
 
-            res.json({ message: response });
+            res.json({ message: response,type:2 });
         } else {
-            res.json({ message: "The user is not in the system" });
+            res.json({ message: "The user is not in the system",type:0 });
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });
