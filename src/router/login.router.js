@@ -22,19 +22,19 @@ router.post('/api/v1/login', async (req, res) => {
           //res.json({ message: "Incorrect password" });
       //  } else if (result) {
         //,{ expiresIn: '10m' }
-        let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
-        let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
-        let response = {
-          message: "login successfully",
-          token: user.token,
-      };
-        res.json({ message:response});
+          let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
+          let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
+          let response = {
+            message: "login successfully",
+            token: user.token,
+        };
+          res.json({ message:user.token , type:2 });
        // } else {
         //  res.json({ message: "Incorrect password" });
        // }
    //   });
     } else {
-      res.status(200).json({ message: "Incorrect user name" });
+      res.json({ message: "Incorrect user name" });
     }
   } catch (error) {
     // Handle errors
@@ -48,7 +48,7 @@ router.patch("/api/v1/logout", auth, async (req, res) => {
     let id = req.user._id;
     let user = await userModels.findByIdAndUpdate({ _id: id }, { token: null }, { new: true });
     let token = user.token
-    res.json({ message:token });
+    res.json({ message: "token is null", token });
   } catch (error) {
     res.status(500).json({ message: "catch error " + error });
   }
