@@ -906,56 +906,62 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
       let department_id = req.user.department_id;
     
       // Retrieve the surveys in the admin's department
-      let surveys = await surveyModel.find({ department_id: department_id }).populate([
-        {
-          path: 'company_id',
-          select: 'company_name -_id',
-        },
-        {
-          path: 'department_id',
-          select: 'department_name',
-        },
-        {
-          path: 'created_by',
-          select: 'user_name -_id',
-        },
-      ]);
-    
-      // Flatten the data structure
-      let flattenedSurveys = await Promise.all(
-        surveys.map(async (item) => {
-          // Filter responses for the current survey
-          let surveyResponses = await responseModel
-            .find({ survey_id: item._id, active: 1 })
-            .distinct('user_id');
-    
-          // Count distinct user_id responses for the survey
-          let responseCount = surveyResponses.length;
-    
-          return {
-            _id: item._id,
-            survey_title: item.survey_title,
-            department_name: item.department_id.department_name, // Include department_name directly
-            responses:responseCount,
-            created_by: item.created_by.user_name,
-            active: item.active,
-            symbol_size: item.symbol_size,
-            survey_description: item.survey_description,
-            logo: item.company_id && item.logo !== "" ? `${item.company_id.company_name}/${item.logo}` : "",
-            submission_pwd: item.submission_pwd,
-            background_color: item.background_color,
-            question_text_color: item.question_text_color,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            __v: item.__v,
-          };
-        })
-      );
-    
-      if (flattenedSurveys.length > 0) {
-        res.json({ message: flattenedSurveys,type:2 });
-      } else {
-        res.json({ message: "No data found" ,type:0});
+      let department = await departmentModels.findOne({_id:department_id,active:1})
+      if(department){
+        let surveys = await surveyModel.find({ department_id: department_id }).populate([
+          {
+            path: 'company_id',
+            select: 'company_name -_id',
+          },
+          {
+            path: 'department_id',
+            select: 'department_name',
+          },
+          {
+            path: 'created_by',
+            select: 'user_name -_id',
+          },
+        ]);
+      
+        // Flatten the data structure
+        let flattenedSurveys = await Promise.all(
+          surveys.map(async (item) => {
+            // Filter responses for the current survey
+            let surveyResponses = await responseModel
+              .find({ survey_id: item._id, active: 1 })
+              .distinct('user_id');
+      
+            // Count distinct user_id responses for the survey
+            let responseCount = surveyResponses.length;
+      
+            return {
+              _id: item._id,
+              survey_title: item.survey_title,
+              department_name: item.department_id.department_name, // Include department_name directly
+              responses:responseCount,
+              created_by: item.created_by.user_name,
+              active: item.active,
+              symbol_size: item.symbol_size,
+              survey_description: item.survey_description,
+              logo: item.company_id && item.logo !== "" ? `${item.company_id.company_name}/${item.logo}` : "",
+              submission_pwd: item.submission_pwd,
+              background_color: item.background_color,
+              question_text_color: item.question_text_color,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              __v: item.__v,
+            };
+          })
+        );
+      
+        if (flattenedSurveys.length > 0) {
+          res.json({ message: flattenedSurveys,type:2 });
+        } else {
+          res.json({ message: "No data found" ,type:0});
+        }
+      }
+      else{
+        res.json({message:"You are trying to get surveys for inactive department",type:0})
       }
     }
     
