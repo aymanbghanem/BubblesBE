@@ -62,7 +62,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
       });
     }
     else{
-      res.json({ message: "You are trying to get surveys for inactive department", type: 0 })
+      res.json({ message: "You are trying to add new surveys for inactive department", type: 0 })
     }
   } catch (error) {
     // Rollback in case of an error
