@@ -541,11 +541,12 @@ router.post('/api/v1/getQuestions', async (req, res) => {
                   question_title: question.question_title,
                   phase: question.phase,
                   question_type: question.question_type ? question.question_type.question_type : null,
+                  required: question.required,
                   answers: question.answers.map(answer => ({
                     _id: answer._id,
                     answer: answer.answer,
                     image: answer.image,
-                    required: question.required
+                    
                   })),
 
                 });
