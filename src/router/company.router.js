@@ -49,8 +49,6 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
     }
 });
 
-
-
 router.get('/api/v1/getCompanies',auth,async(req,res)=>{
     try {
        let role = req.user.user_role

@@ -294,11 +294,11 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
     try {
         let id = req.user._id;
         let readerUser
-        console.log(req.user.user_role)
+       
         let user = await userModels.findById({ _id: id, active: 1 }).populate([
             {
                 path: 'company_id',
-                select: 'company_name -_id',
+                select: 'company_name dashboard notifier -_id',
             },
             {
                 path: 'department_id',
@@ -326,8 +326,11 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 department_name: user.department_id ? user.department_id.department_name || " " : " ",
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
             };
-
-            res.json({ message: response ,type:2});
+            let companyInfo={
+                dashboard:user.company_id.dashboard,
+                notifier : user.company_id.notifier
+            }
+            res.json({ message: response,companyInfo,type:2});
         } else {
             res.json({ message: "The user is not in the system",type:0 });
         }

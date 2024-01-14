@@ -413,10 +413,10 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
 router.post('/api/v1/getQuestions', async (req, res) => {
   try {
     const results = [];
-    let survey_id = req.query.survey_id
-    const location_Id = req.query.location_id;
+    let survey_id = req.query.survey_id;
+    let location_id = req.query.location_id;
+    const { phase, answered_questions } = req.body; // Include location_id in the request body
 
-    const { phase, answered_questions } = req.body;
     const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
       path: "company_id",
       select: "company_name"
@@ -425,30 +425,33 @@ router.post('/api/v1/getQuestions', async (req, res) => {
 
     if (!survey) {
       return res.json({ message: "The survey does not exist or is not active.", type: 0 });
-    }
+    } else {
+      let company_name = survey.company_id.company_name;
+      let surveyData = {
+        survey_title: survey.survey_title,
+        survey_description: survey.survey_description,
+        title_font_size: survey.title_font_size,
+        description_font_size: survey.description_font_size,
+        background_color: survey.background_color,
+        symbol_size: survey.symbol_size,
+        question_text_color: survey.question_text_color,
+        response_message: survey.response_message,
+        logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
+      };
 
-    else {
-      const existingLocation = await locationModel.findOne({
-        _id: location_Id,
-        survey_id: survey_id,
-        active: 1,
-      })
-      if (!existingLocation) {
-        return res.status(404).json({ message: "The location does not exist or is not active.", type: 0 });
-      }
-      else {
-        let company_name = survey.company_id.company_name;
-        let surveyData = {
-          survey_title: survey.survey_title,
-          survey_description: survey.survey_description,
-          title_font_size: survey.title_font_size,
-          description_font_size: survey.description_font_size,
-          background_color: survey.background_color,
-          symbol_size: survey.symbol_size,
-          question_text_color: survey.question_text_color,
-          response_message : survey.response_message,
-          logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
+      // Check if location_id is provided and the location check is required
+      if (location_id) {
+        const existingLocation = await locationModel.findOne({
+          _id: location_id,
+          survey_id: survey_id,
+          active: 1,
+        });
+
+        if (!existingLocation) {
+          return res.status(404).json({ message: "The location does not exist or is not active.", type: 0 });
         }
+      }
+
         if (phase == 1) {
           // dynamicPage/6596835ea9a94b294cc77340/6596835ea9a94b294cc77365
           // let qr = await qrModel.create({
@@ -560,9 +563,6 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           }
         }
       }
-    }
-
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Internal Server Error' });
