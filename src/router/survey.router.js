@@ -688,32 +688,38 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
     let survey_id = req.headers['survey_id'];
     let active = req.headers['active']
     //  let { active } = req.body;
-    let company_id = req.user.company_id;
+    let department_id = req.user.department_id;
 
     let survey = await surveyModel.findOne({ _id: survey_id }).select('company_id -_id');
+    let department_exist = await departmentModels.findOne({_id:department_id,active:1})
+    if(department_exist){
+      if (role === "admin") {
 
-    if (role === "admin") {
-      if (survey) {
-        let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, company_id: req.user.company_id }, { active: active });
-        let deleteLocations = await Location.updateMany({ survey_id: survey_id }, { active: active });
-        let deleteQuestions = await Question.updateMany({ survey_id: survey_id }, { active: active });
-        let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
-        let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
-        let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active });
-        // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
-
-        if (active == 1) {
-          res.json({ message: "The survey and its data were activated successfully", type: 1 });
-        } else if (active == 0) {
-          res.json({ message: "The survey and its data were deleted successfully", type: 1 });
+        if (survey) {
+          let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, company_id: req.user.company_id }, { active: active });
+          let deleteLocations = await Location.updateMany({ survey_id: survey_id }, { active: active });
+          let deleteQuestions = await Question.updateMany({ survey_id: survey_id }, { active: active });
+          let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
+          let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
+          let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active });
+          // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
+  
+          if (active == 1) {
+            res.json({ message: "The survey and its data were activated successfully", type: 1 });
+          } else if (active == 0) {
+            res.json({ message: "The survey and its data were deleted successfully", type: 1 });
+          } else {
+            res.json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", type: 0 });
+          }
         } else {
-          res.json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", type: 0 });
+          res.json({ message: "The survey you are looking for does not exist", type: 0 });
         }
       } else {
-        res.json({ message: "The survey you are looking for does not exist", type: 0 });
+        res.json({ message: "Unauthorized. Only admin users can perform this operation.", type: 0 });
       }
-    } else {
-      res.json({ message: "Unauthorized. Only admin users can perform this operation.", type: 0 });
+    }
+    else{
+      res.json({message:"This survey related to inactive department , we can not complete the process"})
     }
   } catch (error) {
     console.error(error);
