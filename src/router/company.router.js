@@ -114,5 +114,25 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
     }
 });
 
+router.get('/api/v1/getCompanyById',auth,async(req,res)=>{
+    try {
+        let company_id = req.headers['company_id']
+        let role = req.user.user_role
+        if(role == 'admin'){
+            let company = await companyModel.findOne({_id:company_id , active:1})
+            if(company){
+                res.json({message:company , type:2})
+            }
+            else{
+                res.json({message:"No data found"})
+            }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized",type:0})
+        }
+    } catch (error) {
+        res.json({message:"catch error "+error})
+    }
+})
 
 module.exports = router
