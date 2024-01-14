@@ -21,10 +21,10 @@ router.post('/api/v1/addSetting', auth, async (req, res) => {
                 range_limitation: range_limitation,
                 char_limitation: char_limitation
             })
-            res.json({ message: "successfully added", setting })
+            res.json({ message: "successfully added",type:1 })
         }
         else {
-            res.json({ message: "sorry, you are unauthorized" })
+            res.json({ message: "sorry, you are unauthorized" ,type:0 })
         }
     } catch (error) {
         res.json({ message: "catch error " + error })
@@ -39,13 +39,13 @@ router.get('/api/v1/getSetting',auth,async(req,res)=>{
                 active:1
             })
             if(setting){
-               res.json({message:setting})
+               res.json({message:setting,type:2})
             }else{
-                res.json({ message: "no data found " })
+                res.json({ message: "no data found",type:0 })
             }
         }
         else {
-            res.json({ message: "sorry, you are unauthorized" })
+            res.json({ message: "sorry, you are unauthorized",type:0 })
         }
     } catch (error) {
         res.json({message:"catch error "+error})
@@ -94,12 +94,12 @@ router.put('/api/v1/updateSetting', auth, async (req, res) => {
 
                 let updatedSetting = await settingModels.findOneAndUpdate({ _id: id, active: 1 }, updateObject, { new: true });
 
-                res.json({ message: "setting updated successfully", updatedSetting });
+                res.json({ message: "setting updated successfully",type:1 });
             } else {
-                res.json({ message: "sorry, the data does not exist" });
+                res.json({ message: "sorry, the data does not exist",type:0 });
             }
         } else {
-            res.json({ message: "sorry, you are unauthorized" });
+            res.json({ message: "sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -112,10 +112,10 @@ router.delete('/api/v1/deleteSetting',auth,async(req,res)=>{
         let { id}= req.body
         if(role == 'superadmin'){
            let setting = await settingModels.findByIdAndUpdate({_id:id},{active:0},{new:true})
-           res.json({message:"Deleted",setting})
+           res.json({message:"Deleted",type:1})
         }
         else{
-            res.json({ message: "sorry, the data does not exist" });
+            res.json({ message: "sorry, the data does not exist",type:0 });
         }
     } catch (error) {
         res.json({message:"catch error "+error})
