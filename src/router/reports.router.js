@@ -19,63 +19,70 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let created_by = req.user._id
+        let company_id = req.user.company_id
         let { survey_id, location_id, question_id, start_date, end_date, chart_type } = req.body
         
-        if (role == 'admin' || role == 'owner' || role == 'survey-reader') {
-            let surveyExist = await surveyModels.findOne({ _id: survey_id, active: 1 })
-            if (surveyExist) {
-                if(location_id!=null){
-                    let locationExist = await locationModels.findOne({ _id: location_id, active: 1 })
-                    if (locationExist) {
-                        let reportRecord = await reportsModel.create({
-                            survey_id,
-                            location_id,
-                            question_id,
-                            created_by,
-                            company_id: surveyExist.company_id,
-                            department_id: surveyExist.department_id,
-                            start_date: start_date ? start_date : null,
-                            end_date: end_date ? end_date : null,
-                            chart_type,
-                        })
-                        if (reportRecord) {
-                            res.json({ message: "Report successfully created",type:1})
+        let companyAccess = await companyModels.findOne({_id:company_id , active:1,dashboard:1})
+        if(companyAccess){
+            if (role == 'admin' || role == 'owner' || role == 'survey-reader') {
+                let surveyExist = await surveyModels.findOne({ _id: survey_id, active: 1 })
+                if (surveyExist) {
+                    if(location_id!=null){
+                        let locationExist = await locationModels.findOne({ _id: location_id, active: 1 })
+                        if (locationExist) {
+                            let reportRecord = await reportsModel.create({
+                                survey_id,
+                                location_id,
+                                question_id,
+                                created_by,
+                                company_id: surveyExist.company_id,
+                                department_id: surveyExist.department_id,
+                                start_date: start_date ? start_date : null,
+                                end_date: end_date ? end_date : null,
+                                chart_type,
+                            })
+                            if (reportRecord) {
+                                res.json({ message: "Report successfully created",type:1})
+                            }
+                            else {
+                                res.json({ message: "sorry,something wrong" ,type:0})
+                            }
                         }
                         else {
-                            res.json({ message: "sorry,something wrong" ,type:0})
+                            res.json({ message: "The location you are looking for does not exist" ,type:0})
                         }
                     }
-                    else {
-                        res.json({ message: "The location you are looking for does not exist" ,type:0})
+                    else{
+                              let reportRecord = await reportsModel.create({
+                                survey_id,
+                                location_id,
+                                question_id,
+                                created_by,
+                                company_id: surveyExist.company_id,
+                                department_id: surveyExist.department_id,
+                                start_date: start_date ? start_date : null,
+                                end_date: end_date ? end_date : null,
+                                chart_type,
+                            })
+                            if (reportRecord) {
+                                res.json({ message: "Report successfully created",type:1 })
+                            }
+                            else {
+                                res.json({ message: "sorry,something wrong",type:0 })
+                            }
                     }
+                    
                 }
-                else{
-                          let reportRecord = await reportsModel.create({
-                            survey_id,
-                            location_id,
-                            question_id,
-                            created_by,
-                            company_id: surveyExist.company_id,
-                            department_id: surveyExist.department_id,
-                            start_date: start_date ? start_date : null,
-                            end_date: end_date ? end_date : null,
-                            chart_type,
-                        })
-                        if (reportRecord) {
-                            res.json({ message: "Report successfully created",type:1 })
-                        }
-                        else {
-                            res.json({ message: "sorry,something wrong",type:0 })
-                        }
+                else {
+                    res.json({ message: "The survey you are looking for does not exist",type:0 })
                 }
-                
             }
             else {
-                res.json({ message: "The survey you are looking for does not exist",type:0 })
+                res.json({ message: "sorry, you are unauthorized",type:0 })
             }
         }
-        else {
-            res.json({ message: "sorry, you are unauthorized",type:0 })
+        else{
+            res.json({message:"Sorry your company does not have an access for this operation",type:0})
         }
     } catch (error) {
         res.json({ message: "catch error " + error })

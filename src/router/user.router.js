@@ -31,7 +31,7 @@ const addOwner = async (company) => {
     });
 
     if (existingOwner) {
-        throw new Error("There is already an owner for this company");
+       return("There is already an owner for this company");
     }
 };
 
@@ -74,7 +74,10 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             if (company) {
                 const ownerError = await addOwner(company);
                 if (ownerError) {
-                    return res.json({ message: ownerError,type:0 });
+                   res.json({
+                    type: 0,
+                    message: "There is already an owner for this company"
+                });
                 }
                 else {
                     //  await hashPassword(newPassword, async (hash) => {

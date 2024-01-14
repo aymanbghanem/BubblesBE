@@ -17,6 +17,7 @@ const mongoose = require('mongoose');
 const questions_controllerModels = require("../models/questions_controller.models");
 const responseModel = require("../models/response.model");
 const userModels = require("../models/user.models");
+const departmentModels = require("../models/department.models");
 require('dotenv').config()
 
 // Create new survey 
