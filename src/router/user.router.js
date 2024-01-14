@@ -117,7 +117,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
 
             if (!department) {
-                return res.json({ message: "The department does not exist within your company",type:0 });
+                return res.json({ message: "The department does not exist or inactive",type:0 });
             }
 
             // Continue with the user creation
@@ -148,6 +148,16 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
             //await hashPassword(newPassword, async (hash) => {
             // hashedPassword = hash;
+
+            const department = await departmentModels.findOne({
+                _id:req.user.department_id,
+                active: 1,
+            });
+            
+            if (!department) {
+                return res.json({ message: "The department does not exist or inactive",type:0 });
+            }
+
             let user;
             // Set user parameters
             const userParams = {
