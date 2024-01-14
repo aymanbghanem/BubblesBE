@@ -92,10 +92,6 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                     //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
                     return res.json({
                         message: "Successfully added",
-                        token: user.token,
-                        user_role: user.user_role,
-                        email_address: user.email_address,
-                        image: user.image,
                         type:1
                     });
                     //  })
@@ -136,12 +132,8 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 department_id: department._id,
             });
 
-            return res.status(201).json({
+            return res.json({
                 message: "Successfully added",
-                token: user.token,
-                user_role: user.user_role,
-                email_address: user.email_address,
-                image: user.image,
                 type:1
             });
 
