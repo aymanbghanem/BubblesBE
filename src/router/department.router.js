@@ -65,7 +65,7 @@ router.get('/api/v1/getDepartments',auth,async(req,res)=>{
     try {
         let company_id = req.user.company_id
         let role = req.user.user_role
-        
+
         if(role=="owner"){
             let departments = await departmentModel.find({company_id:company_id})
             .select('department_name active') 
@@ -89,35 +89,42 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let department_id = req.headers['department_id']
+        let company_id = req.user.company_id
         let {active} = req.body
-        if(role=="admin"|| role=="owner" || role=="superadmin"){
+        if(role=="owner"){
             // Delete department and related entities
-            let department = await departmentModel.findOneAndUpdate({_id: department_id}, { active:active });
-            let user = await userModels.updateMany({ department_id: department_id}, { active: active });
-            
-
-            // Deactivate surveys and related entities
-            let surveys = await surveyModel.find({ department_id: department_id});
-            for (const survey of surveys) {
-                await Promise.all([
-                    surveyModel.updateOne({ _id: survey._id}, { active: active }),
-                    surveyReaderModel.updateMany({ survey_id: survey._id}, { active: active }),
-                    questionModel.updateMany({ survey_id: survey._id}, { active: active }),
-                    Answer.updateMany({ survey_id: survey._id}, { active: active }),
-                    locationModel.updateMany({ survey_id: survey._id }, { active: active }),
-                    responseModel.updateMany({ survey_id: survey._id }, { active:active })
-                ]);
+            let company_exist = await companyModel.findOne({_id:company_id,active:1})
+            if(company_exist){
+                let department = await departmentModel.findOneAndUpdate({_id: department_id}, { active:active });
+                let user = await userModels.updateMany({ department_id: department_id}, { active: active });
+                
+    
+                // Deactivate surveys and related entities
+                let surveys = await surveyModel.find({ department_id: department_id});
+                for (const survey of surveys) {
+                    await Promise.all([
+                        surveyModel.updateOne({ _id: survey._id}, { active: active }),
+                        surveyReaderModel.updateMany({ survey_id: survey._id}, { active: active }),
+                        questionModel.updateMany({ survey_id: survey._id}, { active: active }),
+                        Answer.updateMany({ survey_id: survey._id}, { active: active }),
+                        locationModel.updateMany({ survey_id: survey._id }, { active: active }),
+                        responseModel.updateMany({ survey_id: survey._id }, { active:active })
+                    ]);
+                }
+    
+                if (department) {
+                    if(active==0){
+                        res.json({ message: "The department and associated entities deleted successfully",type:1});
+                    }
+                    else if(active==1){
+                        res.json({ message: "The department and associated entities activated successfully",type:1 });
+                    }
+                } else {
+                    res.json({ message: "The department you are looking for not found",type:0 });
+                } 
             }
-
-            if (department) {
-                if(active==0){
-                    res.json({ message: "The department and associated entities deleted successfully",type:1});
-                }
-                else if(active==1){
-                    res.json({ message: "The department and associated entities activated successfully",type:1 });
-                }
-            } else {
-                res.json({ message: "The department you are looking for not found",type:0 });
+            else{
+                res.json({message:"You can not active or inactive a department for inactive company",type:0})
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized",type:0 });
