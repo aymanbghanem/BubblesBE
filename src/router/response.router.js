@@ -41,9 +41,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     const { _id, answers } = responseObj;
                     let question_id = _id;
                     let user_answer = answers;
-    
-                  
-                
+
                     const questionType = await questionModel.findOne({ _id: question_id, active: 1 }).populate([
                         {
                             path: 'answers',
@@ -153,14 +151,14 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         }
                     }
                 }
-                res.json({ message: 'Stored responses successfully',response_message });
+                res.json({ message: 'Stored responses successfully',type:1 });
             }
             else {
-                res.json({ message: "The location you are looking for does not exist" })
+                res.json({ message: "The location you are looking for does not exist",type:0 })
             }
         }
         else {
-            res.json({ message: "The survey that you try to answer does not exist" })
+            res.json({ message: "The survey that you try to answer does not exist",type:0 })
         }
     } catch (error) {
         res.json({ message: 'Internal server error ' + error });
@@ -209,9 +207,9 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                     user_id: response.user_id
                 }));
 
-                res.json({ message: formattedResponses });
+                res.json({ message: formattedResponses ,type:2 });
             } else {
-                res.json({ message: "No data found" });
+                res.json({ message: "No data found",type:0 });
             }
         }
         else if(role == 'survey-reader'){
@@ -257,18 +255,18 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                         user_answer: response.user_answer
                     }));
     
-                    res.json({ message: formattedResponses });
+                    res.json({ message: formattedResponses,type:2});
                 }
 
                  else {
-                    res.json({ message: "No responses found for the surveys" });
+                    res.json({ message: "No responses found for the surveys",type:0});
                 }
             } else {
-                res.json({ message: "No surveys found for the survey-reader" });
+                res.json({ message: "No surveys found for the survey-reader",type:0 });
             }
         }
         else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -308,12 +306,12 @@ router.get('/api/v1/getResponseById', auth, async (req, res) => {
                     };
                 }));
 
-                res.json({ message: responsesWithQuestions });
+                res.json({ message: responsesWithQuestions , type:2 });
             } else {
-                res.json({ message: "No data found" });
+                res.json({ message: "No data found", type:0 });
             }
         } else {
-            res.json({ message: "Sorry, you are unauthorized" });
+            res.json({ message: "Sorry, you are unauthorized", type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error: " + error });
