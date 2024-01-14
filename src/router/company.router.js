@@ -56,7 +56,7 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
        let role = req.user.user_role
       
        if(role=="superadmin"){
-        let companies = await companyModel.find().select('company_name active') 
+        let companies = await companyModel.find().select('company_name dashboard notifier active') 
 
         if(companies.length>0){
             res.json({message:companies,type:2})
