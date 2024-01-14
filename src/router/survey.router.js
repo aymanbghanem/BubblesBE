@@ -50,11 +50,12 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    res.status(200).json({
+    res.json({
       message: 'Survey, location, and questions added successfully',
       survey: storedSurvey,
       location: storedLocation,
       questions: storedQuestions,
+      type:1
     });
   } catch (error) {
     // Rollback in case of an error
@@ -353,7 +354,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         });
 
         if (existingSurveyWithNewTitle) {
-          return res.status(400).json({ message: 'Survey title must be unique. Choose a different title.' });
+          return res.json({ message: 'Survey title must be unique. Choose a different title.',type:0 });
         }
       }
 
@@ -361,7 +362,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
 
       if (!existingSurvey) {
-        return res.status(404).json({ message: `Survey with ID ${surveyId} not found` });
+        return res.json({ message: `Survey with ID ${surveyId} not found`,type:0 });
       }
 
       // Update survey data
@@ -391,9 +392,9 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       // Process and store new questions
       const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
 
-      res.status(200).json({ message: 'Survey, locations, and questions updated successfully!' });
+      res.status(200).json({ message: 'Survey, locations, and questions updated successfully!',type:1 });
     } else {
-      res.status(403).json({ message: 'Unauthorized access' });
+      res.status(403).json({ message: 'Unauthorized access',type:0 });
     }
   } catch (error) {
     res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
@@ -416,7 +417,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       .select('survey_title symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
     if (!survey) {
-      return res.status(404).json({ message: "The survey does not exist or is not active." });
+      return res.json({ message: "The survey does not exist or is not active.",type:0 });
     }
 
     else {
@@ -426,7 +427,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
         active: 1,
       })
       if (!existingLocation) {
-        return res.status(404).json({ message: "The location does not exist or is not active." });
+        return res.status(404).json({ message: "The location does not exist or is not active.",type:0 });
       }
       else {
         let company_name = survey.company_id.company_name;
@@ -481,7 +482,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             };
           });
 
-          res.json({ questions: flattenedQuestions, surveyData });
+          res.json({ questions: flattenedQuestions, surveyData,type:2 });
         }
         else {
           let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
@@ -543,10 +544,10 @@ router.post('/api/v1/getQuestions', async (req, res) => {
               }
             }
 
-            return res.json({ questions: responses, surveyData });
+            return res.json({ questions: responses, surveyData,type:2 });
           }
           else {
-            res.json({ message: "No more questions" });
+            res.json({ message: "No more questions",type:1 });
           }
         }
       }
@@ -693,17 +694,17 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
         // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
 
         if (active == 1) {
-          res.json({ message: "The survey and its data were activated successfully" });
+          res.json({ message: "The survey and its data were activated successfully",type:1 });
         } else if (active == 0) {
-          res.json({ message: "The survey and its data were deleted successfully" });
+          res.json({ message: "The survey and its data were deleted successfully" ,type:1});
         } else {
-          res.status(400).json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", active });
+          res.json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.",type:0 });
         }
       } else {
-        res.status(404).json({ message: "The survey you are looking for does not exist" });
+        res.json({ message: "The survey you are looking for does not exist",type:0 });
       }
     } else {
-      res.status(403).json({ message: "Unauthorized. Only admin users can perform this operation." });
+      res.json({ message: "Unauthorized. Only admin users can perform this operation.",type:0 });
     }
   } catch (error) {
     console.error(error);
@@ -791,9 +792,9 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           questions: simplifiedQuestions
         };
 
-        res.json({ message: response });
+        res.json({ message: response,type:2 });
       } else {
-        res.json({ message: "The survey you are looking for does not exist" });
+        res.json({ message: "The survey you are looking for does not exist",type:0 });
       }
     } 
     else if(userRole == 'survey-reader'){
@@ -878,15 +879,15 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
               questions: simplifiedQuestions
             };
     
-            res.json({ message: response });
+            res.json({ message: response ,type:2});
           }
           else{
-            res.json({ message: "The survey you are looking for does not exist" });
+            res.json({ message: "The survey you are looking for does not exist" ,type:0});
           }  
       
     }
     else {
-      res.status(403).json({ message: "Sorry, you are unauthorized" });
+      res.status(403).json({ message: "Sorry, you are unauthorized",type:0 });
     }
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error: error.message });
@@ -952,9 +953,9 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
       );
     
       if (flattenedSurveys.length > 0) {
-        res.json({ message: flattenedSurveys });
+        res.json({ message: flattenedSurveys,type:2 });
       } else {
-        res.json({ message: "No data found" });
+        res.json({ message: "No data found" ,type:0});
       }
     }
     
@@ -1016,9 +1017,9 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
       }));
     
       if (transformedSurveys.length > 0) {
-        res.json({ message: transformedSurveys });
+        res.json({ message: transformedSurveys ,type:2});
       } else {
-        res.json({ message: "No data found" });
+        res.json({ message: "No data found",type:0 });
       }
     }
     
@@ -1065,14 +1066,14 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
       }));
     
       if (flattenedSurveys.length > 0) {
-        res.json({ message: flattenedSurveys });
+        res.json({ message: flattenedSurveys,type:2 });
       } else {
-        res.json({ message: "No data found" });
+        res.json({ message: "No data found" ,type:0});
       }
     }
     
     else {
-      res.json({ message: "sorry, you are unauthorized" })
+      res.json({ message: "sorry, you are unauthorized" ,type:0})
     }
   } catch (error) {
     res.json({ message: "catch error " + error })
