@@ -18,6 +18,7 @@ const questions_controllerModels = require("../models/questions_controller.model
 const responseModel = require("../models/response.model");
 const userModels = require("../models/user.models");
 const departmentModels = require("../models/department.models");
+const companyModels = require("../models/company.models");
 require('dotenv').config()
 
 // Create new survey 
@@ -30,34 +31,39 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
     const role = req.user.user_role;
     const department = req.user.department_id;
 
+    let departmentExist = await departmentModels.findOne({ _id: department, active: 1 })
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Sorry, you are unauthorized' });
     }
+    if (departmentExist) {
+      // Start a MongoDB transaction
+      session = await mongoose.startSession();
+      session.startTransaction();
 
-    // Start a MongoDB transaction
-    session = await mongoose.startSession();
-    session.startTransaction();
+      // Process and store survey
+      storedSurvey = await processAndStoreSurvey(survey, req.user, session);
 
-    // Process and store survey
-    storedSurvey = await processAndStoreSurvey(survey, req.user, session);
+      // Process and store questions with the survey ID
+      storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department, session);
 
-    // Process and store questions with the survey ID
-    storedQuestions = await processAndStoreQuestions(questions, storedSurvey._id, department, session);
+      // Process and store location
+      storedLocation = await processAndStoreLocation(location_data, storedSurvey, req.user, session);
 
-    // Process and store location
-    storedLocation = await processAndStoreLocation(location_data, storedSurvey, req.user, session);
+      // Commit the transaction
+      await session.commitTransaction();
+      session.endSession();
 
-    // Commit the transaction
-    await session.commitTransaction();
-    session.endSession();
-
-    res.json({
-      message: 'Survey, location, and questions added successfully',
-      survey: storedSurvey,
-      location: storedLocation,
-      questions: storedQuestions,
-      type:1
-    });
+      res.json({
+        message: 'Survey, location, and questions added successfully',
+        survey: storedSurvey,
+        location: storedLocation,
+        questions: storedQuestions,
+        type: 1
+      });
+    }
+    else{
+      res.json({ message: "You are trying to get surveys for inactive department", type: 0 })
+    }
   } catch (error) {
     // Rollback in case of an error
     try {
@@ -206,7 +212,7 @@ async function processAndStoreSurvey(surveyData, user) {
         survey_title: surveyData.survey_title,
         survey_description: surveyData.survey_description,
         logo: surveyData.logo,
-        symbol_size : surveyData.symbol_size,
+        symbol_size: surveyData.symbol_size,
         department_id: user.department_id,
         created_by: user._id,
         company_id: user.company_id,
@@ -215,7 +221,7 @@ async function processAndStoreSurvey(surveyData, user) {
         submission_pwd: surveyData.submission_pwd,
         title_font_size: surveyData.title_font_size,
         description_font_size: surveyData.description_font_size,
-        response_message:surveyData.response_message
+        response_message: surveyData.response_message
       });
 
       return survey;
@@ -250,7 +256,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
   const storedQuestions = [];
 
   for (const questionData of questionsData) {
-    const { _id,id,comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
+    const { _id, id, comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
 
     // Case-insensitive lookup for question type
     const questionTypeObject = await QuestionController.findOne({
@@ -311,7 +317,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
   const updatedDependencies = [];
 
   for (const dependencyData of dependencies) {
-    const { sign, comparisonOptions,flag, parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
+    const { sign, comparisonOptions, flag, parent_dummy_id, related_answer, ...otherFields } = dependencyData; // Added related_answer field
 
     const correspondingQuestion = storedQuestions.find(question => question.id === parent_dummy_id);
 
@@ -323,7 +329,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
         comparisonOptions,
         parent_id: correspondingQuestion._id,
         related_answer,
-        parent_dummy_id:(correspondingQuestion.id).toString()
+        parent_dummy_id: (correspondingQuestion.id).toString()
       };
       updatedDependencies.push(newDependency);
     } else {
@@ -355,7 +361,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         });
 
         if (existingSurveyWithNewTitle) {
-          return res.json({ message: 'Survey title must be unique. Choose a different title.',type:0 });
+          return res.json({ message: 'Survey title must be unique. Choose a different title.', type: 0 });
         }
       }
 
@@ -363,7 +369,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
 
       if (!existingSurvey) {
-        return res.json({ message: `Survey with ID ${surveyId} not found`,type:0 });
+        return res.json({ message: `Survey with ID ${surveyId} not found`, type: 0 });
       }
 
       // Update survey data
@@ -378,7 +384,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
             submission_pwd: updatedSurveyData.submission_pwd || existingSurvey.submission_pwd,
             title_font_size: updatedSurveyData.title_font_size || existingSurvey.title_font_size,
             description_font_size: updatedSurveyData.description_font_size || existingSurvey.description_font_size,
-            response_message:updatedSurveyData.response_message || existingSurvey.response_message,
+            response_message: updatedSurveyData.response_message || existingSurvey.response_message,
           },
         }
       );
@@ -393,9 +399,9 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       // Process and store new questions
       const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
 
-      res.status(200).json({ message: 'Survey, locations, and questions updated successfully!',type:1 });
+      res.status(200).json({ message: 'Survey, locations, and questions updated successfully!', type: 1 });
     } else {
-      res.status(403).json({ message: 'Unauthorized access',type:0 });
+      res.status(403).json({ message: 'Unauthorized access', type: 0 });
     }
   } catch (error) {
     res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
@@ -415,10 +421,10 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       path: "company_id",
       select: "company_name"
     })
-      .select('survey_title symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+      .select('survey_title response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
     if (!survey) {
-      return res.json({ message: "The survey does not exist or is not active.",type:0 });
+      return res.json({ message: "The survey does not exist or is not active.", type: 0 });
     }
 
     else {
@@ -428,7 +434,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
         active: 1,
       })
       if (!existingLocation) {
-        return res.status(404).json({ message: "The location does not exist or is not active.",type:0 });
+        return res.status(404).json({ message: "The location does not exist or is not active.", type: 0 });
       }
       else {
         let company_name = survey.company_id.company_name;
@@ -438,8 +444,9 @@ router.post('/api/v1/getQuestions', async (req, res) => {
           title_font_size: survey.title_font_size,
           description_font_size: survey.description_font_size,
           background_color: survey.background_color,
-          symbol_size:survey.symbol_size,
+          symbol_size: survey.symbol_size,
           question_text_color: survey.question_text_color,
+          response_message : survey.response_message,
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
         }
         if (phase == 1) {
@@ -454,7 +461,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             survey_id: survey_id,
             active: 1,
             phase: 1,
-            question_dependency:[]
+            question_dependency: []
           })
             .populate({
               path: 'answers',
@@ -469,7 +476,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             .select('question_title answers question_type required');
 
           if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
-            return res.status(404).json({ questions:[]});
+            return res.status(404).json({ questions: [] });
           }
 
           // Flatten the question_type field
@@ -483,7 +490,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
             };
           });
 
-          res.json({ questions: flattenedQuestions, surveyData,type:2 });
+          res.json({ questions: flattenedQuestions, surveyData, type: 2 });
         }
         else {
           let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
@@ -545,10 +552,10 @@ router.post('/api/v1/getQuestions', async (req, res) => {
               }
             }
 
-            return res.json({ questions: responses, surveyData,type:2 });
+            return res.json({ questions: responses, surveyData, type: 2 });
           }
           else {
-            res.json({ message: "No more questions",type:1 });
+            res.json({ message: "No more questions", type: 1 });
           }
         }
       }
@@ -695,17 +702,17 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
         // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
 
         if (active == 1) {
-          res.json({ message: "The survey and its data were activated successfully",type:1 });
+          res.json({ message: "The survey and its data were activated successfully", type: 1 });
         } else if (active == 0) {
-          res.json({ message: "The survey and its data were deleted successfully" ,type:1});
+          res.json({ message: "The survey and its data were deleted successfully", type: 1 });
         } else {
-          res.json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.",type:0 });
+          res.json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", type: 0 });
         }
       } else {
-        res.json({ message: "The survey you are looking for does not exist",type:0 });
+        res.json({ message: "The survey you are looking for does not exist", type: 0 });
       }
     } else {
-      res.json({ message: "Unauthorized. Only admin users can perform this operation.",type:0 });
+      res.json({ message: "Unauthorized. Only admin users can perform this operation.", type: 0 });
     }
   } catch (error) {
     console.error(error);
@@ -719,7 +726,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     const survey_id = req.headers['survey_id'];
     const userRole = req.user.user_role;
 
-    if (userRole === "admin" || userRole =="owner") {
+    if (userRole === "admin" || userRole == "owner") {
       const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate([
         {
           path: "company_id",
@@ -763,9 +770,9 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
             related_answer: dep.related_answer,
             question_title: dep.question_title,
             parent_dummy_id: dep.parent_dummy_id,
-            flag:dep.flag,
-            comparisonOptions:dep.comparisonOptions,
-            sign:dep.sign
+            flag: dep.flag,
+            comparisonOptions: dep.comparisonOptions,
+            sign: dep.sign
           }));
           return {
             ...question.toObject(),
@@ -774,10 +781,10 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
             question_dependency: modifiedDependencies
           };
         });
-        
+
 
         let response = {
-          
+
           survey_title: survey.survey_title,
           survey_description: survey.survey_description,
           title_font_size: survey.title_font_size,
@@ -786,109 +793,109 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           background_color: survey.background_color,
           question_text_color: survey.question_text_color,
           created_by: created_by,
-          symbol_size:survey.symbol_size,
-          response_message:survey.response_message,
+          symbol_size: survey.symbol_size,
+          response_message: survey.response_message,
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
           locations: buildTree(locations, null),
           questions: simplifiedQuestions
         };
 
-        res.json({ message: response,type:2 });
+        res.json({ message: response, type: 2 });
       } else {
-        res.json({ message: "The survey you are looking for does not exist",type:0 });
+        res.json({ message: "The survey you are looking for does not exist", type: 0 });
       }
-    } 
-    else if(userRole == 'survey-reader'){
-       
-        let survey = await surveyReaderModel
-          .findOne({survey_id:survey_id,active:1})
-          .populate([
-            {
-              path: 'company_id',
-              select: 'company_name -_id',
-            },
-            {
-              path: 'department_id',
-              select: 'department_name',
-            },
-            {
-              path: 'reader_id',
-              select: 'user_name -_id',
-            },
-            {
-              path: 'survey_id',
-              select: 'survey_title response_message symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
-            }
-          ]);
-           
-          if(survey){
-           
-            let company_name = survey.company_id.company_name;
-            let created_by = survey.created_by.user_name;
-            // Fetch locations
-            const locations = await fetchLocations(survey_id);
-    
-            const questions = await Question.find({ survey_id: survey_id, active: 1 }).populate([
-              {
-                path: 'answers',
-                model: 'answer',
-                select: 'answer image'
-              },
-              {
-                path: 'question_type',
-                model: 'question_controller',
-                select: 'question_type'
-              }
-            ]);
-    
-            const simplifiedQuestions = questions.map(question => {
-              // Extract answer ID and text for each answer in the answers array
-              const modifiedAnswers = question.answers.map(answer => ({
-                answerID: answer._id,
-                text: answer.answer,
-                image: answer.image
-              }));
-              const modifiedDependencies = question.question_dependency.map(dep => ({
-                id: dep._id,
-                parent_id: dep.parent_id,
-                related_answer: dep.related_answer,
-                question_title: dep.question_title,
-                parent_dummy_id: dep.parent_dummy_id
-              }));
-              return {
-                ...question.toObject(),
-                answers: modifiedAnswers, // Replace the existing answers array
-                question_type: question.question_type.question_type,
-                question_dependency: modifiedDependencies
-              };
-            });
-            
-            let response = {
-              
-              survey_title: survey.survey_id.survey_title,
-              survey_description: survey.survey_id.survey_description,
-              title_font_size: survey.survey_id.title_font_size,
-              description_font_size: survey.survey_id.description_font_size,
-              submission_pwd: survey.survey_id.submission_pwd,
-              background_color: survey.survey_id.background_color,
-              question_text_color: survey.survey_id.question_text_color,
-              symbol_size:survey.survey_id.symbol_size,
-              response_message:survey.response_message,
-              created_by: created_by,
-              logo: (survey.survey_id.logo != "" && survey.survey_id.logo != " ") ? `${company_name}/${survey.survey_id.logo}` : " " || "",
-              locations: buildTree(locations, null),
-              questions: simplifiedQuestions
-            };
-    
-            res.json({ message: response ,type:2});
+    }
+    else if (userRole == 'survey-reader') {
+
+      let survey = await surveyReaderModel
+        .findOne({ survey_id: survey_id, active: 1 })
+        .populate([
+          {
+            path: 'company_id',
+            select: 'company_name -_id',
+          },
+          {
+            path: 'department_id',
+            select: 'department_name',
+          },
+          {
+            path: 'reader_id',
+            select: 'user_name -_id',
+          },
+          {
+            path: 'survey_id',
+            select: 'survey_title response_message symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
           }
-          else{
-            res.json({ message: "The survey you are looking for does not exist" ,type:0});
-          }  
-      
+        ]);
+
+      if (survey) {
+
+        let company_name = survey.company_id.company_name;
+        let created_by = survey.created_by.user_name;
+        // Fetch locations
+        const locations = await fetchLocations(survey_id);
+
+        const questions = await Question.find({ survey_id: survey_id, active: 1 }).populate([
+          {
+            path: 'answers',
+            model: 'answer',
+            select: 'answer image'
+          },
+          {
+            path: 'question_type',
+            model: 'question_controller',
+            select: 'question_type'
+          }
+        ]);
+
+        const simplifiedQuestions = questions.map(question => {
+          // Extract answer ID and text for each answer in the answers array
+          const modifiedAnswers = question.answers.map(answer => ({
+            answerID: answer._id,
+            text: answer.answer,
+            image: answer.image
+          }));
+          const modifiedDependencies = question.question_dependency.map(dep => ({
+            id: dep._id,
+            parent_id: dep.parent_id,
+            related_answer: dep.related_answer,
+            question_title: dep.question_title,
+            parent_dummy_id: dep.parent_dummy_id
+          }));
+          return {
+            ...question.toObject(),
+            answers: modifiedAnswers, // Replace the existing answers array
+            question_type: question.question_type.question_type,
+            question_dependency: modifiedDependencies
+          };
+        });
+
+        let response = {
+
+          survey_title: survey.survey_id.survey_title,
+          survey_description: survey.survey_id.survey_description,
+          title_font_size: survey.survey_id.title_font_size,
+          description_font_size: survey.survey_id.description_font_size,
+          submission_pwd: survey.survey_id.submission_pwd,
+          background_color: survey.survey_id.background_color,
+          question_text_color: survey.survey_id.question_text_color,
+          symbol_size: survey.survey_id.symbol_size,
+          response_message: survey.response_message,
+          created_by: created_by,
+          logo: (survey.survey_id.logo != "" && survey.survey_id.logo != " ") ? `${company_name}/${survey.survey_id.logo}` : " " || "",
+          locations: buildTree(locations, null),
+          questions: simplifiedQuestions
+        };
+
+        res.json({ message: response, type: 2 });
+      }
+      else {
+        res.json({ message: "The survey you are looking for does not exist", type: 0 });
+      }
+
     }
     else {
-      res.status(403).json({ message: "Sorry, you are unauthorized",type:0 });
+      res.status(403).json({ message: "Sorry, you are unauthorized", type: 0 });
     }
   } catch (error) {
     res.status(500).json({ message: "Internal server error", error: error.message });
@@ -905,10 +912,10 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
     let company_id = req.user.company_id
     if (role == 'admin') {
       let department_id = req.user.department_id;
-    
+
       // Retrieve the surveys in the admin's department
-      let department = await departmentModels.findOne({_id:department_id,active:1})
-      if(department){
+      let department = await departmentModels.findOne({ _id: department_id, active: 1 })
+      if (department) {
         let surveys = await surveyModel.find({ department_id: department_id }).populate([
           {
             path: 'company_id',
@@ -923,7 +930,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
             select: 'user_name -_id',
           },
         ]);
-      
+
         // Flatten the data structure
         let flattenedSurveys = await Promise.all(
           surveys.map(async (item) => {
@@ -931,15 +938,15 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
             let surveyResponses = await responseModel
               .find({ survey_id: item._id, active: 1 })
               .distinct('user_id');
-      
+
             // Count distinct user_id responses for the survey
             let responseCount = surveyResponses.length;
-      
+
             return {
               _id: item._id,
               survey_title: item.survey_title,
               department_name: item.department_id.department_name, // Include department_name directly
-              responses:responseCount,
+              responses: responseCount,
               created_by: item.created_by.user_name,
               active: item.active,
               symbol_size: item.symbol_size,
@@ -954,133 +961,143 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
             };
           })
         );
-      
+
         if (flattenedSurveys.length > 0) {
-          res.json({ message: flattenedSurveys,type:2 });
+          res.json({ message: flattenedSurveys, type: 2 });
         } else {
-          res.json({ message: "No data found" ,type:0});
+          res.json({ message: "No data found", type: 0 });
         }
       }
-      else{
-        res.json({message:"You are trying to get surveys for inactive department",type:0})
+      else {
+        res.json({ message: "You are trying to get surveys for inactive department", type: 0 })
       }
     }
-    
-    
+
     else if (role == "survey-reader") {
       let department_id = req.user.department_id;
-    
-      // Retrieve the surveys for the survey-reader
-      let surveys = await surveyReaderModel
-        .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
-        .populate([
-          {
+      let department = await departmentModels.findOne({ _id: department_id, active: 1 })
+      if (department) {
+        // Retrieve the surveys for the survey-reader
+        let surveys = await surveyReaderModel
+          .find({ department_id: department_id, reader_id: req.user._id, active: 1 })
+          .populate([
+            {
+              path: 'company_id',
+              select: 'company_name -_id',
+            },
+            {
+              path: 'department_id',
+              select: 'department_name',
+            },
+            {
+              path: 'reader_id',
+              select: 'user_name -_id',
+            },
+            {
+              path: 'survey_id',
+              select: 'survey_title symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+            }
+          ]);
+
+        let transformedSurveys = await Promise.all(surveys.map(async (item) => {
+          // Filter responses for the current survey
+          let surveyResponses = await responseModel
+            .find({ survey_id: item.survey_id._id, active: 1 })
+            .distinct('user_id');
+
+          // Count distinct user_id responses for the survey
+          let responseCount = surveyResponses.length;
+
+          let created = await userModels.findOne({
+            _id: item.survey_id.created_by
+          }).select('user_name -_id');
+
+          return {
+            _id: item.survey_id._id,
+            survey_title: item.survey_id.survey_title,
+            department_name: item.department_id.department_name,
+            responses: responseCount,
+            created_by: created.user_name,
+            active: item.survey_id.active,
+            symbol_size: item.survey_id.symbol_size,
+            survey_description: item.survey_id.survey_description,
+            logo: (item.company_id && item.survey_id.logo !== "") ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
+            submission_pwd: item.survey_id.submission_pwd,
+            background_color: item.survey_id.background_color,
+            question_text_color: item.survey_id.question_text_color,
+            createdAt: item.survey_id.createdAt,
+            updatedAt: item.survey_id.updatedAt,
+          };
+        }));
+
+        if (transformedSurveys.length > 0) {
+          res.json({ message: transformedSurveys, type: 2 });
+        } else {
+          res.json({ message: "No data found", type: 0 });
+        }
+      }
+      else {
+        res.json({ message: "You are trying to get surveys for inactive department", type: 0 })
+      }
+    }
+
+    else if (role == "owner") {
+      // Retrieve the surveys for the owner
+      let company = await companyModels.findOne({ _id: company_id })
+      if (company) {
+        let surveys = await surveyModel.find({ company_id: company_id }).populate(
+          [{
             path: 'company_id',
             select: 'company_name -_id',
           },
           {
-            path: 'department_id',
-            select: 'department_name',
-          },
-          {
-            path: 'reader_id',
+            path: 'created_by',
             select: 'user_name -_id',
-          },
-          {
-            path: 'survey_id',
-            select: 'survey_title symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
           }
-        ]);
-    
-      let transformedSurveys = await Promise.all(surveys.map(async (item) => {
-        // Filter responses for the current survey
-        let surveyResponses = await responseModel
-          .find({ survey_id: item.survey_id._id, active: 1 })
-          .distinct('user_id');
-    
-        // Count distinct user_id responses for the survey
-        let responseCount = surveyResponses.length;
-    
-        let created = await userModels.findOne({
-          _id: item.survey_id.created_by
-        }).select('user_name -_id');
-    
-        return {
-          _id: item.survey_id._id,
-          survey_title: item.survey_id.survey_title,
-          department_name: item.department_id.department_name,
-          responses: responseCount,
-          created_by: created.user_name,
-          active: item.survey_id.active,
-          symbol_size: item.survey_id.symbol_size,
-          survey_description: item.survey_id.survey_description,
-          logo: (item.company_id && item.survey_id.logo !== "") ? `${item.company_id.company_name}/${item.survey_id.logo}` : "",
-          submission_pwd: item.survey_id.submission_pwd,
-          background_color: item.survey_id.background_color,
-          question_text_color: item.survey_id.question_text_color,
-          createdAt: item.survey_id.createdAt,
-          updatedAt: item.survey_id.updatedAt,
-        };
-      }));
-    
-      if (transformedSurveys.length > 0) {
-        res.json({ message: transformedSurveys ,type:2});
-      } else {
-        res.json({ message: "No data found",type:0 });
-      }
-    }
-    
-    else if (role == "owner") {
-      // Retrieve the surveys for the owner
-      let surveys = await surveyModel.find({ company_id: company_id }).populate(
-        [{
-          path: 'company_id',
-          select: 'company_name -_id',
-        },
-        {
-          path: 'created_by',
-          select: 'user_name -_id',
+          ]
+        );
+
+        // Flatten the data structure
+        let flattenedSurveys = await Promise.all(surveys.map(async (item) => {
+          // Filter responses for the current survey
+          let surveyResponses = await responseModel
+            .find({ survey_id: item._id, active: 1 })
+            .distinct('user_id');
+
+          // Count distinct user_id responses for the survey
+          let responseCount = surveyResponses.length;
+
+          return {
+            _id: item._id,
+            survey_title: item.survey_title,
+            responses: responseCount,
+            created_by: item.created_by.user_name,
+            active: item.active,
+            symbol_size: item.symbol_size,
+            survey_description: item.survey_description,
+            logo: (item.company_id && item.logo !== "") ? `${item.company_id.company_name}/${item.logo}` : "",
+            submission_pwd: item.submission_pwd,
+            background_color: item.background_color,
+            question_text_color: item.question_text_color,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+
+          };
+        }));
+
+        if (flattenedSurveys.length > 0) {
+          res.json({ message: flattenedSurveys, type: 2 });
+        } else {
+          res.json({ message: "No data found", type: 0 });
         }
-        ]
-      );
-    
-      // Flatten the data structure
-      let flattenedSurveys = await Promise.all(surveys.map(async (item) => {
-        // Filter responses for the current survey
-        let surveyResponses = await responseModel
-          .find({ survey_id: item._id, active: 1 })
-          .distinct('user_id');
-    
-        // Count distinct user_id responses for the survey
-        let responseCount = surveyResponses.length;
-    
-        return {
-          _id: item._id,
-          survey_title: item.survey_title,
-          responses: responseCount,
-          created_by: item.created_by.user_name,
-          active: item.active,
-          symbol_size: item.symbol_size,
-          survey_description: item.survey_description,
-          logo: (item.company_id && item.logo !== "") ? `${item.company_id.company_name}/${item.logo}` : "",
-          submission_pwd: item.submission_pwd,
-          background_color: item.background_color,
-          question_text_color: item.question_text_color,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-        
-        };
-      }));
-    
-      if (flattenedSurveys.length > 0) {
-        res.json({ message: flattenedSurveys,type:2 });
-      } else {
-        res.json({ message: "No data found" ,type:0});
+      }
+      else {
+        res.json({ message: "You are trying to get surveys for inactive company", type: 0 })
       }
     }
-    
+
     else {
-      res.json({ message: "sorry, you are unauthorized" ,type:0})
+      res.json({ message: "sorry, you are unauthorized", type: 0 })
     }
   } catch (error) {
     res.json({ message: "catch error " + error })

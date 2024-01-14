@@ -151,7 +151,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         }
                     }
                 }
-                res.json({ message: 'Stored responses successfully',type:1 });
+                res.json({ message:response_message,type:2 });
             }
             else {
                 res.json({ message: "The location you are looking for does not exist",type:0 })
