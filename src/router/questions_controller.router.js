@@ -41,7 +41,7 @@ router.get('/api/v1/getQuestionsTypes',auth,async(req,res)=>{
         if(role === 'admin'){
            let questionTypes = await questionControllerModel.find({active:1})
            if(questionTypes.length!=0){
-            res.status.json({message:questionTypes,type:2})
+            res.json({message:questionTypes,type:2})
            }
            else{
             res.json({message:"No data found",type:0})
