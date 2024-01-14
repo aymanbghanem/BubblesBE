@@ -94,6 +94,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
         let role = req.user.user_role;
         let created_by = req.user._id;
         let count = 0 ;
+        let location;
         if (role == "owner"|| role == "survey-reader") {
             let reports = await reportsModel.find({ created_by, active: 1 });
 
@@ -114,6 +115,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                     if (report.location_id) {
                         responseQuery.location_id = report.location_id;
+                        location = await locationModels.findOne({_id: report.location_id, active: 1}).select('location_name')
                     }
 
                     let responses = await responseModel.find(responseQuery);
@@ -149,6 +151,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: answerArray,
+                            location_name : report.location_id ?location.location_name:""
                         });
                     } 
                     else {
@@ -159,6 +162,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: [], // You can customize this as needed
+                            location_name : report.location_id ?location.location_name:""
                         });
                     }
                 }
@@ -236,6 +240,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
                     if (report.location_id) {
                         responseQuery.location_id = report.location_id;
+                        location = await locationModels.findOne({_id: report.location_id, active: 1}).select('location_name')
                     }
 
                     let responses = await responseModel.find(responseQuery);
@@ -271,6 +276,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: answerArray,
+                            location_name : report.location_id ?location.location_name:""
                         });
                     } 
                     else {
@@ -281,6 +287,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                             reportId: report._id, // assuming report has an _id field
                             chartType: report.chart_type,
                             answers: [], // You can customize this as needed
+                            location_name : report.location_id ?location.location_name:""
                         });
                     }
                 }
