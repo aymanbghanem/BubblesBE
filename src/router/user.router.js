@@ -91,7 +91,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
                     //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
                     return res.json({
-                        message: "Successfully added",
+                        message: "New owner added successfully",
                         type:1
                     });
                     //  })
@@ -133,7 +133,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
 
             return res.json({
-                message: "Successfully added",
+                message: "New admin added successfully ",
                 type:1
             });
 
@@ -187,7 +187,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             }
 
             return res.json({
-                message: "Successfully added",
+                message: "New reader added successfully",
                 type:1
             });
             //  });
