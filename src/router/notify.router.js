@@ -220,8 +220,10 @@ router.put('/api/v1/activeAndInactiveNotify',auth,async(req,res)=>{
     try {
         let id = req.headers['notifier_id']
         let role = req.user.user_role
+        let user_id = req.user._id
         let {active} = req.body
         if(role == 'admin'){
+          
             let notifier = await notifyModels.findOne({_id:id})
             if(notifier){
                 notifier = await notifyModels.updateOne({_id:id},{active:active})

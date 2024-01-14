@@ -13,7 +13,8 @@ router.post('/api/v1/login', async (req, res) => {
     
     user_name = user_name.toLowerCase()
     const existingUser = await userModels.findOne({
-      user_name: user_name
+      user_name: user_name,
+      active:1
     })
 
     if (existingUser) {
