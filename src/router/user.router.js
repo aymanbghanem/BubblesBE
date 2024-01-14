@@ -96,7 +96,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                         user_role: user.user_role,
                         email_address: user.email_address,
                         image: user.image,
-                        type:2
+                        type:1
                     });
                     //  })
                 }
@@ -196,12 +196,6 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
             return res.json({
                 message: "Successfully added",
-                user: {
-                    token: user.token,
-                    user_role: user.user_role,
-                    email_address: user.email_address,
-                    image: user.image
-                },
                 type:1
             });
             //  });
@@ -237,8 +231,8 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
 
             await hashPassword(newPassword, async (hash) => {
                 hashedPassword = hash;
-
-                let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY,{ expiresIn: '10m' });
+                //,{ expiresIn: '10m' }
+                let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
                 let new_user = await userModels.create({
                     user_name: user_name,
                     user_role: 'superadmin',
@@ -247,14 +241,8 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     token: token,
                 });
                 // await sendEmail(user_name,email_address, "Account password", newPassword,"for your account password")
-                let response = {
-                    message: "successfully added",
-                    token: new_user.token,
-                    user_role: new_user.user_role,
-                    email_address: new_user.email_address,
-                    type:1
-                };
-                res.json({ response });
+
+                res.json({  message: "successfully added",type:1 });
             });
         }
     } catch (error) {
@@ -334,9 +322,9 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
             };
 
-            res.json({ message: response });
+            res.json({ message: response ,type:2});
         } else {
-            res.json({ message: "The user is not in the system" });
+            res.json({ message: "The user is not in the system",type:0 });
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });
@@ -349,7 +337,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
         const company_id = req.user.company_id;
 
         if (!config.roles.includes(role)) {
-            return res.json({ message: "Sorry, you are unauthorized" });
+            return res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
 
         let users;
@@ -436,12 +424,12 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                 return responseArray;
             }));
             
-            return res.json({ message: usersWithSurveys.flat() });
+            return res.json({ message: usersWithSurveys.flat(),type:2 });
             
         } 
         
         else {
-            return res.json({ message: "Invalid user role" });
+            return res.json({ message: "Invalid user role" ,type:0});
         }
 
         if (users.length !== 0) {
@@ -460,9 +448,9 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
                 return response;
             });
 
-            return res.json({ message: simplifiedUsers });
+            return res.json({ message: simplifiedUsers,type:2 });
         } else {
-            return res.json({ message: "Sorry, there are no users under your role" });
+            return res.json({ message: "Sorry, there are no users under your role" ,type:0});
         }
 
     } catch (error) {
@@ -494,12 +482,12 @@ router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
                     active:survey.survey_id.active
                 }));
 
-                res.json({ message: surveysWithoutId });
+                res.json({ message: surveysWithoutId,type:2 });
             } else {
-                res.json({ message: "No data found" });
+                res.json({ message: "No data found",type:0 });
             }
         } else {
-            res.json({ message: "sorry, you are unauthorized" });
+            res.json({ message: "sorry, you are unauthorized" ,type:0});
         }
     } catch (error) {
         res.json({ message: "catch error " + error });
@@ -527,7 +515,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
                     });
 
                     if (isEmailUnique) {
-                        return res.json({ message: "Email address is not unique. Please choose a different email." });
+                        return res.json({ message: "Email address is not unique. Please choose a different email.",type:0 });
                     }
                 }
 
@@ -540,14 +528,14 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
                     { new: true }
                 );
 
-                return res.json({ message: "successfully updated", updateUser });
+                return res.json({ message: "successfully updated",type:1 });
 
 
             } else {
-                return res.json({ message: "The user is not in the system" });
+                return res.json({ message: "The user is not in the system",type:0 });
             }
         } else {
-            return res.json({ message: "sorry, you are unauthorized" });
+            return res.json({ message: "sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         return res.json({ message: "catch error " + error });
@@ -649,14 +637,14 @@ router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
             });
 
             if (!user) {
-                return res.status(404).json({ message: "User not found" });
+                return res.json({ message: "User not found",type:0 });
             }
 
             const assignments = req.body.assignments; // Extract assignments from req.body
 
             // Ensure assignments is an array
             if (!Array.isArray(assignments)) {
-                return res.status(400).json({ message: "Invalid format for assignments" });
+                return res.json({ message: "Invalid format for assignments",type:0 });
             }
 
             for (const assignment of assignments) {
@@ -671,7 +659,7 @@ router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
                 let surveyInfo = await surveyModel.findOne({ _id: survey_id, company_id: req.user.company_id, active: 1 });
 
                 if (!surveyInfo) {
-                    return res.status(404).json({ message: `The survey with ID ${survey_id} does not exist` });
+                    return res.json({ message: `The survey with ID ${survey_id} does not exist`,type:0 });
                 }
 
                 if (!existingAssignment) {
@@ -695,9 +683,9 @@ router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
                 }
             }
 
-            return res.json({ message: "Survey assignments updated successfully" });
+            return res.json({ message: "Survey assignments updated successfully",type:1 });
         } else {
-            return res.status(403).json({ message: "Sorry, you are unauthorized" });
+            return res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         console.error(error);
@@ -723,10 +711,10 @@ router.post('/api/v1/resetPassword', async (req, res) => {
 
              let user_name = existingUser.user_name
             //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
-            res.json({ message: response, existingUser })
+            res.json({ message: response, existingUser,type:2 })
         }
         else {
-            res.json({ message: "The user does not exist" })
+            res.json({ message: "The user does not exist",type:0})
         }
     } catch (error) {
         res.json({ message: "catch error " + error })
@@ -739,7 +727,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
         const { user_ids, active } = req.body;
         let id = user_ids
         if (!config.roles.includes(role)) {
-          return  res.json({message:"sorry, you are unauthorized"})
+          return  res.json({message:"sorry, you are unauthorized",type:0})
         }
 
         if (role === "superadmin") {
@@ -756,7 +744,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                     
                     // Check if there is more than one active owner
                     if (currentActiveOwners.length > 0 && active === 1) {
-                        return res.json({ message: "Cannot activate user, another owner is already active" });
+                        return res.json({ message: "Cannot activate user, another owner is already active" ,type:0});
                     }
                 
                     // Update all users in user_ids to be active or inactive based on the 'active' parameter
@@ -766,15 +754,15 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                     );
                 
                     if (updatedUsers.modifiedCount === updatedUsers.matchedCount) {
-                        return res.json({ message: active === 1 ? "User activated successfully" : "User deactivated successfully" });
+                     return res.json({ message: active === 1 ? "User activated successfully" : "User deactivated successfully" ,type:1});
                     }
                 }
                 else{
-                    res.json({message:"We cannot find any data related for this company"})
+                    res.json({message:"We cannot find any data related for this company",type:0})
                 }
                 }
                 else {
-                    return res.json({ message: "No valid users found to update" });
+                    return res.json({ message: "No valid users found to update",type:0 });
                 }
               
         }
@@ -794,17 +782,17 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                     );
         
                     if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 0) {
-                        return res.json({ message: "Users deleted successfully" });
+                        return res.json({ message: "Users deleted successfully",type:1 });
                     } else if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 1) {
-                        return res.json({ message: "Users activated successfully" });
+                        return res.json({ message: "Users activated successfully",type:1 });
                     }
                 }
                else{
-                res.json({message:"We cannot find any data related for this department"})
+                res.json({message:"We cannot find any data related for this department",type:0})
                }
             }
            else {
-                return res.json({ message: "No valid user found to delete" });
+                return res.json({ message: "No valid user found to delete",type:0 });
             }
         }
     } catch (error) {
