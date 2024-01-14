@@ -12,6 +12,7 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             let notifications = await notificationModel.find({
                 survey_reader_id: id,
                 active: 1,
+                processed:0
             }).populate([
                 {
                     path: 'response_id',
@@ -59,6 +60,7 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             let notifications = await notificationModel.find({
                 created_by: id,
                 active: 1,
+                processed:0
             }).populate([
                 {
                     path: 'response_id',
