@@ -278,12 +278,12 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     }
                 }
 
-                res.status(200).json({ resultArray,notification_count,response_count:count,survey_count });
+                res.json({ resultArray,notification_count,response_count:count,survey_count,type:2 });
             }
             
             
             else {
-                res.status(200).json({notification_count,response_count:count,survey_count });
+                res.json({notification_count,response_count:count,survey_count ,type:2});
             }
         }
         else {
