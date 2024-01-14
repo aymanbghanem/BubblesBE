@@ -20,31 +20,40 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
     try {
         const company_id = req.user.company_id;
 
-        if (req.user.user_role === 'owner') {
-            const departmentsData = req.body.department.map(department => {
-                return { department_name: department.department_name.toLowerCase() };
-            });
-
-            const existingDepartments = await Promise.all(departmentsData.map(async (department) => {
-                const { department_name } = department;
-                return departmentModel.findOne({ department_name, company_id, active: 1 });
-            }));
-
-            if (existingDepartments.some(existingDepartment => existingDepartment)) {
-                res.json({ message: "This department already exist in your company",type:0});
-            } else {
-                const createdDepartments = await Promise.all(departmentsData.map(async (department) => {
-                    const createdDepartment = await departmentModel.create({
-                        ...department,
-                        company_id,
-                    });
-                    return createdDepartment;
+        let company_exist = await companyModel.findOne({
+            _id : company_id,
+            active:1
+        })
+        if(company_exist){
+            if (req.user.user_role === 'owner') {
+                const departmentsData = req.body.department.map(department => {
+                    return { department_name: department.department_name.toLowerCase() };
+                });
+    
+                const existingDepartments = await Promise.all(departmentsData.map(async (department) => {
+                    const { department_name } = department;
+                    return departmentModel.findOne({ department_name, company_id, active: 1 });
                 }));
-
-                res.json({ message: "Successfully added", type:1});
+    
+                if (existingDepartments.some(existingDepartment => existingDepartment)) {
+                    res.json({ message: "This department already exist in your company",type:0});
+                } else {
+                    const createdDepartments = await Promise.all(departmentsData.map(async (department) => {
+                        const createdDepartment = await departmentModel.create({
+                            ...department,
+                            company_id,
+                        });
+                        return createdDepartment;
+                    }));
+    
+                    res.json({ message: "Successfully added", type:1});
+                }
+            } else {
+                res.json({ message: "Sorry, you are unauthorized" ,type:0 });
             }
-        } else {
-            res.json({ message: "Sorry, you are unauthorized" ,type:0 });
+        }
+        else{
+            res.json({message:"The company company does not exist or inactive , we can not complete the process",type:0})
         }
     } catch (error) {
         console.error(error);
@@ -56,6 +65,7 @@ router.get('/api/v1/getDepartments',auth,async(req,res)=>{
     try {
         let company_id = req.user.company_id
         let role = req.user.user_role
+        
         if(role=="owner"){
             let departments = await departmentModel.find({company_id:company_id})
             .select('department_name active') 
