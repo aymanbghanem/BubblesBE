@@ -168,7 +168,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     }
                 }
 
-                res.json({ message: resultArray, type: 2 });
+                res.json({ resultArray, type: 2 });
             } else {
                 res.json({ message: "No data found", type: 0 });
             }
