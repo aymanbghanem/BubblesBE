@@ -25,7 +25,7 @@ router.post('/api/v1/addQuestionType', auth, async (req, res) => {
                 let newType = await questionControllerModel.create({
                     question_type: question_type
                 });
-                res.status(201).json({ message: 'The new question type added successfully',type:1 });
+                res.json({ message: 'New question type added successfully', type: 1 });
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized" });

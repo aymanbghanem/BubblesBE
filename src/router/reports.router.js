@@ -197,11 +197,11 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
 
             }
             let data = {
-                "company_count": companyCount,
-                "survey_count": surveyCount,
-                "user_count": userCount,
-                "location_count": locationCount,
-                "department_count": departmentCount,
+                company_count: companyCount,
+                survey_count : surveyCount,
+                 user_count: userCount,
+                location_count: locationCount,
+                department_count: departmentCount,
                 response_count: count,
             }
             res.json({ message: data, type: 2 });
@@ -292,13 +292,22 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         });
                     }
                 }
-
-                res.json({ resultArray, notification_count, response_count: count, survey_count, type: 2 });
+                let data = {
+                    notification_count: notification_count,
+                    response_count: count,
+                    survey_count: survey_count,
+                }
+                res.json({ message:data,resultArray, type: 2 });
             }
 
 
             else {
-                res.json({ notification_count, response_count: count, survey_count, type: 2 });
+                let data = {
+                    notification_count: notification_count,
+                    response_count: count,
+                    survey_count: survey_count,
+                }
+                res.json({ message:data, type: 2 });
             }
         }
         else {
@@ -321,7 +330,7 @@ router.put('/api/v1/deleteReport', auth, async (req, res) => {
                 res.json({ message: "The report sucssfully deleted", type: 1 })
             }
             else {
-                res.json({ message: "sorry , the report you are trying to delete does not exist", type: 0 })
+                res.json({ message: "Report not found for deletion", type: 0 });
             }
         }
         else {

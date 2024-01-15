@@ -93,15 +93,15 @@ router.get('/api/getReaderBySurvey', auth, async (req, res) => {
                 res.json({message:formattedReaders,type:2});
              }
             else{
-                res.status(200).json({message:"No data found",type:0});
+                res.json({message:"No data found",type:0});
             }
             }
             else{
-                res.status(200).json({message:"The survey you are looking for does not exist",type:0})
+                res.json({ message: "The survey you are looking for does not exist", type: 0 });
             }
          
         } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized",type:0 });
+            res.json({ message: "Sorry, you are unauthorized",type:0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
@@ -167,7 +167,6 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
     }
 });
 
-
 router.get('/api/v1/getNotifies', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
@@ -221,7 +220,6 @@ router.get('/api/v1/getNotifies', auth, async (req, res) => {
         res.json({ message: "Catch error " + error });
     }
 });
-
 
 router.put('/api/v1/activeAndInactiveNotify',auth,async(req,res)=>{
     try {
