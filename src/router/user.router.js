@@ -313,7 +313,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 }
             ]);
         }
-        if (user) {
+        if (user && req.user.user_role!="superadmin") {
           
             let response = {
                 _id: user._id,
@@ -331,7 +331,22 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 notifier : user.company_id.notifier ? user.company_id.notifier: 0
             }
             res.json({ message: response,companyInfo,type:2});
-        } else {
+        }
+        else if(user && req.user.user_role=="superadmin"){
+            let response = {
+                _id: user._id,
+                user_name: user.user_name,
+                user_role: user.user_role,
+                created_by:readerUser?readerUser.created_by.user_name:"",
+                token: user.token,
+                email_address: user.email_address,
+                company_name: user.company_id ? user.company_id.company_name || " " : " ",
+                department_name: user.department_id ? user.department_id.department_name || " " : " ",
+                image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
+            };
+            res.json({ message: response,type:2});
+        }
+        else {
             res.json({ message: "The user is not in the system",type:0 });
         }
     } catch (error) {
