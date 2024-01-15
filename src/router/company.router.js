@@ -37,8 +37,8 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
 
                 const newCompany = await companyModel.create({
                     company_name: company_name,
-                    dashboard:dashboard,
-                    notifier:notifier
+                    dashboard:dashboard ? dashboard:0,
+                    notifier:notifier?notifier:0
                 });
 
                 res.json({ message: `Successfully added company '${company_name}'`,type:1});
@@ -108,7 +108,7 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
                     res.json({ message: "The company and associated entities deleted successfully",type:1 });
                 }
             } else {
-                res.json({ message: "The company you are looking for does not found",type:0 });
+                res.json({ message: "The company you are looking for was not found.", type: 0 });
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized",type:0});

@@ -327,8 +327,8 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
             };
             let companyInfo={
-                dashboard:user.company_id.dashboard,
-                notifier : user.company_id.notifier
+                dashboard:user.company_id.dashboard ?user.company_id.dashboard :0 ,
+                notifier : user.company_id.notifier ? user.company_id.notifier: 0
             }
             res.json({ message: response,companyInfo,type:2});
         } else {
@@ -766,7 +766,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                     }
                 }
                 else{
-                    res.json({message:"We cannot find any data related for this company",type:0})
+                    res.json({ message: "Your company is currently inactive. We are unable to complete the requested process.", type: 0 });
                 }
                 }
                 else {
@@ -796,7 +796,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                     }
                 }
                else{
-                res.json({message:"We cannot find any data related for this department",type:0})
+                res.json({ message: "Your department is currently inactive. We are unable to complete the requested process.", type: 0 });
                }
             }
            else {

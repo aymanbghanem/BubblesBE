@@ -82,7 +82,8 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
             }
         }
         else {
-            res.json({ message: "Sorry your company does not have an access for this operation", type: 0 })
+            res.json({ message: "Apologies, but your company currently lacks the necessary access for this operation.", type: 0 });
+
         }
     } catch (error) {
         res.json({ message: "catch error " + error })

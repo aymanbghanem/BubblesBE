@@ -67,7 +67,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
         type: 1
       });
     } else {
-      res.json({ message: "You are trying to add new surveys for an inactive department, we cannot complete the process", type: 0 });
+      res.json({ message: "Cannot add surveys for an inactive department.", type: 0 });
     }
   } catch (error) {
     // Rollback in case of an error
@@ -748,7 +748,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
       }
     }
     else{
-      res.json({message:"This survey related to inactive department , we can not complete the process"})
+      res.json({ message: "This survey is associated with an inactive department. We cannot complete the process.", type: 0 });
     }
   } catch (error) {
     console.error(error);

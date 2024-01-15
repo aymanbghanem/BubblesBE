@@ -55,7 +55,7 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
             }
         }
         else{
-            res.json({message:"The company does not exist or inactive , we can not complete the process",type:0})
+            res.json({ message: "The company either does not exist or is inactive. We are unable to complete the process.", type: 0 });
         }
     } catch (error) {
         console.error(error);
@@ -124,11 +124,11 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
                         res.json({ message: "The department and associated entities activated successfully",type:1 });
                     }
                 } else {
-                    res.json({ message: "The department you are looking for not found",type:0 });
+                    res.json({ message: "The department you are looking for was not found.", type: 0 });
                 } 
             }
             else{
-                res.json({message:"You can not active or inactive a department for inactive company",type:0})
+                res.json({ message: "You cannot activate or deactivate a department for an inactive company.", type: 0 });
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized",type:0 });

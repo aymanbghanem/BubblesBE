@@ -160,7 +160,7 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
             }
         }
         else{
-         res.json({message:"Sorry your company does not have an access for this operation",type:0})
+            res.json({ message: "Apologies, but your company currently lacks the necessary access for this operation.", type: 0 });
         }
     } catch (error) {
         res.json({ message: "Catch error: " + error });
@@ -215,7 +215,7 @@ router.get('/api/v1/getNotifies', auth, async (req, res) => {
             }
         }
         else{
-            res.json({message:"Sorry your company does not have an access to complete this operation",type:0})
+            res.json({ message: "Apologies, but your company currently lacks the necessary access for this operation.", type: 0 });
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });

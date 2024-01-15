@@ -288,10 +288,10 @@ router.get('/api/v1/getLocations', auth, async (req, res) => {
 
                     res.json({ message: locationTree,type:2 });
                 } else {
-                    res.json({ message: "There is no location for this survey",type:0 });
+                    res.json({ message: "No locations found for this survey.", type: 0 });
                 }
             } else {
-                res.json({ message: "The survey you are looking for does not exist",type:0 });
+                res.json({ message: "The survey you are looking for does not exist.", type: 0 });
             }
         } else {
             res.json({ message: "Sorry, you are unauthorized",type:0 });
