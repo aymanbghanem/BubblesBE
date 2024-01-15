@@ -93,7 +93,6 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
   }
 });
 
-
 async function rollbackQuestions(questions, session) {
   if (questions.length === 0) {
     return;
@@ -156,7 +155,6 @@ function flattenLocationData(locationData, parentId = null) {
   }
   return result;
 }
-
 async function processAndStoreLocation(locationData, survey, user) {
   try {
     const department = user.department_id;
@@ -233,8 +231,6 @@ async function processAndStoreSurvey(surveyData, user) {
     throw error;
   }
 }
-
-
 async function processAndStoreAnswers(answerArray, questionId, questionType, survey_id) {
   // Fetch question type ID from QuestionController table based on the provided question type
   const questionTypeObject = await QuestionController.findOne({ question_type: questionType });
@@ -254,7 +250,6 @@ async function processAndStoreAnswers(answerArray, questionId, questionType, sur
 
   return answerIdsAndTexts;
 }
-
 async function processAndStoreQuestions(questionsData, survey_id, department_id) {
   const storedQuestions = [];
 
@@ -342,7 +337,6 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 
   return updatedDependencies;
 }
-
 
 
 router.put('/api/v1/updateSurvey', auth, async (req, res) => {
@@ -453,7 +447,7 @@ router.post('/api/v1/getQuestions', async (req, res) => {
       .select('survey_title response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
     if (!survey) {
-      return res.json({ message: "The survey does not exist or is not active.", type: 0 });
+      return res.json({ message: "Survey not found or is inactive.", type: 0 });
     } else {
       let company_name = survey.company_id.company_name;
       let surveyData = {
@@ -741,14 +735,14 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
             res.json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", type: 0 });
           }
         } else {
-          res.json({ message: "The survey you are looking for does not exist", type: 0 });
+          res.json({ message: "Survey not found", type: 0 });
         }
       } else {
         res.json({ message: "Unauthorized. Only admin users can perform this operation.", type: 0 });
       }
     }
     else{
-      res.json({ message: "This survey is associated with an inactive department. We cannot complete the process.", type: 0 });
+      res.json({ message: "Survey linked to inactive department. Cannot complete process.", type: 0 });
     }
   } catch (error) {
     console.error(error);
@@ -1005,7 +999,7 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
         }
       }
       else {
-        res.json({ message: "You are trying to get surveys for inactive department", type: 0 })
+        res.json({ message: "Surveys not available for inactive department", type: 0 });
       }
     }
 

@@ -21,8 +21,6 @@ const validateEmail = (email) => {
     return emailRegex.test(email);
 };
 
-
-
 const addOwner = async (company) => {
     const existingOwner = await userModels.findOne({
         user_role: 'owner',
@@ -101,11 +99,9 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 }
             }
             else {
-                res.json({ message: "The company does not exist",type:0 })
+                res.json({ message: "Company not found", type: 0 });
             }
         }
-
-
         else if (department_name && role == 'owner') {
             // await hashPassword(newPassword, async (hash) => {
             //  hashedPassword = hash;
@@ -117,7 +113,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
 
             if (!department) {
-                return res.json({ message: "The department does not exist or inactive",type:0 });
+                return res.json({ message: "Department not found or inactive", type: 0 });
             }
 
             // Continue with the user creation
@@ -155,7 +151,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             });
             
             if (!department) {
-                return res.json({ message: "The department does not exist or inactive",type:0 });
+                return res.json({ message: "Department not found or inactive", type: 0 });
             }
 
             let user;
@@ -231,7 +227,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         });
 
         if (existingUser) {
-            res.json({ message: "The email address or username already exists",type:0 });
+            res.json({ message: "Email address or username already exists", type: 0 });
         } else {
 
             await hashPassword(newPassword, async (hash) => {
@@ -283,7 +279,7 @@ router.get('/api/v1/userById', async (req, res) => {
 
             res.json({ message: response,type:2 });
         } else {
-            res.json({ message: "The user is not in the system",type:0 });
+            res.json({ message: "User not found in the system", type: 0 });
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });
@@ -347,7 +343,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
             res.json({ message: response,type:2});
         }
         else {
-            res.json({ message: "The user is not in the system",type:0 });
+            res.json({ message: "User not found in the system", type: 0 });
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });
@@ -473,7 +469,8 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
 
             return res.json({ message: simplifiedUsers,type:2 });
         } else {
-            return res.json({ message: "Sorry, there are no users under your role" ,type:0});
+            return res.json({ message: "No users found under your role", type: 0 });
+
         }
 
     } catch (error) {
@@ -507,7 +504,7 @@ router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
 
                 res.json({ message: surveysWithoutId,type:2 });
             } else {
-                res.json({ message: "No data found",type:0 });
+                res.json({ message: "No data found", type: 0 });
             }
         } else {
             res.json({ message: "sorry, you are unauthorized" ,type:0});
@@ -555,7 +552,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
 
 
             } else {
-                return res.json({ message: "The user is not in the system",type:0 });
+                return res.json({ message: "User not found in the system", type: 0 });
             }
         } else {
             return res.json({ message: "sorry, you are unauthorized",type:0 });
@@ -737,7 +734,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
             res.json({ message: response, existingUser,type:2 })
         }
         else {
-            res.json({ message: "The user does not exist",type:0})
+            res.json({ message: "User does not exist", type: 0 });
         }
     } catch (error) {
         res.json({ message: "catch error " + error })
@@ -815,7 +812,8 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                }
             }
            else {
-                return res.json({ message: "No valid user found to delete",type:0 });
+            return res.json({ message: "No valid user found to delete", type: 0 });
+
             }
         }
     } catch (error) {

@@ -154,17 +154,16 @@ router.post('/api/v1/createResponse', async (req, res) => {
                 res.json({ message:response_message,type:2 });
             }
             else {
-                res.json({ message: "The location you are looking for does not exist",type:0 })
+                res.json({ message: "Location not found", type: 0 });
             }
         }
         else {
-            res.json({ message: "The survey that you try to answer does not exist",type:0 })
+            res.json({ message: "Survey not found for answering", type: 0 });
         }
     } catch (error) {
         res.json({ message: 'Internal server error ' + error });
     }
 });
-
 
 router.get('/api/v1/getResponses', auth, async (req, res) => {
     try {
@@ -259,10 +258,11 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                 }
 
                  else {
-                    res.json({ message: "No responses found for the surveys",type:0});
+                    res.json({ message: "No responses found for the surveys", type: 0 });
                 }
             } else {
-                res.json({ message: "No surveys found for the survey-reader",type:0 });
+                res.json({ message: "No surveys found for the survey-reader", type: 0 });
+
             }
         }
         else {
