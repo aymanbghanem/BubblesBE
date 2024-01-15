@@ -11,6 +11,8 @@ const surveyReaderModel = require('../models/surveyReader.model')
 const surveyModel = require('../models/survey.models')
 const questionModel = require("../models/questions.models");
 const responseModel = require("../models/response.model");
+const notificationModel = require("../models/notification.model");
+const notifyModels = require("../models/notify.models");
 const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
@@ -32,7 +34,7 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
     
                 const existingDepartments = await Promise.all(departmentsData.map(async (department) => {
                     const { department_name } = department;
-                    return departmentModel.findOne({ department_name, company_id, active: 1 });
+                    return departmentModel.findOne({ department_name, company_id});
                 }));
     
                 if (existingDepartments.some(existingDepartment => existingDepartment)) {
@@ -53,7 +55,7 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
             }
         }
         else{
-            res.json({message:"The company company does not exist or inactive , we can not complete the process",type:0})
+            res.json({message:"The company does not exist or inactive , we can not complete the process",type:0})
         }
     } catch (error) {
         console.error(error);
@@ -108,7 +110,9 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
                         questionModel.updateMany({ survey_id: survey._id}, { active: active }),
                         Answer.updateMany({ survey_id: survey._id}, { active: active }),
                         locationModel.updateMany({ survey_id: survey._id }, { active: active }),
-                        responseModel.updateMany({ survey_id: survey._id }, { active:active })
+                       // responseModel.updateMany({ survey_id: survey._id }, { active:active })
+                       notificationModel.updateMany({ survey_id: survey._id }, { active:active }),
+                    notifyModels.updateMany({ survey_id: survey._id }, { active:active })
                     ]);
                 }
     

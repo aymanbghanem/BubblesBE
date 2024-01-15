@@ -112,7 +112,6 @@ router.post('/api/v1/createResponse', async (req, res) => {
                     } 
                     for (const notify of existingNotify) {
                         // Check if the question is in existingNotify
-                        console.log(responseRecord.question_id)
                         const isQuestionInNotify = notify.question_id.equals(responseRecord.question_id);
                         let location_id = notify.location_id
 
@@ -138,7 +137,8 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                             company_id: company_id,
                                             survey_reader_id:notify.survey_reader_id,
                                             response_id:responseRecord._id,
-                                            created_by : notify.created_by
+                                            created_by : notify.created_by,
+                                            survey_id:notify.survey_id
                                             // Add other properties as needed
                                         });
 
@@ -191,7 +191,7 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                 },
             ]).select('user_answer createdAt active user_id');
 
-            if (responses) {
+            if (responses.length > 0) {
                 // Group responses by user_id
                 const groupedResponses = _.groupBy(responses, 'user_id');
 

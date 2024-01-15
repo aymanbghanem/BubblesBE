@@ -16,6 +16,8 @@ const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper'
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 const responseModel = require("../models/response.model");
+const notificationModel = require("../models/notification.model");
+const notifyModels = require("../models/notify.models");
 require('dotenv').config()
 
 
@@ -27,7 +29,7 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
 
             const caseInsensitiveRegex = new RegExp(`^${company_name}$`, 'i');
 
-            const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex, active: 1 });
+            const existingCompany = await companyModel.findOne({ company_name: caseInsensitiveRegex});
 
             if (existingCompany) {
                 res.json({ message: `The company name '${company_name}' already exists`,type:0 });
@@ -92,13 +94,15 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
                     Answer.updateMany({ survey_id: survey._id }, { active:active }),
                     locationModel.updateMany({ survey_id: survey._id }, { active:active }),
                     qrModel.updateMany({ survey_id: survey._id }, { active:active }),
-                    responseModel.updateMany({ survey_id: survey._id }, { active:active })
+                   // responseModel.updateMany({ survey_id: survey._id }, { active:active }),
+                    notificationModel.updateMany({ survey_id: survey._id }, { active:active }),
+                    notifyModels.updateMany({ survey_id: survey._id }, { active:active })
                 ]);
             }
 
             if (company) {
                 if(active==1){
-                    resizeBy.json({ message: "The company and associated entities activated successfully",type:1 });
+                    res.json({ message: "The company and associated entities activated successfully",type:1 });
                 }
                 else{
                     res.json({ message: "The company and associated entities deleted successfully",type:1 });

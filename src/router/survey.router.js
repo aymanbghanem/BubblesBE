@@ -21,20 +21,26 @@ const departmentModels = require("../models/department.models");
 const companyModels = require("../models/company.models");
 require('dotenv').config()
 
-// Create new survey 
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
   let session;
   let storedSurvey, storedLocation, storedQuestions;
 
   try {
-    const { location_data, survey, location, questions } = req.body;
+    const { location_data, survey, questions } = req.body;
     const role = req.user.user_role;
     const department = req.user.department_id;
 
-    let departmentExist = await departmentModels.findOne({ _id: department, active: 1 })
-    if (role !== 'admin') {
-      return res.status(403).json({ message: 'Sorry, you are unauthorized' });
+    // Check if location_data and questions are not empty arrays
+    if (!Array.isArray(location_data) || location_data.length === 0 || !Array.isArray(questions) || questions.length === 0) {
+      return res.json({ message: 'Location data and questions cannot be empty arrays', type: 0 });
     }
+
+    let departmentExist = await departmentModels.findOne({ _id: department, active: 1 });
+
+    if (role !== 'admin') {
+      return res.json({ message: 'Sorry, you are unauthorized', type: 0 });
+    }
+
     if (departmentExist) {
       // Start a MongoDB transaction
       session = await mongoose.startSession();
@@ -60,22 +66,18 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
         questions: storedQuestions,
         type: 1
       });
-    }
-    else{
-      res.json({ message: "You are trying to add new surveys for inactive department", type: 0 })
+    } else {
+      res.json({ message: "You are trying to add new surveys for an inactive department, we cannot complete the process", type: 0 });
     }
   } catch (error) {
     // Rollback in case of an error
     try {
-
       if (session) {
         await session.abortTransaction();
         session.endSession();
       }
       if (storedQuestions) {
-
         await rollbackQuestions(storedQuestions);
-
       }
       if (storedLocation) {
         await rollbackLocation(storedLocation);
@@ -90,6 +92,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
     res.status(500).json({ message: 'Error: ' + error.message });
   }
 });
+
 
 async function rollbackQuestions(questions, session) {
   if (questions.length === 0) {
@@ -342,8 +345,8 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 
 
 
-//Update exist survey
 router.put('/api/v1/updateSurvey', auth, async (req, res) => {
+  let session;
   try {
     let role = req.user.user_role;
     let surveyId = req.headers['survey_id'];
@@ -352,18 +355,28 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
       const { updatedSurveyData, locationData, questionsUpdates } = req.body;
       const department = req.user.department_id;
 
+      // Check if locationData and questionsUpdates are arrays
+      if (!Array.isArray(locationData) || locationData.length === 0 || !Array.isArray(questionsUpdates)|| questionsUpdates.length === 0) {
+        return res.json({ message: 'locationData and questionsUpdates must be arrays', type: 0 });
+      }
+
       // Check if the survey title is being updated
       if (updatedSurveyData.survey_title) {
         // Check if the new survey title already exists
         const existingSurveyWithNewTitle = await surveyModel.findOne({
           survey_title: updatedSurveyData.survey_title,
           _id: { $ne: surveyId }, // Exclude the current survey from the check
+          department_id:department
         });
 
         if (existingSurveyWithNewTitle) {
           return res.json({ message: 'Survey title must be unique. Choose a different title.', type: 0 });
         }
       }
+
+      // Start a MongoDB transaction
+      session = await mongoose.startSession();
+      session.startTransaction();
 
       // Update survey information
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
@@ -372,42 +385,58 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         return res.json({ message: `Survey with ID ${surveyId} not found`, type: 0 });
       }
 
-      // Update survey data
-      await surveyModel.updateOne(
-        { _id: surveyId },
-        {
-          $set: {
-            survey_title: updatedSurveyData.survey_title || existingSurvey.survey_title,
-            survey_description: updatedSurveyData.survey_description || existingSurvey.survey_description,
-            logo: updatedSurveyData.logo || existingSurvey.logo,
-            question_text_color: updatedSurveyData.question_text_color || existingSurvey.question_text_color,
-            submission_pwd: updatedSurveyData.submission_pwd || existingSurvey.submission_pwd,
-            title_font_size: updatedSurveyData.title_font_size || existingSurvey.title_font_size,
-            description_font_size: updatedSurveyData.description_font_size || existingSurvey.description_font_size,
-            response_message: updatedSurveyData.response_message || existingSurvey.response_message,
-          },
-        }
-      );
+      try {
+        // Update survey data
+        await surveyModel.updateOne(
+          { _id: surveyId },
+          {
+            $set: {
+              survey_title: updatedSurveyData.survey_title || existingSurvey.survey_title,
+              survey_description: updatedSurveyData.survey_description || existingSurvey.survey_description,
+              logo: updatedSurveyData.logo || existingSurvey.logo,
+              question_text_color: updatedSurveyData.question_text_color || existingSurvey.question_text_color,
+              submission_pwd: updatedSurveyData.submission_pwd || existingSurvey.submission_pwd,
+              title_font_size: updatedSurveyData.title_font_size || existingSurvey.title_font_size,
+              description_font_size: updatedSurveyData.description_font_size || existingSurvey.description_font_size,
+              response_message: updatedSurveyData.response_message || existingSurvey.response_message,
+            },
+          }
+        );
 
-      // Soft delete existing locations related to the survey
-      await Location.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
-      const storedLocations = await processAndStoreLocation(locationData, existingSurvey, req.user);
-      // Process and store new locations
-      await Question.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
-      await Answer.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
+        // Soft delete existing locations related to the survey
+        await Location.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
 
-      // Process and store new questions
-      const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department);
+        // Process and store new locations
+        const storedLocations = await processAndStoreLocation(locationData, existingSurvey, req.user, session);
 
-      res.status(200).json({ message: 'Survey, locations, and questions updated successfully!', type: 1 });
+        // Process and store new questions
+        await Question.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
+        await Answer.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
+        const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department, session);
+
+        // Commit the transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        res.json({ message: 'Survey, locations, and questions updated successfully!', type: 1 });
+      } catch (updateError) {
+        // Rollback in case of an error during the update
+        await session.abortTransaction();
+        session.endSession();
+        res.json({ message: 'Error updating survey, locations, and questions: ' + updateError.message });
+      }
     } else {
-      res.status(403).json({ message: 'Unauthorized access', type: 0 });
+      res.json({ message: 'Unauthorized access', type: 0 });
     }
   } catch (error) {
+    // Rollback in case of an error before the update
+    if (session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
     res.status(500).json({ message: 'Error updating survey, locations, and questions: ' + error.message });
   }
 });
-
 
 
 router.post('/api/v1/getQuestions', async (req, res) => {
@@ -902,10 +931,10 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
 
     }
     else {
-      res.status(403).json({ message: "Sorry, you are unauthorized", type: 0 });
+      res.json({ message: "Sorry, you are unauthorized", type: 0 });
     }
   } catch (error) {
-    res.status(500).json({ message: "Internal server error", error: error.message });
+    res.json({ message: "Internal server error", error: error.message });
   }
 });
 

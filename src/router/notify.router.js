@@ -171,44 +171,51 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
 router.get('/api/v1/getNotifies', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
-        if (role === 'admin') {
-            let notifiers = await notifyModels.find({
-                created_by: req.user._id,
-            }).populate([
-                {
-                    path: 'survey_reader_id',
-                    select: 'user_name -_id',
-                },
-                {
-                    path: 'survey_id',
-                    select: 'survey_title',
-                },
-                {
-                    path: 'question_id',
-                    select: 'question_title',
-                },
-                {
-                    path: 'location_id',
-                    select: 'location_name',
+        let company_id = req.user.company_id
+        let companyAccess = await companyModels.findOne({_id:company_id , active:1,notifier:1})
+        if(companyAccess){
+            if (role === 'admin') {
+                let notifiers = await notifyModels.find({
+                    created_by: req.user._id,
+                }).populate([
+                    {
+                        path: 'survey_reader_id',
+                        select: 'user_name -_id',
+                    },
+                    {
+                        path: 'survey_id',
+                        select: 'survey_title',
+                    },
+                    {
+                        path: 'question_id',
+                        select: 'question_title',
+                    },
+                    {
+                        path: 'location_id',
+                        select: 'location_name',
+                    }
+                ]);
+    
+                if (notifiers.length > 0) {
+                    const flattenedNotifiers = notifiers.map(notifier => ({
+                        _id: notifier._id,
+                        active: notifier.active,
+                        location_name: notifier.location_id ? notifier.location_id.location_name : null,
+                        survey_title: notifier.survey_id ? notifier.survey_id.survey_title : null,
+                        question_title: notifier.question_id ? notifier.question_id.question_title : null,
+                        answer_text: notifier.answer_text,
+                        survey_reader_name: notifier.survey_reader_id ? notifier.survey_reader_id.user_name : null,
+                    }));
+                    res.json({message:flattenedNotifiers,type:2});
+                } else {
+                    res.json({ message: "No data found" ,type:0});
                 }
-            ]);
-
-            if (notifiers.length > 0) {
-                const flattenedNotifiers = notifiers.map(notifier => ({
-                    _id: notifier._id,
-                    active: notifier.active,
-                    location_name: notifier.location_id ? notifier.location_id.location_name : null,
-                    survey_title: notifier.survey_id ? notifier.survey_id.survey_title : null,
-                    question_title: notifier.question_id ? notifier.question_id.question_title : null,
-                    answer_text: notifier.answer_text,
-                    survey_reader_name: notifier.survey_reader_id ? notifier.survey_reader_id.user_name : null,
-                }));
-                res.json({message:flattenedNotifiers,type:2});
             } else {
-                res.json({ message: "No data found" ,type:0});
+                res.status(200).json({ message: "Sorry, you are unauthorized",type:0 });
             }
-        } else {
-            res.status(200).json({ message: "Sorry, you are unauthorized",type:0 });
+        }
+        else{
+            res.json({message:"Sorry your company does not have an access to complete this operation",type:0})
         }
     } catch (error) {
         res.json({ message: "Catch error " + error });
