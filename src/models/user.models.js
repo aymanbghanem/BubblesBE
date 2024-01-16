@@ -34,6 +34,11 @@ const userSchema = new Schema({
     created_by:{
         type:Schema.Types.ObjectId,
         ref:'user'
+    },
+    // 1 = > deleted , 0 => not deleted
+    deleted:{
+        type:Number,
+        default:0
     }
     
     

@@ -760,6 +760,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                         user_role: 'owner',
                         active: 1,
                         company_id:user.company_id,
+                        deleted:0
                     });
                     
                     // Check if there is more than one active owner
@@ -770,7 +771,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                     // Update all users in user_ids to be active or inactive based on the 'active' parameter
                     const updatedUsers = await userModels.updateMany(
                         { _id: id },
-                        { $set: { active: active } }
+                        { $set: { active: active,deleted:!active } }
                     );
                 
                     if (updatedUsers.modifiedCount === updatedUsers.matchedCount) {
@@ -793,12 +794,12 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                 if(department){
                     const deletedUsers = await userModels.updateMany(
                         { _id:id },
-                        { $set: { active: active } }
+                        { $set: { active: active,deleted:!active } }
                     );
         
                     const deletedSurveyReader = await surveyReaderModel.updateMany(
                         { reader_id: id },
-                        { $set: { active: active } }
+                        { $set: { active: active,deleted:!active } }
                     );
         
                     if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 0) {

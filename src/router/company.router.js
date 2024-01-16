@@ -82,7 +82,7 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
         if (role === "superadmin") {
             // Delete company and related entities
             let company = await companyModel.findOneAndUpdate({ _id: company_id}, { active:active});
-            let user = await userModels.updateMany({ company_id: company_id}, {active:active});
+            let user = await userModels.updateMany({ company_id: company_id,deleted:0}, {active:active});
             let department = await departmentModel.updateMany({ company_id: company_id}, {active:active});
             let report = await reportsModel.updateMany({ company_id: company_id}, {active:active})
             // Deactivate surveys and related entities

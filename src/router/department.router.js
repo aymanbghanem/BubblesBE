@@ -98,7 +98,7 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
             let company_exist = await companyModel.findOne({_id:company_id,active:1})
             if(company_exist){
                 let department = await departmentModel.findOneAndUpdate({_id: department_id}, { active:active });
-                let user = await userModels.updateMany({ department_id: department_id}, { active: active });
+                let user = await userModels.updateMany({ department_id: department_id,deleted:0}, { active: active });
                 
     
                 // Deactivate surveys and related entities
