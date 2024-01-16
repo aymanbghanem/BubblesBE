@@ -133,7 +133,7 @@ router.put('/api/v1/processedNotification', auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let notification_id = req.headers['notification_id']
-        if (role == 'survey-reader') {
+        if (role == 'survey-reader' || role == 'admin') {
             let notification = await notificationModel.findOneAndUpdate({ _id: notification_id, processed: 0 }, { processed: 1 })
             if (notification) {
                 res.json({ message: "The notification has been successfully processed",type:1 })

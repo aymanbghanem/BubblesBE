@@ -33,7 +33,7 @@ router.post('/api/v1/login', async (req, res) => {
        // }
    //   });
     } else {
-      res.json({ message: "Incorrect username or user is inactive." });
+      res.json({ message: "Incorrect username or user is inactive.",type:0 });
     }
   } catch (error) {
     // Handle errors
