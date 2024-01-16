@@ -198,8 +198,8 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             }
             let data = {
                 company_count: companyCount,
-                survey_count : surveyCount,
-                 user_count: userCount,
+                survey_count: surveyCount,
+                user_count: userCount,
                 location_count: locationCount,
                 department_count: departmentCount,
                 response_count: count,
@@ -297,7 +297,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     response_count: count,
                     survey_count: survey_count,
                 }
-                res.json({ message:data,resultArray, type: 2 });
+                res.json({ message: data, resultArray, type: 2 });
             }
 
 
@@ -307,7 +307,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                     response_count: count,
                     survey_count: survey_count,
                 }
-                res.json({ message:data, type: 2 });
+                res.json({ message: data, type: 2 });
             }
         }
         else {
@@ -348,11 +348,11 @@ function getDynamicFileName() {
     return `responses_${timestamp}_${randomFraction}.xlsx`;
 }
 
-router.get('/api/v1/exportReport',auth, async (req, res) => {
+router.get('/api/v1/exportReport', async (req, res) => {
     try {
-          let role = req.user.user_role;
+        let role = req.user.user_role;
         if (role === 'admin' || role == 'survey-reader') {
-          let department_id = req.user.department_id;
+        let department_id = req.user.department_id;
 
         let responses = await responseModel.find({ department_id, active: 1 }).populate([
             {
@@ -376,18 +376,24 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Responses');
 
+
             // Add headers to the worksheet
             worksheet.columns = [
-                { header: 'Survey title', key: 'survey_title', width: 30, alignment: { vertical: 'center' } },
-                { header: 'Location name', key: 'location_name', width: 30, alignment: { vertical: 'center' } },
-                { header: 'Question title', key: 'question_title', width: 50, alignment: { vertical: 'center' } },
-                { header: 'Question type', key: 'question_type', width: 20, alignment: { vertical: 'center' } },
-                { header: 'User answer', key: 'user_answer', width: 30, alignment: { vertical: 'center' } },
-                { header: 'Created at', key: 'createdAt', width: 20, alignment: { vertical: 'center' } },
-                { header: 'User ID', key: 'user_id', width: 40, alignment: { vertical: 'center' } },
+                { header: 'Survey title', key: 'survey_title', width: 30 },
+                { header: 'Location name', key: 'location_name', width: 30 },
+                { header: 'Question title', key: 'question_title', width: 50 },
+                { header: 'Question type', key: 'question_type', width: 20 },
+                { header: 'User answer', key: 'user_answer', width: 30 },
+                { header: 'Created at', key: 'createdAt', width: 20 },
+                { header: 'User ID', key: 'user_id', width: 40 },
             ];
-            worksheet.getRow(1).font = { bold: true, size: 12};
-         
+
+            worksheet.getRow(1).eachCell({ includeEmpty: true }, cell => {
+                cell.alignment = { vertical: 'center', horizontal: 'center' };
+                cell.font = { bold: true, size: 12 };
+            });
+
+
             // Add data to the worksheet
             responses.forEach(response => {
                 const formattedResponse = {
@@ -402,8 +408,9 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
                 };
 
                 const row = worksheet.addRow(formattedResponse);
+
                 row.eachCell({ includeEmpty: true }, cell => {
-                    cell.alignment = { vertical: 'center' };
+                    cell.alignment = { vertical: 'center', horizontal: 'center' };
                 });
             });
 
@@ -431,7 +438,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
         else {
             res.json({ message: "No data found", type: 0 });
         }
-        }
+   }
     } catch (error) {
         res.json({ message: "Catch error " + error });
     }
