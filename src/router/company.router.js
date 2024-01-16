@@ -18,6 +18,7 @@ var jwt = require('jsonwebtoken');
 const responseModel = require("../models/response.model");
 const notificationModel = require("../models/notification.model");
 const notifyModels = require("../models/notify.models");
+const reportsModel = require("../models/reports.model");
 require('dotenv').config()
 
 
@@ -83,7 +84,7 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
             let company = await companyModel.findOneAndUpdate({ _id: company_id}, { active:active});
             let user = await userModels.updateMany({ company_id: company_id}, {active:active});
             let department = await departmentModel.updateMany({ company_id: company_id}, {active:active});
-
+            let report = await reportsModel.updateMany({ company_id: company_id}, {active:active})
             // Deactivate surveys and related entities
             let surveys = await surveyModel.find({ company_id: company_id});
             for (const survey of surveys) {
@@ -139,4 +140,44 @@ router.get('/api/v1/getCompanyById',auth,async(req,res)=>{
     }
 })
 
+router.put('/api/v1/updateCompanyAccess',auth,async(req,res)=>{
+    try {
+        let role = req.user.user_role
+        let company_id = req.headers['company_id']
+        let {dashboard,notifier} = req.body
+        if(role == 'superadmin'){
+            let company = await companyModel.findOne({_id:company_id,active:1})
+            if(company){
+                if( !dashboard|| !notifier){
+                    res.json({message:"Invalid input",type:0})
+                }
+
+               else if(dashboard == 0 || dashboard == 1 ){
+                
+                    let report = await reportsModel.updateMany({ company_id: company_id}, {active:dashboard})
+                }
+
+               else if(notifier == 0 || notifier == 1 ){
+                let surveys = await surveyModel.find({ company_id: company_id});
+                for (const survey of surveys) {
+                    await Promise.all([
+                        notificationModel.updateMany({ survey_id: survey._id }, { active:notifier }),
+                        notifyModels.updateMany({ survey_id: survey._id }, { active:notifier })
+                    ]);
+                }
+                }
+                company = await companyModel.findOneAndUpdate({_id:company_id},{notifier:notifier , dashboard:dashboard})
+                res.json({message:"Successful updated" , type:1})
+            }
+            else{
+                res.json({message:"No data found",type:0})
+            }
+        }
+        else{
+            res.json({message:"sorry, you are unauthorized",type:0})
+        }
+    } catch (error) {
+      res.json({message : "catch error "+error})  
+    }
+})
 module.exports = router
