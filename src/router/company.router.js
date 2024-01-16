@@ -148,18 +148,17 @@ router.put('/api/v1/updateCompanyAccess',auth,async(req,res)=>{
         if(role == 'superadmin'){
             let company = await companyModel.findOne({_id:company_id,active:1})
             if(company){
-                if( !dashboard|| !notifier){
-                    res.json({message:"Invalid input",type:0})
-                }
+      
 
-               else if(dashboard == 0 || dashboard == 1 ){
+                 if(dashboard == 0 || dashboard == 1 ){
                 
                     let report = await reportsModel.updateMany({ company_id: company_id}, {active:dashboard})
                 }
 
-               else if(notifier == 0 || notifier == 1 ){
+                if(notifier == 0 || notifier == 1 ){
                 let surveys = await surveyModel.find({ company_id: company_id});
                 for (const survey of surveys) {
+                   
                     await Promise.all([
                         notificationModel.updateMany({ survey_id: survey._id }, { active:notifier }),
                         notifyModels.updateMany({ survey_id: survey._id }, { active:notifier })
@@ -167,7 +166,7 @@ router.put('/api/v1/updateCompanyAccess',auth,async(req,res)=>{
                 }
                 }
                 company = await companyModel.findOneAndUpdate({_id:company_id},{notifier:notifier , dashboard:dashboard})
-                res.json({message:"Successful updated" , type:1})
+                res.json({ message: "Successfully updated", type: 1 });
             }
             else{
                 res.json({message:"No data found",type:0})

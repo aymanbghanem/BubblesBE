@@ -98,79 +98,84 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
         let location;
         if (role == "owner" || role == "survey-reader") {
             let reports = await reportsModel.find({ created_by, active: 1 });
-
-            if (reports.length > 0) {
-                // Array to store the results with counts for each answer and additional information
-                let resultArray = [];
-
-                for (const report of reports) {
-                    let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
-                    let question = await questionsModels.findOne({ _id: report.question_id, active: 1 }).select('question_title')
-                    let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
-                    let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
-
-                    let responseQuery = {
-                        survey_id: report.survey_id,
-                        question_id: report.question_id,
-                    };
-
-                    if (report.location_id) {
-                        responseQuery.location_id = report.location_id;
-                        location = await locationModels.findOne({ _id: report.location_id, active: 1 }).select('location_name')
-                    }
-
-                    let responses = await responseModel.find(responseQuery);
-
-                    let filteredResponses = responses.filter(response => {
-                        let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
-                        let responseDate = new Date(createdAtDateOnly);
-
-                        // If startDateString is provided, check if the response date is greater than or equal to it
-                        let isAfterStartDate = !startDateString || responseDate >= new Date(startDateString);
-
-                        // If endDateString is provided, check if the response date is less than or equal to it
-                        let isBeforeEndDate = !endDateString || responseDate <= new Date(endDateString);
-
-                        return isAfterStartDate && isBeforeEndDate;
-                    });
-
-                    if (filteredResponses.length > 0) {
-                        // Count the responses for each answer and update the resultMap
-                        let resultMap = new Map();
-                        filteredResponses.forEach(response => {
-                            let answer = response.user_answer;
-                            resultMap.set(answer, (resultMap.get(answer) || 0) + 1);
+            let company = await companyModels.findOne({_id:req.user.company_id ,dashboard:1 })
+            if(company){
+                if (reports.length > 0) {
+                    // Array to store the results with counts for each answer and additional information
+                    let resultArray = [];
+    
+                    for (const report of reports) {
+                        let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
+                        let question = await questionsModels.findOne({ _id: report.question_id, active: 1 }).select('question_title')
+                        let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
+                        let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
+    
+                        let responseQuery = {
+                            survey_id: report.survey_id,
+                            question_id: report.question_id,
+                        };
+    
+                        if (report.location_id) {
+                            responseQuery.location_id = report.location_id;
+                            location = await locationModels.findOne({ _id: report.location_id, active: 1 }).select('location_name')
+                        }
+    
+                        let responses = await responseModel.find(responseQuery);
+    
+                        let filteredResponses = responses.filter(response => {
+                            let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
+                            let responseDate = new Date(createdAtDateOnly);
+    
+                            // If startDateString is provided, check if the response date is greater than or equal to it
+                            let isAfterStartDate = !startDateString || responseDate >= new Date(startDateString);
+    
+                            // If endDateString is provided, check if the response date is less than or equal to it
+                            let isBeforeEndDate = !endDateString || responseDate <= new Date(endDateString);
+    
+                            return isAfterStartDate && isBeforeEndDate;
                         });
-
-                        // Convert resultMap to an array of objects for easier JSON serialization
-                        let answerArray = Array.from(resultMap.entries()).map(([answer, count]) => ({ answer, count }));
-
-                        // Add additional information like report ID and chart type
-                        resultArray.push({
-                            survey_title: survey.survey_title,
-                            question_title: question.question_title ? question.question_title : "",
-                            reportId: report._id, // assuming report has an _id field
-                            chartType: report.chart_type,
-                            answers: answerArray,
-                            location_name: report.location_id ? location.location_name : ""
-                        });
+    
+                        if (filteredResponses.length > 0) {
+                            // Count the responses for each answer and update the resultMap
+                            let resultMap = new Map();
+                            filteredResponses.forEach(response => {
+                                let answer = response.user_answer;
+                                resultMap.set(answer, (resultMap.get(answer) || 0) + 1);
+                            });
+    
+                            // Convert resultMap to an array of objects for easier JSON serialization
+                            let answerArray = Array.from(resultMap.entries()).map(([answer, count]) => ({ answer, count }));
+    
+                            // Add additional information like report ID and chart type
+                            resultArray.push({
+                                survey_title: survey.survey_title,
+                                question_title: question.question_title ? question.question_title : "",
+                                reportId: report._id, // assuming report has an _id field
+                                chartType: report.chart_type,
+                                answers: answerArray,
+                                location_name: report.location_id ? location.location_name : ""
+                            });
+                        }
+                        else {
+                            // No matching responses, add default response data
+                            resultArray.push({
+                                survey_title: survey.survey_title,
+                                question_title: question.question_title ? question.question_title : "",
+                                reportId: report._id, // assuming report has an _id field
+                                chartType: report.chart_type,
+                                answers: [], // You can customize this as needed
+                                location_name: report.location_id ? location.location_name : ""
+                            });
+                        }
                     }
-                    else {
-                        // No matching responses, add default response data
-                        resultArray.push({
-                            survey_title: survey.survey_title,
-                            question_title: question.question_title ? question.question_title : "",
-                            reportId: report._id, // assuming report has an _id field
-                            chartType: report.chart_type,
-                            answers: [], // You can customize this as needed
-                            location_name: report.location_id ? location.location_name : ""
-                        });
-                    }
+    
+                    res.json({ resultArray, type: 2 });
+                } else {
+                    res.json({ message: "No data found", type: 0 });
                 }
-
-                res.json({ resultArray, type: 2 });
-            } else {
-                res.json({ message: "No data found", type: 0 });
+            }
+            else{
+                res.json({message:"Apologies, but your company currently lacks the necessary access for this operation.",type:0})
             }
         }
 
@@ -211,103 +216,106 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             let notification_count = await notificationModel.countDocuments({ created_by, processed: 0 })
             let survey_count = await surveyModels.countDocuments({ created_by, active: 1 })
             let responses = await responseModel.find()
-
-            if (responses) {
-                // Group responses by user_id
-                const groupedResponses = _.groupBy(responses, 'user_id');
-
-                // Select only the first response for each user_id
-                const uniqueResponses = _.map(groupedResponses, group => group[0]);
-
-                // Transform the unique responses array
-                count = uniqueResponses.length
-
-
+            let company = await companyModels.findOne({_id:req.user.company_id ,dashboard:1 })
+            if(company){
+                if (responses) {
+                    // Group responses by user_id
+                    const groupedResponses = _.groupBy(responses, 'user_id');
+    
+                    // Select only the first response for each user_id
+                    const uniqueResponses = _.map(groupedResponses, group => group[0]);
+    
+                    // Transform the unique responses array
+                    count = uniqueResponses.length
+    
+    
+                }
+                if (reports.length > 0) {
+                    // Array to store the results with counts for each answer and additional information
+                    let resultArray = [];
+    
+                    for (const report of reports) {
+                        let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
+                        let question = await questionsModels.findOne({ _id: report.question_id }).select('question_title')
+                        let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
+                        let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
+    
+                        let responseQuery = {
+                            survey_id: report.survey_id,
+                            question_id: report.question_id,
+                        };
+    
+                        if (report.location_id) {
+                            responseQuery.location_id = report.location_id;
+                            location = await locationModels.findOne({ _id: report.location_id, active: 1 }).select('location_name')
+                        }
+    
+                        let responses = await responseModel.find(responseQuery);
+    
+                        let filteredResponses = responses.filter(response => {
+                            let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
+                            let responseDate = new Date(createdAtDateOnly);
+    
+                            // If startDateString is provided, check if the response date is greater than or equal to it
+                            let isAfterStartDate = !startDateString || responseDate >= new Date(startDateString);
+    
+                            // If endDateString is provided, check if the response date is less than or equal to it
+                            let isBeforeEndDate = !endDateString || responseDate <= new Date(endDateString);
+    
+                            return isAfterStartDate && isBeforeEndDate;
+                        });
+    
+                        if (filteredResponses.length > 0) {
+                            // Count the responses for each answer and update the resultMap
+                            let resultMap = new Map();
+                            filteredResponses.forEach(response => {
+                                let answer = response.user_answer;
+                                resultMap.set(answer, (resultMap.get(answer) || 0) + 1);
+                            });
+    
+                            // Convert resultMap to an array of objects for easier JSON serialization
+                            let answerArray = Array.from(resultMap.entries()).map(([answer, count]) => ({ answer, count }));
+    
+                            // Add additional information like report ID and chart type
+                            resultArray.push({
+                                survey_title: survey.survey_title,
+                                question_title: question.question_title ? question.question_title : "",
+                                reportId: report._id, // assuming report has an _id field
+                                chartType: report.chart_type,
+                                answers: answerArray,
+                                location_name: report.location_id ? location.location_name : ""
+                            });
+                        }
+                        else {
+                            // No matching responses, add default response data
+                            resultArray.push({
+                                survey_title: survey.survey_title,
+                                question_title: question.question_title ? question.question_title : "",
+                                reportId: report._id, // assuming report has an _id field
+                                chartType: report.chart_type,
+                                answers: [], // You can customize this as needed
+                                location_name: report.location_id ? location.location_name : ""
+                            });
+                        }
+                    }
+                    let data = {
+                        notification_count: notification_count,
+                        response_count: count,
+                        survey_count: survey_count,
+                    }
+                    res.json({ message: data, resultArray, type: 2 });
+                }
+                else {
+                    let data = {
+                        notification_count: notification_count,
+                        response_count: count,
+                        survey_count: survey_count,
+                    }
+                    res.json({ message: data, type: 2 });
+                }
             }
-            if (reports.length > 0) {
-                // Array to store the results with counts for each answer and additional information
-                let resultArray = [];
-
-                for (const report of reports) {
-                    let survey = await surveyModels.findOne({ _id: report.survey_id, active: 1 }).select('survey_title')
-                    let question = await questionsModels.findOne({ _id: report.question_id }).select('question_title')
-                    let startDateString = (report.start_date) ? new Date(report.start_date).toISOString().split('T')[0] : null;
-                    let endDateString = (report.end_date) ? new Date(report.end_date).toISOString().split('T')[0] : null;
-
-                    let responseQuery = {
-                        survey_id: report.survey_id,
-                        question_id: report.question_id,
-                    };
-
-                    if (report.location_id) {
-                        responseQuery.location_id = report.location_id;
-                        location = await locationModels.findOne({ _id: report.location_id, active: 1 }).select('location_name')
-                    }
-
-                    let responses = await responseModel.find(responseQuery);
-
-                    let filteredResponses = responses.filter(response => {
-                        let createdAtDateOnly = new Date(response.createdAt).toISOString().split('T')[0];
-                        let responseDate = new Date(createdAtDateOnly);
-
-                        // If startDateString is provided, check if the response date is greater than or equal to it
-                        let isAfterStartDate = !startDateString || responseDate >= new Date(startDateString);
-
-                        // If endDateString is provided, check if the response date is less than or equal to it
-                        let isBeforeEndDate = !endDateString || responseDate <= new Date(endDateString);
-
-                        return isAfterStartDate && isBeforeEndDate;
-                    });
-
-                    if (filteredResponses.length > 0) {
-                        // Count the responses for each answer and update the resultMap
-                        let resultMap = new Map();
-                        filteredResponses.forEach(response => {
-                            let answer = response.user_answer;
-                            resultMap.set(answer, (resultMap.get(answer) || 0) + 1);
-                        });
-
-                        // Convert resultMap to an array of objects for easier JSON serialization
-                        let answerArray = Array.from(resultMap.entries()).map(([answer, count]) => ({ answer, count }));
-
-                        // Add additional information like report ID and chart type
-                        resultArray.push({
-                            survey_title: survey.survey_title,
-                            question_title: question.question_title ? question.question_title : "",
-                            reportId: report._id, // assuming report has an _id field
-                            chartType: report.chart_type,
-                            answers: answerArray,
-                            location_name: report.location_id ? location.location_name : ""
-                        });
-                    }
-                    else {
-                        // No matching responses, add default response data
-                        resultArray.push({
-                            survey_title: survey.survey_title,
-                            question_title: question.question_title ? question.question_title : "",
-                            reportId: report._id, // assuming report has an _id field
-                            chartType: report.chart_type,
-                            answers: [], // You can customize this as needed
-                            location_name: report.location_id ? location.location_name : ""
-                        });
-                    }
-                }
-                let data = {
-                    notification_count: notification_count,
-                    response_count: count,
-                    survey_count: survey_count,
-                }
-                res.json({ message: data, resultArray, type: 2 });
-            }
-
-
-            else {
-                let data = {
-                    notification_count: notification_count,
-                    response_count: count,
-                    survey_count: survey_count,
-                }
-                res.json({ message: data, type: 2 });
+            else{
+                res.json({message:"Apologies, but your company currently lacks the necessary access for this operation.",type:0})
             }
         }
         else {
