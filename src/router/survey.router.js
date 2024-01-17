@@ -393,6 +393,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
               title_font_size: updatedSurveyData.title_font_size || existingSurvey.title_font_size,
               description_font_size: updatedSurveyData.description_font_size || existingSurvey.description_font_size,
               response_message: updatedSurveyData.response_message || existingSurvey.response_message,
+              symbol_size : updatedSurveyData.symbol_size || existingSurvey.symbol_size
             },
           }
         );
