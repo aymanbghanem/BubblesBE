@@ -67,7 +67,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                             department_id: department_id,
                             company_id: company_id,
                             user_id,
-                            user_answer: user_answer[0],
+                            user_answer: user_answer[0]? user_answer[0] : "No answer",
                             question_type: question_type.question_type
                         });
                     } else if (question_type.question_type === 'Multiple choice') {
@@ -90,7 +90,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                         user_id,
                                         department_id: department_id,
                                         company_id: company_id,
-                                        user_answer: selectedAnswer,
+                                        user_answer: selectedAnswer ? selectedAnswer :"No answer" ,
                                         question_type: question_type.question_type
                                     });
                                 }
