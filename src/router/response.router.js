@@ -143,7 +143,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                         });
 
                                     let email =   await sendNotificationEmail(notify.reader_name,notify.reader_email,"User Response Alert"
-                                        ,question_title.question_title,location_name,individualAnswer)
+                                        ,question_title.question_title,location_name.location_name,individualAnswer)
 
                                     }
                                 }
