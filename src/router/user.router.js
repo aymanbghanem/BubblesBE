@@ -734,7 +734,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
 
              let user_name = existingUser.user_name
             response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
-            res.json({ message: "Password successful updated",type:2 })
+            res.json({ message: "Password successful updated",type:1 })
         }
         else {
             res.json({ message: "User does not exist", type: 0 });
