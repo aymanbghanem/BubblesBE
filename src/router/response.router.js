@@ -114,12 +114,16 @@ router.post('/api/v1/createResponse', async (req, res) => {
                         // Check if the question is in existingNotify
                         const isQuestionInNotify = notify.question_id.equals(responseRecord.question_id);
                         let location_id = notify.location_id
-                        let location_name = "All locations"
+                       
                         if (isQuestionInNotify) {
                             let question_title = await questionModel.findOne({_id:question_id}).select('question_title -_id')
                             if(location_id!=null){
                                  location_name = await locationModels.findOne({_id:location_id}).select('location_name -_id')
                                  location_name = location_name.location_name
+                            }
+                            else{
+                                location_name = await locationModels.findOne({_id:locationExist._id}).select('location_name -_id')
+                                location_name = location_name.location_name
                             }
                             
                             
