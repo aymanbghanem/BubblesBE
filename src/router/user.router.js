@@ -83,7 +83,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
 
                     const user = await userModels.create({
                         user_name: user_name,
-                        password: newPassword,
+                        password: hashedPassword,
                         email_address: email_address,
                         company_id: company._id,
                         user_role: "owner",
