@@ -2,20 +2,24 @@
 const nodemailer = require("nodemailer");
 //reset your password
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: '10.100.26.11', // Updated SMTP server for Jawwal
+  port: 25,
+  secure: false, // Disabling TLS
+  tls: {
+    // Do not attempt to upgrade non-secure connections to secure
+    rejectUnauthorized: false,
+  },
   auth: {
-    user: "misksawallha@gmail.com",
-    pass: "fmyl ixbz pcik qsdb", 
+    user: "digitalfeedback@jawwal.ps",
   },
 });
 
-async function sendEmail(user_name,to, subject,password,message) {
+async function sendEmail(user_name, to, subject, password, message) {
   const info = await transporter.sendMail({
-    from: `"Digital Feed Back "`,
+    from: `"digitalfeedback@jawwal.ps"`,
     to: to,
     subject: subject,
-    // text: password,
-   html: `
+    html: `
    <!DOCTYPE html>
    <html lang="en">
 
@@ -27,22 +31,24 @@ async function sendEmail(user_name,to, subject,password,message) {
    </head>
 
    <body>
-     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
-       <h1 style="color: #333;">Digital Feed Back 👋</h1>
-       <p style="color: #555;">Dear ${user_name},</p>
-       <p style="color: #555;">This is an email ${message}.</p>
-       <p style="color: #555;">Your new password : <strong>${password}</strong></p>
-       <p style="color: #555;">Thank you for your attention!</p>
-       <p style="color: #555;">Best regards,</p>
-       <p style="color: #333;">Digital support</p>
-     </div>
+   <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
+   <h1 style="color: #333; text-align: center;">🌐 Digital Feedback</h1>
+   <p style=" font-size: 16px;">Dear ${user_name},</p>
+   <p style="font-size: 16px;">We hope this email finds you well.</p>
+   <p style="font-size: 16px;">This email ${message}</p>
+   <p style="font-size: 16px;">Your password: <strong>${password}</strong></p>
+   <p style="font-size: 16px;">Thank you for your attention!</p>
+   <p style="font-size: 16px;">Best regards,</p>
+   <p style="font-size: 18px; font-weight: bold; text-align: center;">Digital Support Team</p>
+</div>
+
    </body>
 
    </html>
  `,
   });
 
-  return(info.messageId);
+  return info.messageId;
 }
 
-module.exports = sendEmail
+module.exports = sendEmail;

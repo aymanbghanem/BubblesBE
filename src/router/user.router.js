@@ -78,8 +78,8 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 });
                 }
                 else {
-                    //  await hashPassword(newPassword, async (hash) => {
-                    // hashedPassword = hash;
+                     await hashPassword(newPassword, async (hash) => {
+                    hashedPassword = hash;
 
                     const user = await userModels.create({
                         user_name: user_name,
@@ -90,12 +90,12 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                         token: token,
                     });
 
-                    //  await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
+                    await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
                     return res.json({
                         message: "New owner added successfully",
                         type:1
                     });
-                    //  })
+                     })
                 }
             }
             else {
@@ -103,8 +103,8 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             }
         }
         else if (department_name && role == 'owner') {
-            // await hashPassword(newPassword, async (hash) => {
-            //  hashedPassword = hash;
+            await hashPassword(newPassword, async (hash) => {
+             hashedPassword = hash;
 
             const department = await departmentModel.findOne({
                 department_name: { $regex: new RegExp("^" + department_name, "i") },
@@ -119,7 +119,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             // Continue with the user creation
             const userParams = {
                 user_name: user_name,
-                password: newPassword,
+                password: hashedPassword,
                 email_address: email_address,
                 user_role: "admin",
                 token: token,
@@ -131,19 +131,17 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 department_id: department._id,
             });
 
+            await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
             return res.json({
                 message: "New admin added successfully ",
                 type:1
             });
-
-            // await sendEmail(user_name,email_address, "Account password", newPassword,"your account password")
-
-            //  })
+             })
         }
         else if (role === 'admin') {
 
-            //await hashPassword(newPassword, async (hash) => {
-            // hashedPassword = hash;
+            await hashPassword(newPassword, async (hash) => {
+            hashedPassword = hash;
 
             const department = await departmentModels.findOne({
                 _id:req.user.department_id,
@@ -158,7 +156,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             // Set user parameters
             const userParams = {
                 user_name: user_name,
-                password: newPassword,
+                password: hashedPassword,
                 email_address: email_address,
                 user_role: 'survey-reader',
                 token: token,
@@ -194,12 +192,12 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 }
 
             }
-
+            await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
             return res.json({
                 message: "New reader added successfully",
                 type:1
             });
-            //  });
+             });
 
         }
         else {
@@ -217,7 +215,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         let newPassword = await generateMixedID()
 
         if (!validateEmail(email_address)) {
-            return res.json({ message: "Invalid email address" ,type:0});
+            return res.json({ message: "Invalid email address", type: 0 });
         }
 
         let hashedPassword;
@@ -227,29 +225,34 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         });
 
         if (existingUser) {
-            res.json({ message: "Email address or username already exists", type: 0 });
+            return res.json({ message: "Email address or username already exists", type: 0 });
         } else {
-
             await hashPassword(newPassword, async (hash) => {
                 hashedPassword = hash;
-                //,{ expiresIn: '10m' }
                 let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
                 let new_user = await userModels.create({
                     user_name: user_name,
                     user_role: 'superadmin',
                     email_address: email_address,
-                    password: newPassword,
+                    password: hashedPassword,
                     token: token,
                 });
-                // await sendEmail(user_name,email_address, "Account password", newPassword,"for your account password")
 
-                res.json({  message: "successfully added",type:1 });
+                try {
+                    await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                    res.json({ message: "successfully added", type: 1 });
+                } catch (emailError) {
+                    // Handle the email sending error
+                    console.error("Email sending error:", emailError);
+                    res.json({ message: "successfully added, but email not sent", type: 1 });
+                }
             });
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });
     }
 });
+
 
 router.get('/api/v1/userById', async (req, res) => {
     try {
@@ -718,7 +721,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
     try {
         let { email_address } = req.body
         let newPassword = await generateMixedID()
-        //console.log(newPassword)
+        console.log(newPassword)
         let response;
         let existingUser = await userModels.findOne({
             email_address: email_address
@@ -726,12 +729,12 @@ router.post('/api/v1/resetPassword', async (req, res) => {
         if (existingUser) {
             await hashPassword(newPassword, async (hash) => {
                 hashedPassword = hash;
-                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: newPassword }, { new: true })
+                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword }, { new: true })
             })
 
              let user_name = existingUser.user_name
-            //  response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
-            res.json({ message: response, existingUser,type:2 })
+            response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
+            res.json({ message: "Password successful updated",type:2 })
         }
         else {
             res.json({ message: "User does not exist", type: 0 });

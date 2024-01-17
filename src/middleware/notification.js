@@ -2,16 +2,22 @@
 const nodemailer = require("nodemailer");
 //reset your password
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: '10.100.26.11', // Updated SMTP server for Jawwal
+  port: 25,
+  secure: false, // Disabling TLS
+  tls: {
+    // Do not attempt to upgrade non-secure connections to secure
+    rejectUnauthorized: false,
+  },
   auth: {
-    user: "misksawallha@gmail.com",
-    pass: "fmyl ixbz pcik qsdb", 
+    user: "digitalfeedback@jawwal.ps",
   },
 });
 
+
 async function sendNotificationEmail(user_name,to, subject,question,location,answer) {
   const info = await transporter.sendMail({
-    from: `"Digital Feed Back "`,
+    from: `"digitalfeedback@jawwal.ps"`,
     to: to,
     subject: subject,
     // text: password,
@@ -26,19 +32,34 @@ async function sendNotificationEmail(user_name,to, subject,question,location,ans
      <title>Email Template</title>
    </head>
 
-   <body>
-     <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
-       <h1 style="color: #333;">Digital Feed Back 👋</h1>
-       <p style="color: #555;">Dear ${user_name},</p>
-       <p style="color: #555;">User has answered the following question:</p>
-       <p style="color: #555;"><strong>${question}</strong></p>
-        ${location != null ? `For this location ${location} `:''}
-        ${answer != null ? `For this answer ${answer}`:''}
-       <p style="color: #555;">Thank you for your attention!</p>
-       <p style="color: #555;">Best regards,</p>
-       <p style="color: #333;">Digital support</p>
-     </div>
-   </body>
+   <body  padding: 20px; ">
+
+   <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; padding: 20px;">
+ 
+     <h1 style="color: #333; text-align: center;">🌐 Digital Feedback</h1>
+ 
+     <p style="font-size: 16px;">Dear ${user_name},</p>
+ 
+     <p style="font-size: 16px;">We hope this email finds you well.</p>
+ 
+     <p style="font-size: 16px;">User has answered the following question:</p>
+ 
+     <p style="font-size: 16px;"><strong>${question}</strong></p>
+ 
+     ${location != null ? `<p style="font-size: 16px;">For this location: <strong>${location}</strong></p>` : ''}
+     
+     ${answer != null ? `<p style="font-size: 16px;">with answer: <strong>${answer}</strong></p>` : ''}
+ 
+     <p style="font-size: 16px;">Thank you for your attention!</p>
+ 
+     <p style="font-size: 16px;">Best regards,</p>
+ 
+     <p style="font-size: 18px; font-weight: bold; text-align: center;">Digital Support Team</p>
+ 
+   </div>
+ 
+ </body>
+ 
 
    </html>
  `,

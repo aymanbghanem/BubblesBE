@@ -18,20 +18,20 @@ router.post('/api/v1/login', async (req, res) => {
     })
 
     if (existingUser) {
-     // compareHashedPassword(password, existingUser.password,async (err, result) => {
-      //  if (err) {
-          //res.json({ message: "Incorrect password" });
-      //  } else if (result) {
+     compareHashedPassword(password, existingUser.password,async (err, result) => {
+       if (err) {
+          res.json({ message: "Incorrect password" });
+       } else if (result) {
         //,{ expiresIn: '10m' }
           let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
           let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
     
           token=user.token,
           res.json({ message:token , type:2 });
-       // } else {
-        //  res.json({ message: "Incorrect password" });
-       // }
-   //   });
+       } else {
+         res.json({ message: "Incorrect password" });
+       }
+     });
     } else {
       res.json({ message: "Incorrect username or user is inactive.",type:0 });
     }
