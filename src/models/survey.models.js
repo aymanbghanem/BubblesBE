@@ -58,6 +58,10 @@ const surveySchema = new Schema({
     response_message:{
         type:String,
         default:""
+    },
+    deleted:{
+        type: Number,
+        default: 0
     }
 
 }, { timestamps: true })

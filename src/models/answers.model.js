@@ -22,7 +22,8 @@ const answerSchema = new Schema({
     survey_id:{
         type:Schema.Types.ObjectId,
         ref : 'survey'
-    }
+    },
+
     
 }, { timestamps: true })
 

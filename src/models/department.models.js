@@ -13,6 +13,10 @@ const departmentSchema = new Schema({
         type:Schema.Types.ObjectId,
         ref:'company'
     },
+    deleted:{
+        type: Number,
+        default: 0
+    }
 }, { timestamps: true })
 
 module.exports = model('department', departmentSchema)

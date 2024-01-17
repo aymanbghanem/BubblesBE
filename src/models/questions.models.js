@@ -44,7 +44,7 @@ const questionsSchema = new Schema({
         question_title: String,
         parent_dummy_id:Number // Add this field to match your code
     }],
- 
+
 }, { timestamps: true });
 
 module.exports = model('question', questionsSchema);
