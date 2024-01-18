@@ -39,7 +39,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         const role = req.user.user_role.toLowerCase();
 
         let newPassword = await generateMixedID()
-
+        console.log(newPassword)
         let { user_name, email_address, company_name, department_name, survey } = req.body;
         user_name = user_name.toLowerCase()
         if (!config.roles.includes(role)) {
@@ -60,7 +60,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             return res.json({ message: "The email address or username already exists",type:0 });
         }
 
-        let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
+        //let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
 
         if (role == "superadmin") {
             // check if the company is exists
@@ -87,7 +87,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                         email_address: email_address,
                         company_id: company._id,
                         user_role: "owner",
-                        token: token,
+                        token: null,
                     });
 
                     await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
@@ -122,7 +122,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 password: hashedPassword,
                 email_address: email_address,
                 user_role: "admin",
-                token: token,
+                token: null,
             };
 
             const user = await userModels.create({
@@ -159,7 +159,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 password: hashedPassword,
                 email_address: email_address,
                 user_role: 'survey-reader',
-                token: token,
+                token: null,
                 created_by: req.user._id
             };
             // Create a new user

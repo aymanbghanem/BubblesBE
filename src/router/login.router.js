@@ -36,9 +36,8 @@ router.post('/api/v1/login', async (req, res) => {
       res.json({ message: "Incorrect username or user is inactive.",type:0 });
     }
   } catch (error) {
-    // Handle errors
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
+ 
+    res.status(500).json({ message: "Internal Server Error" +error});
   }
 });
 

@@ -57,74 +57,77 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
             }
         }
         else if (role === 'admin') {
-            let notifications = await notificationModel.find({
-                created_by: id,
-                active: 1,
-                processed:0
-            }).populate([
-                {
-                    path: 'response_id',
-                    populate: [
-                        {
-                            path: 'location_id',
-                            model: 'location'
-                        },
-                        {
-                            path: 'survey_id',
-                            model: 'survey'
-                        }
-                    ]
-                },
-                {
-                    path: 'survey_reader_id',
-                    model: 'user'
-                }
-            ]);
-        
-            if (notifications.length > 0) {
-                // Initialize groupedData to store results by survey reader and user_id
-                const groupedData = notifications.reduce((result, notification) => {
-                    const { response_id, survey_reader_id, createdAt,processed } = notification;
-                    const {user_answer, survey_id, location_id, user_id } = response_id;
-        
-                    if (survey_reader_id) {
-                        const readerId = survey_reader_id._id.toString();
-                        const key = `${readerId}-${user_id}`; // Create a unique key based on reader and user_id
-        
-                        result[key] = result[key] || {
-                            readerName: survey_reader_id.user_name,
-                            processed,
-                            survey_title: survey_id.survey_title,
-                            location_name: location_id.location_name,
-                            createdAt: createdAt,
-                            user_id: user_id,
-                        };    
+         
+                // Find notifications based on the specified criteria
+                let notifications = await notificationModel.find({
+                    created_by: id,
+                    active: 1,
+                    processed: 0
+                }).populate([
+                    {
+                        path: 'response_id',
+                        populate: [
+                            {
+                                path: 'location_id',
+                                model: 'location'
+                            },
+                            {
+                                path: 'survey_id',
+                                model: 'survey'
+                            }
+                        ]
+                    },
+                    {
+                        path: 'survey_reader_id',
+                        model: 'user'
                     }
-                    return result;
-                }, {});
+                ]);
         
-                const responseData = Object.keys(groupedData).map(key => {
-                    const reader = groupedData[key];
+                if (notifications.length > 0) {
+                    // Initialize groupedData to store results by survey reader and user_id
+                    const groupedData = notifications.reduce((result, notification) => {
+                        const { response_id, survey_reader_id, createdAt, processed, _id } = notification;
+                        const { user_answer, survey_id, location_id, user_id } = response_id;
         
-                    return {
+                        if (survey_reader_id) {
+                            const readerId = survey_reader_id._id.toString();
+                            const key = `${readerId}-${user_id}`; // Create a unique key based on reader and user_id
+        
+                            result[key] = result[key] || {
+                                readerName: survey_reader_id.user_name,
+                                processed,
+                                survey_title: survey_id.survey_title,
+                                location_name: location_id.location_name,
+                                createdAt: createdAt,
+                                user_id: user_id,
+                                notification_id: _id
+                            };
+                        }
+                        return result;
+                    }, {});
+        
+                    // Map the groupedData to the desired responseData format
+                    const responseData = Object.values(groupedData).map(reader => ({
+                        notification_id: reader.notification_id,
                         survey_title: reader.survey_title,
                         reader_name: reader.readerName,
-                        processed : reader.processed,
+                        processed: reader.processed,
                         createdAt: reader.createdAt,
                         location_name: reader.location_name,
                         user_id: reader.user_id
-                    };
-                });
+                    }));
         
-                res.json({message:responseData,type:2});
-            } else {
-                res.json({ message: "No data found",type:0});
-            }
+                    res.json({ message: responseData, type: 2 });
+                } else {
+                    res.json({ message: "No data found", type: 0 });
+                }
         }
-         else {
+
+        else {
             res.json({ message: "Sorry, you are unauthorized",type:0});
         }
-    } catch (error) {
+    } 
+    catch (error) {
         res.json({ message: "Catch error " + error });
     }
 });
