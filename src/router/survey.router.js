@@ -274,12 +274,13 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
     });
 
     const questionTypeLowerCase = question_type.toLowerCase();
-
-    if (["text", "Single selection", "Multiple selection", "range"].includes(questionTypeLowerCase)) {
+    console.log(questionTypeLowerCase)
+    if (["text", "single selection", "multiple selection", "range"].includes(questionTypeLowerCase)) {
+     
       const questionController = await QuestionController.findOne({
         question_type: new RegExp(`^${question_type}$`, 'i'),
       });
-
+      
       if (!questionController) {
         throw new Error(`Question type "${question_type}" not found in question_controller`);
       }
@@ -711,6 +712,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
     let role = req.user.user_role;
     let survey_id = req.headers['survey_id'];
     let active = req.headers['active']
+    
     //  let { active } = req.body;
     let department_id = req.user.department_id;
 
@@ -720,7 +722,10 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
       if (role == "admin") {
 
         if (survey) {
-          let deleteSurvey = await surveyModel.findOneAndUpdate({ _id: survey_id, company_id: req.user.company_id }, { active: active,deleted:!active });
+          let deleteSurvey = await surveyModel.findOneAndUpdate(
+            { _id: survey_id, company_id: req.user.company_id },
+            { active: active, deleted: !(parseInt(active)) }
+          );
           let deleteLocations = await Location.updateMany({ survey_id: survey_id }, { active: active });
           let deleteQuestions = await Question.updateMany({ survey_id: survey_id }, { active: active });
           let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
