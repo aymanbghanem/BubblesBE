@@ -90,11 +90,14 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                         token: null,
                     });
 
-                    await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
-                    return res.json({
-                        message: "New owner added successfully",
-                        type:1
-                    });
+                    try {
+                        await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                        res.json({ message: "New owner added successfully", type: 1 });
+                    } catch (emailError) {
+                        // Handle the email sending error
+                        res.json({ message: "successfully added, but email not sent", type: 1 });
+                    }
+
                     // })
                 }
             }
@@ -131,11 +134,13 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 department_id: department._id,
             });
 
-            await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
-            return res.json({
-                message: "New admin added successfully ",
-                type:1
-            });
+            try {
+                await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                res.json({ message: "New admin added successfully", type: 1 });
+            } catch (emailError) {
+                // Handle the email sending error
+                res.json({ message: "successfully added, but email not sent", type: 1 });
+            }
             // })
         }
         else if (role === 'admin') {
@@ -192,11 +197,13 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 }
 
             }
-            await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
-            return res.json({
-                message: "New reader added successfully",
-                type:1
-            });
+            try {
+                await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                res.json({ message: "New reader added successfully", type: 1 });
+            } catch (emailError) {
+                // Handle the email sending error
+                res.json({ message: "successfully added, but email not sent", type: 1 });
+            }
            //  });
 
         }
@@ -243,7 +250,6 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     res.json({ message: "successfully added", type: 1 });
                 } catch (emailError) {
                     // Handle the email sending error
-                    console.error("Email sending error:", emailError);
                     res.json({ message: "successfully added, but email not sent", type: 1 });
                 }
            // });

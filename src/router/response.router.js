@@ -149,7 +149,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                             survey_id:notify.survey_id
                                             // Add other properties as needed
                                         });
-
+                                        
                                     let email =   await sendNotificationEmail(notify.reader_name,notify.reader_email,"User Response Alert"
                                         ,question_title.question_title,location_name,individualAnswer)
 
