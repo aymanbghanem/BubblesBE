@@ -23,4 +23,13 @@ SECRET_HASH_KEY = Digital_Feedback_key
 SALT_ROUND = 10
 NODE_MAILER_PASSWORD = fmyl ixbz pcik qsdb
 
+
+PORT = 2107
+DB_URL = mongodb://127.0.0.1:27017/Digital_Feedback
+TOKEN_KEY = Digital_Feedback_token
+BEARER_TOKEN_KEY = Digital_Feedback_token@
+SECRET_HASH_KEY = Digital_Feedback_key
+SALT_ROUND = 10
+NODE_MAILER_EMAIL = misksawallha@gmail.com
+NODE_MAILER_PASSWORD = fmyl ixbz pcik qsdb
 */

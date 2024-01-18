@@ -733,10 +733,10 @@ router.post('/api/v1/resetPassword', async (req, res) => {
             email_address: email_address
         })
         if (existingUser) {
-            await hashPassword(newPassword, async (hash) => {
-                hashedPassword = hash;
-                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword }, { new: true })
-            })
+          //  await hashPassword(newPassword, async (hash) => {
+              //  hashedPassword = hash;
+                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: newPassword }, { new: true })
+         //   })
 
              let user_name = existingUser.user_name
             response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
