@@ -113,7 +113,7 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let created_by = req.user._id
-        let { survey_id, location_id, surveyReaders_id, question_id, answer_id } = req.body;
+        let { survey_id, location_id, surveyReaders_id, question_id, answer_id,answer_text } = req.body;
         let existLocation;
         let  existAnswer;
         let company_id = req.user.company_id
@@ -143,7 +143,7 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
                         survey_id: existSurvey._id,
                         question_id: existQuestion._id,
                         answer_id: answer_id ?existAnswer._id:null ,
-                        answer_text : answer_id? existAnswer.answer:null,
+                        answer_text : (answer_id && answer_text)?existAnswer.answer:answer_text,
                         survey_reader_id: surveyReaders_id,
                         created_by,
                         reader_email:readerData.email_address,
