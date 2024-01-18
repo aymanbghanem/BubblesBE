@@ -362,7 +362,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
         if (role === 'admin' || role == 'survey-reader') {
         let department_id = req.user.department_id;
 
-        let responses = await responseModel.find({ department_id, active: 1 }).populate([
+        let responses = await responseModel.find({ department_id:"65a4f7840666931697fb9d66", active: 1 }).populate([
             {
                 path: 'survey_id',
                 model: 'survey',
@@ -378,7 +378,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
                 model: 'location',
                 select: 'location_name -_id'
             },
-        ]).select('user_answer createdAt question_type active user_id');
+        ]).select('user_answer createdAt question_type active user_id user_number');
 
         if (responses && responses.length > 0) {
             const workbook = new ExcelJS.Workbook();
@@ -393,6 +393,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
                 { header: 'Question type', key: 'question_type', width: 20 },
                 { header: 'User answer', key: 'user_answer', width: 30 },
                 { header: 'Created at', key: 'createdAt', width: 20 },
+                { header: 'User number', key: 'user_number', width: 25 },
                 { header: 'User ID', key: 'user_id', width: 40 },
             ];
 
@@ -410,6 +411,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
                     location_name: response.location_id.location_name,
                     createdAt: response.createdAt,
                     user_id: response.user_id,
+                    user_number : response.user_number,
                     user_answer: response.user_answer,
                     question_title: response.question_id.question_title,
                     question_type: response.question_type
@@ -446,7 +448,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
         else {
             res.json({ message: "No data found", type: 0 });
         }
-   }
+  }
     } catch (error) {
         res.json({ message: "Catch error " + error });
     }

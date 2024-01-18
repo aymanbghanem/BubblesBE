@@ -196,7 +196,7 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                     model: 'location',
                     select: 'location_name -_id'
                 },
-            ]).select('user_answer createdAt active user_id');
+            ]).select('user_answer createdAt active user_id user_number');
 
             if (responses.length > 0) {
                 // Group responses by user_id
@@ -211,7 +211,8 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                     survey_title: response.survey_id.survey_title,
                     location_name: response.location_id.location_name,
                     createdAt: response.createdAt,
-                    user_id: response.user_id
+                    user_id: response.user_id,
+                    user_number:response.user_number
                 }));
 
                 res.json({ message: formattedResponses ,type:2 });
@@ -244,7 +245,7 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                         model: 'location',
                         select: 'location_name -_id'
                     },
-                ]).select('user_answer createdAt active user_id');
+                ]).select('user_answer createdAt active user_id user_number');
                 if (responses) {
                     // Group responses by user_id
                     const groupedResponses = _.groupBy(responses, 'user_id');
@@ -259,7 +260,8 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
                         location_name: response.location_id.location_name,
                         createdAt: response.createdAt,
                         user_id: response.user_id,
-                        user_answer: response.user_answer
+                        user_answer: response.user_answer,
+                        user_number: response.user_number
                     }));
     
                     res.json({ message: formattedResponses,type:2});
