@@ -275,7 +275,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
 
     const questionTypeLowerCase = question_type.toLowerCase();
 
-    if (["text", "single choice", "multiple choice", "range"].includes(questionTypeLowerCase)) {
+    if (["text", "Single selection", "Multiple selection", "range"].includes(questionTypeLowerCase)) {
       const questionController = await QuestionController.findOne({
         question_type: new RegExp(`^${question_type}$`, 'i'),
       });
@@ -612,7 +612,7 @@ async function checkDependencySatisfaction(dependency, answeredQuestions, result
       if (type && type.question_type) {
         let parentQuestionType = type.question_type;
 
-        if (parentQuestionType === 'Single choice' || parentQuestionType === 'Multiple choice') {
+        if (parentQuestionType === 'Single selection' || parentQuestionType === 'Multiple selection') {
           return matchingAnsweredQuestion.answers.includes(relatedAnswer);
         } else if (parentQuestionType === 'Range') {
           let threshold = await Answer.findOne({ _id: parentQuestion.answers[0] }).select('answer -_id');

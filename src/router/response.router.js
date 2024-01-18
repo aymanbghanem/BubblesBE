@@ -57,7 +57,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
 
                     const { question_type } = questionType;
 
-                    if (['text', 'range', 'Range', 'Text','Single choice'].includes(question_type.question_type)) {
+                    if (['text', 'range', 'Range', 'Text','Single selection'].includes(question_type.question_type)) {
                         // If the question type is 'text' or 'range', store the response directly
                         responseRecord =  await responseModel.create({
                             survey_id,
@@ -70,7 +70,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
                             user_answer: user_answer[0]? user_answer[0] : "No answer",
                             question_type: question_type.question_type
                         });
-                    } else if (question_type.question_type === 'Multiple choice') {
+                    } else if (question_type.question_type === 'Multiple selection') {
                         if (Array.isArray(user_answer)) {
                             // If it's an array of answers, iterate over each selected answer
                             for (const selectedAnswer of user_answer) {

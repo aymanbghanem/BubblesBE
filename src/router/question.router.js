@@ -53,8 +53,8 @@ async function processAndStoreQuestions(questions) {
             case "text":
                 // No answers, dependencies, or child questions for text questions
                 break;
-            case "Single choice":
-            case "Multiple choice":
+            case "Single selection":
+            case "Multiple selection":
             case "Range":
                 // Process and store answers only for single-choice, multiple-choice, and range questions
                 const answerIdsAndTexts = await processAndStoreAnswers(answers, newQuestion._id, question_type);
