@@ -111,7 +111,7 @@ router.get('/api/v1/getURL', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/excel', auth, upload.single('file'), async (req, res) => {
+router.get('/api/v1/excelBuilder', auth, upload.single('file'), async (req, res) => {
     try {
         let id = req.user._id;
         let role = req.user.user_role;
