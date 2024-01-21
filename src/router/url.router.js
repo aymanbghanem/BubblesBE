@@ -111,7 +111,7 @@ router.get('/api/v1/getURL', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/excelBuilder', auth, upload.single('file'), async (req, res) => {
+router.post('/api/v1/excelBuilder', auth, upload.single('file'), async (req, res) => {
     try {
         let id = req.user._id;
         let role = req.user.user_role;
@@ -125,7 +125,7 @@ router.get('/api/v1/excelBuilder', auth, upload.single('file'), async (req, res)
                 const file = req.file;
 
                 if (!file) {
-                    return res.status(400).json({ message: 'No file uploaded', type: 0 });
+                    return res.json({ message: 'No file uploaded', type: 0 });
                 }
 
                 // Read the Excel file
