@@ -11,12 +11,12 @@ const companySchema = new Schema({
     },
     company_logo:String,
 
-        // basic:{
-        //     type: Number,
-        //     default:1,
-        //     min:[0,'invalid number'],
-        //     max:[1,'invalid number']
-        // },
+        url_builder:{
+            type: Number,
+            default:0,
+            min:[0,'invalid number'],
+            max:[1,'invalid number']
+        },
         dashboard:{
             type: Number,
             default:0,

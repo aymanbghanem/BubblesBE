@@ -25,7 +25,7 @@ require('dotenv').config()
 router.post('/api/v1/addCompany', auth, async (req, res) => {
     try {
         if (req.user.user_role === 'superadmin') {
-            const { company_name, dashboard,notifier } = req.body;
+            const { company_name, dashboard,notifier,url_builder } = req.body;
 
             const caseInsensitiveRegex = new RegExp(`^${company_name}$`, 'i');
 
@@ -38,7 +38,8 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
                 const newCompany = await companyModel.create({
                     company_name: company_name,
                     dashboard:dashboard ? dashboard:0,
-                    notifier:notifier?notifier:0
+                    notifier:notifier?notifier:0,
+                    url_builder:url_builder?url_builder:0
                 });
 
                 res.json({ message: `Successfully added company '${company_name}'`,type:1});

@@ -333,7 +333,8 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
             };
             let companyInfo={
                 dashboard:user.company_id.dashboard ?user.company_id.dashboard :0 ,
-                notifier : user.company_id.notifier ? user.company_id.notifier: 0
+                notifier : user.company_id.notifier ? user.company_id.notifier: 0,
+                url_builder : user.company_id.url_builder ? user.company_id.url_builder:0
             }
             res.json({ message: response,companyInfo,type:2});
         }
