@@ -12,7 +12,6 @@ const Location = require("../../src/models/location.models");
 const locationModel = require("../../src/models/location.models");
 const questionsModels = require("../models/questions.models");
 const Response = require("../models/response.model")
-const qrModel = require("../models/qr.model");
 const mongoose = require('mongoose');
 const questions_controllerModels = require("../models/questions_controller.models");
 const responseModel = require("../models/response.model");

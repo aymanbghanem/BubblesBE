@@ -5,7 +5,6 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
-    
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "exceljs": "^4.4.0",
@@ -19,6 +18,7 @@
     "nanoid": "^5.0.3",
     "nodemailer": "^6.9.7",
     "qrcode": "^1.5.3",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "xlsx": "^0.18.5"
   }
 }

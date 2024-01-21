@@ -1,13 +1,13 @@
 const { Schema, model } = require('mongoose')
 
-const qrSchema = new Schema({
+const urlSchema = new Schema({
     active: {
         type: Number,
         default: 1
     },
     location_id: {
         type: Schema.Types.ObjectId,
-        ref: 'survey'
+        ref: 'location'
     },
     survey_id: {
         type: Schema.Types.ObjectId,
@@ -15,8 +15,12 @@ const qrSchema = new Schema({
     },
     link:{
         type:String
+    },
+    created_by: {
+        type: Schema.Types.ObjectId,
+        ref: 'user'
     }
 
 }, { timestamps: true })
 
-module.exports = model('QR', qrSchema)
+module.exports = model('url', urlSchema)

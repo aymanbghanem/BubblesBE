@@ -11,7 +11,6 @@ const departmentModel = require('../models/department.models')
 const surveyReaderModel = require('../models/surveyReader.model')
 const surveyModel = require('../models/survey.models')
 const questionModel = require("../models/questions.models");
-const qrModel = require("../models/qr.model");
 const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
@@ -94,7 +93,6 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
                     questionModel.updateMany({ survey_id: survey._id }, { active:active }),
                     Answer.updateMany({ survey_id: survey._id }, { active:active }),
                     locationModel.updateMany({ survey_id: survey._id }, { active:active }),
-                    qrModel.updateMany({ survey_id: survey._id }, { active:active }),
                    // responseModel.updateMany({ survey_id: survey._id }, { active:active }),
                     notificationModel.updateMany({ survey_id: survey._id }, { active:active }),
                     notifyModels.updateMany({ survey_id: survey._id }, { active:active })
