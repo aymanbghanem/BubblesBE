@@ -18,6 +18,7 @@ const responseModel = require("../models/response.model");
 const notificationModel = require("../models/notification.model");
 const notifyModels = require("../models/notify.models");
 const reportsModel = require("../models/reports.model");
+const urlModel = require("../models/url.model");
 require('dotenv').config()
 
 
@@ -96,7 +97,8 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
                     locationModel.updateMany({ survey_id: survey._id }, { active:active }),
                    // responseModel.updateMany({ survey_id: survey._id }, { active:active }),
                     notificationModel.updateMany({ survey_id: survey._id }, { active:active }),
-                    notifyModels.updateMany({ survey_id: survey._id }, { active:active })
+                    notifyModels.updateMany({ survey_id: survey._id }, { active:active }),
+                    urlModel.updateMany({survey_id: survey._id }, { active:active })
                 ]);
             }
 
@@ -143,12 +145,20 @@ router.put('/api/v1/updateCompanyAccess',auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         let company_id = req.headers['company_id']
-        let {dashboard,notifier} = req.body
+        let {dashboard,notifier,url_builder} = req.body
         if(role == 'superadmin'){
             let company = await companyModel.findOne({_id:company_id,active:1})
             if(company){
       
-
+                if(url_builder==0 || url_builder == 1){
+                    let surveys = await surveyModel.find({ company_id: company_id});
+                    for (const survey of surveys) {
+                       
+                        await Promise.all([
+                            urlModel.updateMany({ survey_id: survey._id }, { active:url_builder }),
+                        ]);
+                    }
+                }
                  if(dashboard == 0 || dashboard == 1 ){
                 
                     let report = await reportsModel.updateMany({ company_id: company_id}, {active:dashboard})

@@ -13,6 +13,7 @@ const questionModel = require("../models/questions.models");
 const responseModel = require("../models/response.model");
 const notificationModel = require("../models/notification.model");
 const notifyModels = require("../models/notify.models");
+const urlModel = require("../models/url.model");
 const {hashPassword,compareHashedPassword} = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
@@ -112,7 +113,7 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
                         locationModel.updateMany({ survey_id: survey._id }, { active: active }),
                         notificationModel.updateMany({ survey_id: survey._id }, { active:active }),
                         notifyModels.updateMany({ survey_id: survey._id }, { active:active }),
-
+                        urlModel.updateMany({survey_id: survey._id }, { active:active })
                     ]);
                 }
     

@@ -13,7 +13,7 @@ const auth = async (req, res, next) => {
 
     jwt.verify(token, process.env.TOKEN_KEY, async function (err, decode) {
       if (err) {
-        res.json({ message: "Invalid token" });
+        res.json({ message: "Invalid token",type:0 });
       } else {
         
         const user = await User.findOne({
@@ -21,7 +21,7 @@ const auth = async (req, res, next) => {
           active: 1,
         });
         if (!user) {
-          res.json("user authentication failed ");
+          res.json({message:"user authentication failed",type:0});
         }
         else{
           req.user = user;
@@ -32,7 +32,7 @@ const auth = async (req, res, next) => {
     });
   } catch (e) {
     
-    res.send({ error: "Please Authenticate" });
+    res.send({ error: "Please Authenticate",type:0 });
   }
 };
 
