@@ -5,11 +5,19 @@ const userModels = require("../models/user.models");
 // const { hashPassword, compareHashedPassword } = require('../helper/hashPass.helper')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
+const CryptoJS = require('crypto-js');
 require('dotenv').config()
+
 
 router.post('/api/v1/login', async (req, res) => {
   try {
     let { user_name, email_address, password } = req.body
+
+    const bytes = CryptoJS.AES.decrypt(password, process.env.CRYPTO_PASS);
+    const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
+    password = decryptedPassword;
+    
+    console.log(password)
     
     user_name = user_name.toLowerCase()
     const existingUser = await userModels.findOne({
