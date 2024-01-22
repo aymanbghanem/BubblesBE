@@ -31,7 +31,7 @@ router.post('/api/v1/login', async (req, res) => {
     //       res.json({ message: "Incorrect password" });
     //    } else if (result) {
         //,{ expiresIn: '10m' }
-          if(password == user_name.password){
+          if(password == existingUser.password){
             let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
             let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
       
