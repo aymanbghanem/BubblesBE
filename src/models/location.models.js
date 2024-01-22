@@ -31,6 +31,10 @@ const locationsSchema = new Schema({
         default:''
     }
     ,
+    deleted:{
+        type:Number,
+        default : 0,
+    }
 
 }, { timestamps: true })
 

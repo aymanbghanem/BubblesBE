@@ -44,6 +44,10 @@ const questionsSchema = new Schema({
         question_title: String,
         parent_dummy_id:Number // Add this field to match your code
     }],
+    deleted:{
+        type:Number,
+        default : 0,
+    }
 
 }, { timestamps: true });
 

@@ -400,14 +400,14 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         );
 
         // Soft delete existing locations related to the survey
-        await Location.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
+        await Location.updateMany({ survey_id: surveyId,deleted:0 }, { $set: { active: 0,deleted:1 } });
 
         // Process and store new locations
         const storedLocations = await processAndStoreLocation(locationData, existingSurvey, req.user, session);
 
         // Process and store new questions
-        await Question.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
-        await Answer.updateMany({ survey_id: surveyId }, { $set: { active: 0 } });
+        await Question.updateMany({ survey_id: surveyId,deleted:0 }, { $set: { active: 0,deleted:1 } });
+        await Answer.updateMany({ survey_id: surveyId,deleted:0 }, { $set: { active: 0,deleted:1 } });
         const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department, session);
 
         // Commit the transaction
@@ -724,13 +724,12 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
         if (survey) {
           let deleteSurvey = await surveyModel.findOneAndUpdate(
             { _id: survey_id, company_id: req.user.company_id },
-            { active: active, deleted: !(parseInt(active)) }
+            { active: active,deleted: !(parseInt(active)) }
           );
-          let deleteLocations = await Location.updateMany({ survey_id: survey_id }, { active: active });
-          let deleteQuestions = await Question.updateMany({ survey_id: survey_id }, { active: active });
-          let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
+          let deleteLocations = await Location.updateMany({ survey_id: survey_id,deleted:0}, { active: active,deleted: !(parseInt(active)) });
+          let deleteQuestions = await Question.updateMany({ survey_id: survey_id,deleted:0 }, { active: active,deleted: !(parseInt(active)) });
+          let deleteAnswers = await Answer.updateMany({ survey_id: survey_id,deleted:0 }, { active: active,deleted: !(parseInt(active)) });
           let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
-          let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active });
           let url = await urlModel.updateMany({ survey_id: survey_id }, { active: active });
           // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
   
@@ -764,7 +763,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
     const userRole = req.user.user_role;
 
     if (userRole === "admin" || userRole == "owner") {
-      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate([
+      const survey = await surveyModel.findOne({ _id: survey_id, active: 1,deleted:0 }).populate([
         {
           path: "company_id",
           select: "company_name"
@@ -781,7 +780,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
         // Fetch locations
         const locations = await fetchLocations(survey_id);
 
-        const questions = await Question.find({ survey_id: survey_id, active: 1 }).populate([
+        const questions = await Question.find({ survey_id: survey_id, active: 1,deleted:0 }).populate([
           {
             path: 'answers',
             model: 'answer',
@@ -872,7 +871,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
         // Fetch locations
         const locations = await fetchLocations(survey_id);
 
-        const questions = await Question.find({ survey_id: survey_id, active: 1 }).populate([
+        const questions = await Question.find({ survey_id: survey_id, active: 1,deleted:0 }).populate([
           {
             path: 'answers',
             model: 'answer',
@@ -1145,7 +1144,8 @@ router.get('/api/v1/getSurveys', auth, async (req, res) => {
 async function fetchLocations(survey_id) {
   const locations = await locationModel.find({
     survey_id: survey_id,
-    active: 1
+    active: 1,
+    deleted:0
   }).lean();
   return locations;
 }
