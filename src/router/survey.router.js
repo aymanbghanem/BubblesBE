@@ -18,6 +18,7 @@ const responseModel = require("../models/response.model");
 const userModels = require("../models/user.models");
 const departmentModels = require("../models/department.models");
 const companyModels = require("../models/company.models");
+const urlModel = require("../models/url.model");
 require('dotenv').config()
 
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
@@ -730,6 +731,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
           let deleteAnswers = await Answer.updateMany({ survey_id: survey_id }, { active: active });
           let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
           let qr = await qrModel.updateMany({ survey_id: survey_id }, { active: active });
+          let url = await urlModel.updateMany({ survey_id: survey_id }, { active: active });
           // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
   
           if (active == 1) {
