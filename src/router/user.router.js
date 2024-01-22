@@ -303,7 +303,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
         let user = await userModels.findById({ _id: id, active: 1 }).populate([
             {
                 path: 'company_id',
-                select: 'company_name dashboard notifier -_id',
+                select: 'company_name dashboard url_builder notifier -_id',
             },
             {
                 path: 'department_id',
