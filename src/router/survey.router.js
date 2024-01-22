@@ -400,14 +400,14 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
         );
 
         // Soft delete existing locations related to the survey
-        await Location.updateMany({ survey_id: surveyId,deleted:0 }, { $set: { active: 0,deleted:1 } });
+        await Location.updateMany({ survey_id: surveyId}, { $set: { active: 0,deleted:1} });
 
         // Process and store new locations
         const storedLocations = await processAndStoreLocation(locationData, existingSurvey, req.user, session);
 
         // Process and store new questions
-        await Question.updateMany({ survey_id: surveyId,deleted:0 }, { $set: { active: 0,deleted:1 } });
-        await Answer.updateMany({ survey_id: surveyId,deleted:0 }, { $set: { active: 0,deleted:1 } });
+        await Question.updateMany({ survey_id: surveyId,}, { $set: { active: 0,deleted:1} });
+        await Answer.updateMany({ survey_id: surveyId,}, { $set: { active: 0,deleted:1} });
         const storedQuestions = await processAndStoreQuestions(questionsUpdates, surveyId, department, session);
 
         // Commit the transaction
@@ -723,24 +723,56 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
 
         if (survey) {
           let deleteSurvey = await surveyModel.findOneAndUpdate(
-            { _id: survey_id, company_id: req.user.company_id },
-            { active: active,deleted: !(parseInt(active)) }
+              { _id: survey_id, company_id: req.user.company_id },
+              { active: active, deleted: !(parseInt(active)) }
           );
-          let deleteLocations = await Location.updateMany({ survey_id: survey_id,deleted:0}, { active: active,deleted: !(parseInt(active)) });
-          let deleteQuestions = await Question.updateMany({ survey_id: survey_id,deleted:0 }, { active: active,deleted: !(parseInt(active)) });
-          let deleteAnswers = await Answer.updateMany({ survey_id: survey_id,deleted:0 }, { active: active,deleted: !(parseInt(active)) });
-          let surveyReader = await surveyReaderModel.updateMany({ survey_id: survey_id }, { active: active });
-          let url = await urlModel.updateMany({ survey_id: survey_id }, { active: active });
+
+          let deleteLocations = await Location.updateMany(
+              { survey_id: survey_id,deleted:0 },
+              { active: active}
+          );
+
+          let deleteQuestions = await Question.updateMany(
+              { survey_id: survey_id,deleted:0},
+              { active: active}
+          );
+
+          let deleteAnswers = await Answer.updateMany(
+              { survey_id: survey_id,deleted:0},
+              { active: active}
+          );
+
+          let surveyReader = await surveyReaderModel.updateMany(
+              { survey_id: survey_id },
+              { active: active }
+          );
+
+          let url = await urlModel.updateMany(
+              { survey_id: survey_id },
+              { active: active }
+          );
+
           // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
-  
+
           if (active == 1) {
-            res.json({ message: "The survey and its data were activated successfully", type: 1 });
+              res.json({
+                  message: "The survey and its data were activated successfully",
+                  type: 1,
+              });
           } else if (active == 0) {
-            res.json({ message: "The survey and its data were deleted successfully", type: 1 });
+              res.json({
+                  message: "The survey and its data were deleted successfully",
+                  type: 1,
+              });
           } else {
-            res.json({ message: "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.", type: 0 });
+              res.json({
+                  message:
+                      "Invalid value for 'active'. Please provide either 0 for deletion or 1 for activation.",
+                  type: 0,
+              });
           }
-        } else {
+        }
+        else {
           res.json({ message: "Survey not found", type: 0 });
         }
       } else {
