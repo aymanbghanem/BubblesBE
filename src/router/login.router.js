@@ -17,8 +17,8 @@ router.post('/api/v1/login', async (req, res) => {
     const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
     password = decryptedPassword;
     
-    console.log(password)
-    
+    // console.log(password)
+
     user_name = user_name.toLowerCase()
     const existingUser = await userModels.findOne({
       user_name: user_name,
@@ -31,14 +31,17 @@ router.post('/api/v1/login', async (req, res) => {
     //       res.json({ message: "Incorrect password" });
     //    } else if (result) {
         //,{ expiresIn: '10m' }
-          let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
-          let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
-    
-          token=user.token,
-          res.json({ message:token , type:2 });
-      //  } else {
-      //    res.json({ message: "Incorrect password" });
-      //  }
+          if(password == user_name.password){
+            let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
+            let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
+      
+            token=user.token,
+            res.json({ message:token , type:2 });
+          }
+
+        else {
+         res.json({ message: "Incorrect password" });
+       }
     // });
     } else {
       res.json({ message: "Incorrect username or user is inactive.",type:0 });
