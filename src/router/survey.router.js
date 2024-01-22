@@ -274,7 +274,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
     });
 
     const questionTypeLowerCase = question_type.toLowerCase();
-    console.log(questionTypeLowerCase)
+   
     if (["text", "single selection", "multiple selection", "range"].includes(questionTypeLowerCase)) {
      
       const questionController = await QuestionController.findOne({
