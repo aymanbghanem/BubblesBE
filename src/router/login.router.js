@@ -40,7 +40,7 @@ router.post('/api/v1/login', async (req, res) => {
           }
 
         else {
-         res.json({ message: "Incorrect password" });
+         res.json({ message: "Incorrect password",type:0 });
        }
     // });
     } else {
