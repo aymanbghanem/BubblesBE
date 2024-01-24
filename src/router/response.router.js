@@ -135,7 +135,9 @@ router.post('/api/v1/createResponse', async (req, res) => {
                                     const isLocationMatch = notify.location_id === null || notify.location_id.equals(location_id);
                 
                                     // Check conditions for creating a notification based on answer text
-                                    const isAnswerTextMatch = notify.answer_text === null || notify.answer_text === individualAnswer;
+                                    const isAnswerTextMatch = notify.answer_text === null ||
+                                    notify.answer_text === ""
+                                    || notify.answer_text === individualAnswer;
                 
                                     // If both location and answer text conditions are met, create a notification
                                     if (isLocationMatch && isAnswerTextMatch) {
