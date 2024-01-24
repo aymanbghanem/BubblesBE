@@ -13,6 +13,7 @@ const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 const companyModels = require("../models/company.models");
 const departmentModels = require("../models/department.models");
+const notifyModels = require("../models/notify.models");
 require('dotenv').config()
 
 
@@ -797,6 +798,7 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                 }
               
         }
+
          else {
             let user = await userModels.findOne({_id:id}).select('department_id -_id')
             if(user){
@@ -811,7 +813,11 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                         { reader_id: id },
                         { $set: { active: active,deleted:!active } }
                     );
-        
+                    
+                    let deleteNotify = await notifyModels.updateMany(
+                        {survey_reader_id : id},
+                        {$set:{active: active}}
+                    )
                     if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 0) {
                         return res.json({ message: "Users deleted successfully",type:1 });
                     } else if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 1) {
