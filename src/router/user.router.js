@@ -14,6 +14,7 @@ var jwt = require('jsonwebtoken');
 const companyModels = require("../models/company.models");
 const departmentModels = require("../models/department.models");
 const notifyModels = require("../models/notify.models");
+const notificationModel = require("../models/notification.model");
 require('dotenv').config()
 
 
@@ -815,6 +816,10 @@ router.post('/api/v1/deleteUsers', auth, async (req, res) => {
                     );
                     
                     let deleteNotify = await notifyModels.updateMany(
+                        {survey_reader_id : id},
+                        {$set:{active: active}}
+                    )
+                    let deleteNotification= await notificationModel.updateMany(
                         {survey_reader_id : id},
                         {$set:{active: active}}
                     )
