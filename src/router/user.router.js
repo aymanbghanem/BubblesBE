@@ -3,7 +3,7 @@ const router = express.Router();
 const userModels = require("../models/user.models");
 const departmentModel = require('../models/department.models')
 const companyModel = require('../models/company.models')
-// const { hashPassword } = require('../helper/hashPass.helper')
+const { hashPassword } = require('../helper/hashPass.helper')
 const generateMixedID = require('../helper/passwordGenerator.helper')
 const sendEmail = require('../middleware/email')
 const surveyReaderModel = require('../models/surveyReader.model')
@@ -82,10 +82,10 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
                 else {
                   //   await hashPassword(newPassword, async (hash) => {
                     // hashedPassword = hash;
-
+                    hashedPassword = await hashPassword(newPassword);
                     const user = await userModels.create({
                         user_name: user_name,
-                        password: newPassword,
+                        password: hashedPassword,
                         email_address: email_address,
                         company_id: company._id,
                         user_role: "owner",
@@ -110,7 +110,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         else if (department_name && role == 'owner') {
             // await hashPassword(newPassword, async (hash) => {
             //  hashedPassword = hash;
-
+            hashedPassword = await hashPassword(newPassword);
             const department = await departmentModel.findOne({
                 department_name: { $regex: new RegExp("^" + department_name, "i") },
                 company_id: req.user.company_id,
@@ -124,7 +124,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             // Continue with the user creation
             const userParams = {
                 user_name: user_name,
-                password: newPassword,
+                password: hashedPassword,
                 email_address: email_address,
                 user_role: "admin",
                 token: null,
@@ -147,9 +147,10 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
         }
         else if (role === 'admin') {
 
+            hashedPassword = await hashPassword(newPassword);
             // await hashPassword(newPassword, async (hash) => {
             // hashedPassword = hash;
-
+            
             const department = await departmentModels.findOne({
                 _id:req.user.department_id,
                 active: 1,
@@ -163,7 +164,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
             // Set user parameters
             const userParams = {
                 user_name: user_name,
-                password: newPassword,
+                password: hashedPassword,
                 email_address: email_address,
                 user_role: 'survey-reader',
                 token: null,
@@ -222,12 +223,13 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         let { user_name, email_address, password } = req.body;
         user_name = user_name.toLowerCase();
         let newPassword = await generateMixedID()
+        let hashedPassword;
 
         if (!validateEmail(email_address)) {
             return res.json({ message: "Invalid email address", type: 0 });
         }
 
-        let hashedPassword;
+        
         // Check if either the email_address or user_name already exists
         const existingUser = await userModels.findOne({
             $or: [{ email_address: email_address }, { user_name: user_name }],
@@ -238,12 +240,13 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
         } else {
             // await hashPassword(newPassword, async (hash) => {
             //     hashedPassword = hash;
+               hashedPassword = await hashPassword(newPassword);
                 let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
                 let new_user = await userModels.create({
                     user_name: user_name,
                     user_role: 'superadmin',
                     email_address: email_address,
-                    password: newPassword,
+                    password: hashedPassword,
                     token: token,
                 });
 
@@ -254,7 +257,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                     // Handle the email sending error
                     res.json({ message: "successfully added, but email not sent", type: 1 });
                 }
-           // });
+        //   });
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });

@@ -1,42 +1,31 @@
-// const bcrypt = require('bcrypt');
-// require('dotenv').config();
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
- 
-// const saltRounds = parseInt(process.env.SALT_ROUND);
+const saltRounds = parseInt(process.env.SALT_ROUND);
 
-// function hashPassword(password, callback) {
-//   bcrypt.genSalt(saltRounds, (err, salt) => {
-//     if (err) {
-//       console.error(err);
-//     } else {
-//       // Hash the password with the generated salt
-//       bcrypt.hash(password, salt, (err, hash) => {
-//         if (err) {
-//           console.error(err);
-//         } else {
-//           console.log('Hashed Password:', hash);
-//           callback(hash); // Pass the hashed password to the callback function
-//         }
-//       });
-//     }
-//   });
-// }
+async function hashPassword(password) {
+    try {
+        const salt = await bcrypt.genSalt(saltRounds);
+        const hash = await bcrypt.hash(password, salt);
+        console.log('Hashed Password:', hash);
+        return hash;
+    } catch (error) {
+        console.error(error);
+        throw error; // Rethrow the error to be caught by the caller
+    }
+}
 
+function compareHashedPassword(user_input_password, hashed_password, callback) {
+    bcrypt.compare(user_input_password, hashed_password, (err, result) => {
+        if (err) {
+            console.error(err);
+            callback(err, null);
+        } else if (result) {
+            callback(null, result);
+        } else {
+            callback('Password is incorrect', null);
+        }
+    });
+}
 
-
-// function compareHashedPassword(user_input_password, hashed_password, callback) {
-//   bcrypt.compare(user_input_password, hashed_password, (err, result) => {
-//     if (err) {
-//       console.error(err);
-//       callback(err, null);
-//     } else if (result) {
-//       callback(null, result);
-//     } else {
-//       callback('Password is incorrect', null);
-//     }
-//   });
-// }
-
-
-
-// module.exports = {hashPassword,compareHashedPassword};
+module.exports = { hashPassword, compareHashedPassword };
