@@ -7,7 +7,7 @@ async function hashPassword(password) {
     try {
         const salt = await bcrypt.genSalt(saltRounds);
         const hash = await bcrypt.hash(password, salt);
-        console.log('Hashed Password:', hash);
+      //  console.log('Hashed Password:', hash);
         return hash;
     } catch (error) {
         console.error(error);
@@ -18,7 +18,7 @@ async function hashPassword(password) {
 function compareHashedPassword(user_input_password, hashed_password, callback) {
     bcrypt.compare(user_input_password, hashed_password, (err, result) => {
         if (err) {
-            console.error(err);
+          //  console.error(err);
             callback(err, null);
         } else if (result) {
             callback(null, result);

@@ -39,8 +39,8 @@ const userSchema = new Schema({
     deleted:{
         type:Number,
         default:0
-    }
-    
+    },
+    temp:String,
     
 }, { timestamps: true })
 

@@ -17,15 +17,12 @@ require('dotenv').config()
 router.post('/api/v1/login', async (req, res) => {
   try {
     let { user_name, email_address, password } = req.body
-    // console.log(password)
-    // let encryptP = encrypt(password)
-    // console.log(encryptP)
+
 
     const bytes = CryptoJS.AES.decrypt(password, process.env.CRYPTO_PASS);
     const decryptedPassword = bytes.toString(CryptoJS.enc.Utf8);
     password = decryptedPassword;
-    
-    console.log(password)
+
 
     user_name = user_name.toLowerCase()
     const existingUser = await userModels.findOne({
