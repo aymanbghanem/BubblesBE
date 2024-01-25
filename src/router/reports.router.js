@@ -212,10 +212,12 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
             res.json({ message: data, type: 2 });
         }
         else if (role == "admin") {
+            let department_id = req.user.department_id;
+
             let reports = await reportsModel.find({ created_by, active: 1 });
             let notification_count = await notificationModel.countDocuments({ created_by, processed: 0 })
             let survey_count = await surveyModels.countDocuments({ created_by, active: 1 })
-            let responses = await responseModel.find()
+            let responses = await responseModel.find({department_id})
             let company = await companyModels.findOne({_id:req.user.company_id ,dashboard:1 })
             if(company){
                 if (responses) {
