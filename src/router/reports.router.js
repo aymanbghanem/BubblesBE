@@ -362,7 +362,7 @@ router.get('/api/v1/exportReport',auth, async (req, res) => {
         if (role === 'admin' || role == 'survey-reader') {
         let department_id = req.user.department_id;
 
-        let responses = await responseModel.find({ department_id:"65a4f7840666931697fb9d66", active: 1 }).populate([
+        let responses = await responseModel.find({ department_id:department_id, active: 1 }).populate([
             {
                 path: 'survey_id',
                 model: 'survey',
