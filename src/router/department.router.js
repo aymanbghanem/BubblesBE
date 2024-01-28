@@ -113,7 +113,8 @@ router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
                         locationModel.updateMany({ survey_id: survey._id }, { active: active }),
                         notificationModel.updateMany({ survey_id: survey._id }, { active:active }),
                         notifyModels.updateMany({ survey_id: survey._id }, { active:active }),
-                        urlModel.updateMany({survey_id: survey._id }, { active:active })
+                        urlModel.updateMany({survey_id: survey._id }, { active:active }),
+                        reportsModel.updateMany({ survey_id: survey_id },{ active: active }),
                     ]);
                 }
     

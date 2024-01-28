@@ -19,6 +19,7 @@ const userModels = require("../models/user.models");
 const departmentModels = require("../models/department.models");
 const companyModels = require("../models/company.models");
 const urlModel = require("../models/url.model");
+const reportsModel = require("../models/reports.model");
 require('dotenv').config()
 
 router.post('/api/v1/createSurvey', auth, async (req, res) => {
@@ -751,9 +752,13 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
               { survey_id: survey_id },
               { active: active }
           );
-
+          
+          let report = await reportsModel.updateMany(
+            { survey_id: survey_id },
+            { active: active }
+          )
           // let response = await responseModel.updateMany({ survey_id: survey._id }, { active:active })
-
+        
           if (active == 1) {
               res.json({
                   message: "The survey and its data were activated successfully",
