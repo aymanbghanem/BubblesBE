@@ -13,7 +13,7 @@ const auth = async (req, res, next) => {
 
     jwt.verify(token, process.env.TOKEN_KEY, async function (err, decode) {
       if (err) {
-        res.json({ message: "Invalid token",type:0 });
+        res.json({ message: "Your session has expired. Please log in again to continue.",type:0 });
       } else {
         
         const user = await User.findOne({

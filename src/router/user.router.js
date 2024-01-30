@@ -250,7 +250,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
             return res.json({ message: "Email address or username already exists", type: 0 });
         } else {
             hashedPassword = await hashPassword(newPassword);
-            let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
+            let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY,{ expiresIn: '2m' });
             let new_user = await userModels.create({
                 user_name: user_name,
                 user_role: 'superadmin',
@@ -265,6 +265,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
                 res.json({ message: "successfully added", type: 1 });
             } catch (emailError) {
                 // Handle the email sending error
+                console.log("emailError "+emailError)
                 res.json({ message: "successfully added, but email not sent", type: 1 });
             }
         }
@@ -763,7 +764,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
             res.json({ message: "User does not exist", type: 0 });
         }
     } catch (error) {
-        res.json({ message: "catch error " + error })
+        res.json({ message: "catch error " + error,type:0 })
     }
 })
 

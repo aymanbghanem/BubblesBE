@@ -47,8 +47,8 @@ async function sendEmail(user_name, to, subject, password, message) {
    </html>
  `,
   });
-
-  return info.messageId;
+ console.log(info)
+  return info;
 }
 
 module.exports = sendEmail;
