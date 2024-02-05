@@ -378,7 +378,7 @@ router.get(`${process.env.BASE_URL}/userInfo`, auth, async (req, res) => {
     }
 });
 
-router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole'`, auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole`, auth, async (req, res) => {
     try {
         const role = req.user.user_role;
         const company_id = req.user.company_id;
@@ -507,7 +507,7 @@ router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole'`, auth, async (req
     }
 });
 
-router.get(`${process.env.BASE_URL}/getSurveysForSurveyReader'`, auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getSurveysForSurveyReader`, auth, async (req, res) => {
     try {
         let role = req.user.user_role; //from the token
         let id = req.headers['id']; // from the front
@@ -542,7 +542,7 @@ router.get(`${process.env.BASE_URL}/getSurveysForSurveyReader'`, auth, async (re
     }
 });
 
-router.put(`${process.env.BASE_URL}/updateUserInfo'`, auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/updateUserInfo`, auth, async (req, res) => {
     try {
         let { user_name, email_address, image } = req.body
         let role = req.user.user_role

@@ -41,7 +41,7 @@ router.get(`${process.env.BASE_URL}/getNotifications`, auth, async (req, res) =>
 
                     // Extract necessary fields
                     const result = {
-                        notification_id:notification._id,
+                        _id:notification._id,
                         user_id,
                         processed:notification.processed,
                         survey_title:survey_id.survey_title,
