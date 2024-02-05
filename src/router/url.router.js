@@ -8,6 +8,7 @@ const router = express.Router();
 const multer = require('multer');
 const xlsx = require('xlsx');
 const companyModels = require("../models/company.models");
+require('dotenv').config()
 
 const storage = multer.memoryStorage(); // Use memory storage for reading the file buffer
 const fileFilter = (req, file, cb) => {
@@ -20,7 +21,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-router.post('/api/v1/addURL', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addURL`, auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let created_by = req.user._id
@@ -63,7 +64,7 @@ router.post('/api/v1/addURL', auth, async (req, res) => {
     }
 })
 
-router.get('/api/v1/getURL', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getURL`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
 
@@ -126,7 +127,7 @@ router.get('/api/v1/getURL', auth, async (req, res) => {
     }
 });
 
-router.post('/api/v1/excelBuilder', auth, upload.single('file'), async (req, res) => {
+router.post(`${process.env.BASE_URL}/excelBuilder`, auth, upload.single('file'), async (req, res) => {
     try {
         let id = req.user._id;
         let role = req.user.user_role;

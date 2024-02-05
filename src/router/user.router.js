@@ -35,7 +35,7 @@ const addOwner = async (company) => {
     }
 };
 
-router.post('/api/v1/addUsers', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
     try {
         let hashedPassword;
         const role = req.user.user_role.toLowerCase();
@@ -224,7 +224,7 @@ router.post('/api/v1/addUsers', auth, async (req, res) => {
     }
 });
 
-router.post('/api/v1/addSuperadmin', async (req, res) => {
+router.post(`${process.env.BASE_URL}/addSuperadmin`, async (req, res) => {
     try {
         let { user_name, email_address, password } = req.body;
         user_name = user_name.toLowerCase();
@@ -250,7 +250,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
             return res.json({ message: "Email address or username already exists", type: 0 });
         } else {
             hashedPassword = await hashPassword(newPassword);
-            let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY,{ expiresIn: '2m' });
+            let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
             let new_user = await userModels.create({
                 user_name: user_name,
                 user_role: 'superadmin',
@@ -276,7 +276,7 @@ router.post('/api/v1/addSuperadmin', async (req, res) => {
 
 
 
-router.get('/api/v1/userById', async (req, res) => {
+router.get(`${process.env.BASE_URL}/userById`, async (req, res) => {
     try {
         let id = req.headers['id'];
         let user = await userModels.findOne({ _id: id, active: 1 }).populate([
@@ -311,7 +311,7 @@ router.get('/api/v1/userById', async (req, res) => {
     }
 });
 
-router.get('/api/v1/userInfo', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/userInfo`, auth, async (req, res) => {
     try {
         let id = req.user._id;
         let readerUser
@@ -346,6 +346,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 company_name: user.company_id ? user.company_id.company_name || " " : " ",
                 department_name: user.department_id ? user.department_id.department_name || " " : " ",
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
+                createdAt:user.createdAt
             };
             let companyInfo={
                 dashboard:user.company_id.dashboard ?user.company_id.dashboard :0 ,
@@ -365,6 +366,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
                 company_name: user.company_id ? user.company_id.company_name || " " : " ",
                 department_name: user.department_id ? user.department_id.department_name || " " : " ",
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
+                createdAt:user.createdAt
             };
             res.json({ message: response,type:2});
         }
@@ -376,7 +378,7 @@ router.get('/api/v1/userInfo', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole'`, auth, async (req, res) => {
     try {
         const role = req.user.user_role;
         const company_id = req.user.company_id;
@@ -505,7 +507,7 @@ router.get('/api/v1/getUserAccordingToMyRole', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getSurveysForSurveyReader'`, auth, async (req, res) => {
     try {
         let role = req.user.user_role; //from the token
         let id = req.headers['id']; // from the front
@@ -540,7 +542,7 @@ router.get('/api/v1/getSurveysForSurveyReader', auth, async (req, res) => {
     }
 });
 
-router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/updateUserInfo'`, auth, async (req, res) => {
     try {
         let { user_name, email_address, image } = req.body
         let role = req.user.user_role
@@ -589,7 +591,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
 });
 
 // //Update this api not only 
-// router.put('/api/v1/deleteAssignedSurveyReader', auth, async (req, res) => {
+// router.put('${process.env.BASE_URL}/deleteAssignedSurveyReader', auth, async (req, res) => {
 //     try {
 //         let role = req.user.user_role
 //         let { survey_id, reader_id } = req.body
@@ -628,7 +630,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
 //         res.json({ message: "catch error" })
 //     }
 // })
-// router.post('/api/v1/assignSurveysReader', auth, async (req, res) => {
+// router.post('${process.env.BASE_URL}/assignSurveysReader', auth, async (req, res) => {
 //     try {
 //         let role = req.user.user_role
 //         let { survey_id, reader_id } = req.body
@@ -671,7 +673,7 @@ router.put('/api/v1/updateUserInfo', auth, async (req, res) => {
 //     }
 // })
 
-router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/assignOrDeleteSurveyForReader`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let reader_id = req.headers['reader_id']; // Get reader_id from headers
@@ -739,8 +741,7 @@ router.put('/api/v1/assignOrDeleteSurveyForReader', auth, async (req, res) => {
     }
 });
 
-
-router.post('/api/v1/resetPassword', async (req, res) => {
+router.post(`${process.env.BASE_URL}/resetPassword`, async (req, res) => {
     try {
         let { email_address } = req.body
         let newPassword = await generateMixedID()
@@ -768,7 +769,7 @@ router.post('/api/v1/resetPassword', async (req, res) => {
     }
 })
 
-router.post('/api/v1/deleteUsers', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/deleteUsers`, auth, async (req, res) => {
     try {
         const role = req.user.user_role;
         const { user_ids, active } = req.body;

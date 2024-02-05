@@ -7,7 +7,7 @@ const auth = require('../middleware/auth')
 const settingModels = require("../models/setting.models");
 require('dotenv').config()
 
-router.post('/api/v1/addSetting', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addSetting`, auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let { title_weight, title_font_size, description_font_size, question_font_size, location_limitation, range_limitation, char_limitation } = req.body
@@ -31,7 +31,7 @@ router.post('/api/v1/addSetting', auth, async (req, res) => {
     }
 })
 
-router.get('/api/v1/getSetting',auth,async(req,res)=>{
+router.get(`${process.env.BASE_URL}/getSetting`,auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         if (role==="superadmin" || role==="admin" ) {
@@ -52,7 +52,7 @@ router.get('/api/v1/getSetting',auth,async(req,res)=>{
     }
 })
 
-router.put('/api/v1/updateSetting', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/updateSetting`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let { id, title_weight, title_font_size, description_font_size, question_font_size, location_limitation, range_limitation, char_limitation } = req.body;
@@ -106,7 +106,7 @@ router.put('/api/v1/updateSetting', auth, async (req, res) => {
     }
 });
 
-router.delete('/api/v1/deleteSetting',auth,async(req,res)=>{
+router.delete(`${process.env.BASE_URL}/deleteSetting`,auth,async(req,res)=>{
     try {
         let role = req.user.user_role;
         let { id}= req.body

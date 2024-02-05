@@ -22,7 +22,7 @@ const urlModel = require("../models/url.model");
 const reportsModel = require("../models/reports.model");
 require('dotenv').config()
 
-router.post('/api/v1/createSurvey', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/createSurvey`, auth, async (req, res) => {
   let session;
   let storedSurvey, storedLocation, storedQuestions;
 
@@ -90,7 +90,7 @@ router.post('/api/v1/createSurvey', auth, async (req, res) => {
       console.error('Rollback error:', rollbackError);
     }
 
-    res.status(500).json({ message: 'Error: ' + error.message });
+    res.status(500).json({ message:error.message,type:0 });
   }
 });
 
@@ -223,7 +223,8 @@ async function processAndStoreSurvey(surveyData, user) {
         submission_pwd: surveyData.submission_pwd,
         title_font_size: surveyData.title_font_size,
         description_font_size: surveyData.description_font_size,
-        response_message: surveyData.response_message
+        response_message: surveyData.response_message,
+       
       });
 
       return survey;
@@ -255,7 +256,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
   const storedQuestions = [];
 
   for (const questionData of questionsData) {
-    const { _id, id, comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
+    const { _id,drop_down ,id, comparisonOptions, flag, question_title, answers, question_type, ...otherFields } = questionData;
 
     // Case-insensitive lookup for question type
     const questionTypeObject = await QuestionController.findOne({
@@ -263,7 +264,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
     });
     const questionTypeId = questionTypeObject ? questionTypeObject._id : null;
 
-    const newQuestion = new Question({
+    let newQuestion = new Question({
       id,
       flag,
       question_title,
@@ -275,9 +276,13 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
     });
 
     const questionTypeLowerCase = question_type.toLowerCase();
-   
+
     if (["text", "single selection", "multiple selection", "range"].includes(questionTypeLowerCase)) {
-     
+      
+      if (questionTypeLowerCase === "single selection") {
+        newQuestion.drop_down = drop_down;
+      }
+
       const questionController = await QuestionController.findOne({
         question_type: new RegExp(`^${question_type}$`, 'i'),
       });
@@ -313,6 +318,7 @@ async function processAndStoreQuestions(questionsData, survey_id, department_id)
 
   return storedQuestions;
 }
+
 async function processAndStoreQuestionDependencies(dependencies, storedQuestions) {
   const updatedDependencies = [];
 
@@ -341,7 +347,7 @@ async function processAndStoreQuestionDependencies(dependencies, storedQuestions
 }
 
 
-router.put('/api/v1/updateSurvey', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/updateSurvey`, auth, async (req, res) => {
   let session;
   try {
     let role = req.user.user_role;
@@ -436,7 +442,7 @@ router.put('/api/v1/updateSurvey', auth, async (req, res) => {
 });
 
 
-router.post('/api/v1/getQuestions', async (req, res) => {
+router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
   try {
     const results = [];
     let survey_id = req.query.survey_id;
@@ -708,7 +714,7 @@ async function checkRangeDependency(dependency, answeredQuestions, results) {
 }
 
 
-router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
+router.delete(`${process.env.BASE_URL}/deleteSurvey`, auth, async (req, res) => {
   try {
     let role = req.user.user_role;
     let survey_id = req.headers['survey_id'];
@@ -794,7 +800,7 @@ router.delete('/api/v1/deleteSurvey', auth, async (req, res) => {
 });
 
 //get survey by id
-router.get('/api/v1/getSurveyById', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
   try {
     const survey_id = req.headers['survey_id'];
     const userRole = req.user.user_role;
@@ -835,7 +841,8 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
           const modifiedAnswers = question.answers.map(answer => ({
             answerID: answer._id,
             text: answer.answer,
-            image: answer.image
+            image: answer.image,
+          
           }));
           const modifiedDependencies = question.question_dependency.map(dep => ({
             id: dep._id,
@@ -977,7 +984,7 @@ router.get('/api/v1/getSurveyById', auth, async (req, res) => {
 
 
 //get survey according to the department 
-router.get('/api/v1/getSurveys', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getSurveys`, auth, async (req, res) => {
   try {
     let role = req.user.user_role
     let id = req.user._id

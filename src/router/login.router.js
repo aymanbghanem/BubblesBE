@@ -14,7 +14,7 @@ require('dotenv').config()
 //   return CryptoJS.AES.encrypt(text, secretKey).toString();
 // };
 
-router.post('/api/v1/login', async (req, res) => {
+router.post(`${process.env.BASE_URL}/login`, async (req, res) => {
   try {
     let { user_name, email_address, password } = req.body
 
@@ -37,7 +37,7 @@ router.post('/api/v1/login', async (req, res) => {
        } else if (result) {
         //,{ expiresIn: '10m' }
     
-            let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY,{ expiresIn: '2m' });
+            let token = jwt.sign({ user_name: existingUser.user_name }, process.env.TOKEN_KEY);
             let user = await userModels.findOneAndUpdate({ user_name: existingUser.user_name ,active:1}, { token }, { new: true });
       
             token=user.token,
@@ -53,12 +53,12 @@ router.post('/api/v1/login', async (req, res) => {
   }
 });
 
-router.patch("/api/v1/logout", auth, async (req, res) => {
+router.patch(`${process.env.BASE_URL}/logout`, auth, async (req, res) => {
   try {
     let id = req.user._id;
     let user = await userModels.findByIdAndUpdate({ _id: id }, { token: null }, { new: true });
     let token = user.token
-    res.json({ message: "token is null", token });
+    res.json({ message: "token is null", type:1 });
   } catch (error) {
     res.status(500).json({ message: "catch error " + error });
   }

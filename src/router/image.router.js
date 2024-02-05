@@ -5,7 +5,7 @@ const {answersImageUploader} = require('../middleware/answersImage')
 const auth = require('../middleware/auth')
 require('dotenv').config()
 
-router.post('/api/v1/uploadImage',auth,myMulter().single('image'),async(req,res)=>{
+router.post(`${process.env.BASE_URL}/uploadImage`,auth,myMulter().single('image'),async(req,res)=>{
     try {
         let logo=req.file.filename;
         if (req.file) {
@@ -32,7 +32,7 @@ router.post('/api/v1/uploadImage',auth,myMulter().single('image'),async(req,res)
       }
 })
 
-router.post('/api/v1/uploadAnswersImage',answersImageUploader().single('image'),async(req,res)=>{
+router.post(`${process.env.BASE_URL}/uploadAnswersImage`,answersImageUploader().single('image'),async(req,res)=>{
   try {
       let logo=req.file.filename;
       if (req.file) {

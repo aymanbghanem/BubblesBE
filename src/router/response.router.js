@@ -15,7 +15,7 @@ const surveyReaderModel = require("../models/surveyReader.model");
 const sendNotificationEmail = require("../middleware/notification");
 require('dotenv').config()
 
-router.post('/api/v1/createResponse', async (req, res) => {
+router.post(`${process.env.BASE_URL}/createResponse`, async (req, res) => {
     try {
         let survey_id = req.query.survey_id
         let location_id = req.query.location_id;
@@ -175,7 +175,7 @@ router.post('/api/v1/createResponse', async (req, res) => {
     }
 });
 
-router.get('/api/v1/getResponses', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getResponses`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let id = req.user._id
@@ -285,7 +285,7 @@ router.get('/api/v1/getResponses', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getResponseById', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getResponseById`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let user_id = req.headers['user_id'];

@@ -8,7 +8,7 @@ const auth = require('../middleware/auth')
 
 require('dotenv').config()
 
-router.post('/api/v1/addQuestionType', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addQuestionType`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let { question_type } = req.body;
@@ -35,7 +35,7 @@ router.post('/api/v1/addQuestionType', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getQuestionsTypes',auth,async(req,res)=>{
+router.get(`${process.env.BASE_URL}/getQuestionsTypes`,auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         if(role === 'admin'){

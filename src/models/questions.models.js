@@ -6,6 +6,10 @@ const questionsSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'question',
     },
+    drop_down:{
+        type:Number,
+        default:0
+    },
     question_title: String,
     phase: Number,
     required: {

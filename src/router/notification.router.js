@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const auth = require('../middleware/auth');
 const notificationModel = require("../models/notification.model");
+require('dotenv').config()
 
-router.get('/api/v1/getNotifications', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getNotifications`, auth, async (req, res) => {
     try {
         let id = req.user._id;
         let role = req.user.user_role;
@@ -132,7 +133,7 @@ router.get('/api/v1/getNotifications', auth, async (req, res) => {
     }
 });
 
-router.put('/api/v1/processedNotification', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/processedNotification`, auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let notification_id = req.headers['notification_id']

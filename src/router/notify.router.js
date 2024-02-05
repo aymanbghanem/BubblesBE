@@ -19,7 +19,7 @@ const notifyModels = require("../models/notify.models");
 const companyModels = require("../models/company.models");
 require('dotenv').config()
 
-// router.get('/api/v1/getNotifyData', auth, async (req, res) => {
+// router.get('${process.env.BASE_URL}/getNotifyData', auth, async (req, res) => {
 //     try {
 //         let role = req.user.user_role;
 //         if (role === "admin") {
@@ -69,7 +69,7 @@ require('dotenv').config()
 //     }
 // });
 
-router.get('/api/getReaderBySurvey', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getReaderBySurvey`, auth, async (req, res) => {
     try {
         let survey_id = req.headers['survey_id'];
         let role = req.user.user_role;
@@ -109,7 +109,7 @@ router.get('/api/getReaderBySurvey', auth, async (req, res) => {
 });
 
 
-router.post('/api/v1/addNotifier', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addNotifier`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let created_by = req.user._id
@@ -167,7 +167,7 @@ router.post('/api/v1/addNotifier', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getNotifies', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getNotifies`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let company_id = req.user.company_id
@@ -222,7 +222,7 @@ router.get('/api/v1/getNotifies', auth, async (req, res) => {
     }
 });
 
-router.put('/api/v1/activeAndInactiveNotify',auth,async(req,res)=>{
+router.put(`${process.env.BASE_URL}/activeAndInactiveNotify`,auth,async(req,res)=>{
     try {
         let id = req.headers['notifier_id']
         let role = req.user.user_role

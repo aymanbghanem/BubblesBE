@@ -19,7 +19,7 @@ const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 require('dotenv').config()
 
-router.post('/api/v1/addDepartment', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addDepartment`, auth, async (req, res) => {
     try {
         const company_id = req.user.company_id;
 
@@ -64,7 +64,7 @@ router.post('/api/v1/addDepartment', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getDepartments',auth,async(req,res)=>{
+router.get(`${process.env.BASE_URL}/getDepartments`,auth,async(req,res)=>{
     try {
         let company_id = req.user.company_id
         let role = req.user.user_role
@@ -88,7 +88,7 @@ router.get('/api/v1/getDepartments',auth,async(req,res)=>{
     }
 })
 
-router.put('/api/v1/deleteDepartment', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/deleteDepartment`, auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let department_id = req.headers['department_id']

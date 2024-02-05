@@ -14,8 +14,9 @@ const departmentModels = require("../models/department.models");
 const _ = require('lodash');
 const notificationModel = require("../models/notification.model");
 const path = require('path');
+require('dotenv').config()
 
-router.post('/api/v1/createReport', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/createReport`, auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let created_by = req.user._id
@@ -90,8 +91,8 @@ router.post('/api/v1/createReport', auth, async (req, res) => {
     }
 })
 
-router.get('/api/v1/getReport', auth, async (req, res) => {
-    try {
+router.get(`${process.env.BASE_URL}/getReport`, auth, async (req, res) => {
+    try { 
         let role = req.user.user_role;
         let created_by = req.user._id;
         let count = 0;
@@ -169,7 +170,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         }
                     }
     
-                    res.json({ resultArray, type: 2 });
+                    res.json({message: {resultArray}, type: 2 });
                 } else {
                     res.json({ message: "No data found", type: 0 });
                 }
@@ -304,8 +305,9 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
                         notification_count: notification_count,
                         response_count: count,
                         survey_count: survey_count,
+                        resultArray:resultArray
                     }
-                    res.json({ message: data, resultArray, type: 2 });
+                    res.json({ message: data, type: 2 });
                 }
                 else {
                     let data = {
@@ -329,7 +331,7 @@ router.get('/api/v1/getReport', auth, async (req, res) => {
     }
 });
 
-router.put('/api/v1/deleteReport', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/deleteReport`, auth, async (req, res) => {
     try {
         let role = req.user.user_role
         let report_id = req.headers['report_id']
@@ -358,7 +360,7 @@ function getDynamicFileName() {
     return `responses_${timestamp}_${randomFraction}.xlsx`;
 }
 
-router.get('/api/v1/exportReport',auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/exportReport`,auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         if (role === 'admin' || role == 'survey-reader') {

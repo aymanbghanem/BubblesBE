@@ -13,7 +13,7 @@ const QuestionController = require('../models/questions_controller.models')
 require('dotenv').config()
 
 
-router.post('/api/v1/addQuestions', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addQuestions`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         if (role === "admin") {

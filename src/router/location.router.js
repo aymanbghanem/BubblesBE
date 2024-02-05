@@ -17,7 +17,7 @@ require('dotenv').config()
 
 
 
-// router.get('/api/v1/getLocations', auth, async (req, res) => {
+// router.get('${process.env.BASE_URL}/getLocations', auth, async (req, res) => {
 //     try {
 //         let survey_id = req.headers['survey_id'];
 //         let role = req.user.user_role;
@@ -59,7 +59,7 @@ require('dotenv').config()
 //     res.redirect(`http://localhost:2107/location/${location_id}?survey_id=${survey_id}`);
 // });
 
-// router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
+// router.get('${process.env.BASE_URL}/getLeafLocation', auth, async (req, res) => {
 //     try {
 //         let survey_id = req.headers['survey_id'];
 //         let role = req.user.user_role;
@@ -135,7 +135,7 @@ require('dotenv').config()
 //     return dynamicLinksAndQRCodes;
 // };
 
-// router.post('/api/v1/addLocation', auth, async (req, res) => {
+// router.post('${process.env.BASE_URL}/addLocation', auth, async (req, res) => {
 //     try {
 //         const { location_data, survey_title } = req.body;
 //         const role = req.user.user_role;
@@ -205,7 +205,7 @@ function flattenLocationData(locationData, parentId = null) {
 }
 
 
-router.get('/api/v1/getRootLocation', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getRootLocation`, auth, async (req, res) => {
     try {
         let role = req.user.user_role
         if (role == "admin") {
@@ -230,7 +230,7 @@ router.get('/api/v1/getRootLocation', auth, async (req, res) => {
     }
 })
 
-router.get('/api/v1/getLocationInfo',async (req, res) => {
+router.get(`${process.env.BASE_URL}/getLocationInfo`,async (req, res) => {
     try {
       
          let parentId = req.headers['location_id']
@@ -269,7 +269,7 @@ const getLocationsTree = async (parentId) => {
     };
 };
 
-router.get('/api/v1/getLocations', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getLocations`, auth, async (req, res) => {
     try {
         let survey_id = req.headers['survey_id'];
         let role = req.user.user_role;
@@ -324,7 +324,7 @@ const buildLocationTree = async (locations) => {
     return locationTree;
 };
 
-router.get('/api/v1/getLeafLocation', auth, async (req, res) => {
+router.get(`${process.env.BASE_URL}/getLeafLocation`, auth, async (req, res) => {
     try {
         let survey_id = req.headers['survey_id'];
         let role = req.user.user_role;
@@ -388,7 +388,7 @@ const getLeafLocations = async (parentId, parentPath) => {
 };
 
 
-// router.put('/api/v1/updateLocation', auth, async(req, res) => {
+// router.put('${process.env.BASE_URL}/updateLocation', auth, async(req, res) => {
 //     try {
 //         let role = req.user.user_role;
         

@@ -23,7 +23,7 @@ require('dotenv').config()
 
 
 
-router.post('/api/v1/addCompany', auth, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addCompany`, auth, async (req, res) => {
     try {
         if (req.user.user_role === 'superadmin') {
             const { company_name, dashboard,notifier,url_builder } = req.body;
@@ -53,7 +53,7 @@ router.post('/api/v1/addCompany', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getCompanies',auth,async(req,res)=>{
+router.get(`${process.env.BASE_URL}/getCompanies`,auth,async(req,res)=>{
     try {
        let role = req.user.user_role
       
@@ -75,7 +75,7 @@ router.get('/api/v1/getCompanies',auth,async(req,res)=>{
     }
 })
 
-router.put('/api/v1/deleteCompany', auth, async (req, res) => {
+router.put(`${process.env.BASE_URL}/deleteCompany`, auth, async (req, res) => {
     try {
         let role = req.user.user_role;
         let company_id = req.headers['company_id'];
@@ -120,7 +120,7 @@ router.put('/api/v1/deleteCompany', auth, async (req, res) => {
     }
 });
 
-router.get('/api/v1/getCompanyById',auth,async(req,res)=>{
+router.get(`${process.env.BASE_URL}/getCompanyById`,auth,async(req,res)=>{
     try {
         let company_id = req.headers['company_id']
         let role = req.user.user_role
@@ -141,7 +141,7 @@ router.get('/api/v1/getCompanyById',auth,async(req,res)=>{
     }
 })
 
-router.put('/api/v1/updateCompanyAccess',auth,async(req,res)=>{
+router.put(`${process.env.BASE_URL}/updateCompanyAccess`,auth,async(req,res)=>{
     try {
         let role = req.user.user_role
         let company_id = req.headers['company_id']
