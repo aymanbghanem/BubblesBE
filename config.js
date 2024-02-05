@@ -4,17 +4,8 @@ let roles =
 module.exports = {
     roles
 };
-//res.json({message:"sorry, you are unauthorized"})
-//samah.tubasi
-/*
 
-const locationModel = require("../../src/models/location.models");
-const Answer = require("../models/answers.model")
-const QuestionController = require('../models/questions_controller.models')
-
-*/
-/*
-
+/* 
 PORT = 3030
 DB_URL = mongodb://127.0.0.1:27878/Digital_Feedback
 BASE_URL = process.env.BASE_URL

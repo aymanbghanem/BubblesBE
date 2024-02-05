@@ -754,7 +754,7 @@ router.post(`${process.env.BASE_URL}/resetPassword`, async (req, res) => {
           //  await hashPassword(newPassword, async (hash) => {
               //  hashedPassword = hash;
                hashedPassword = await hashPassword(newPassword);
-                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword,temp:newPassword, }, { new: true })
+                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword,temp:newPassword, })
          //   })
 
              let user_name = existingUser.user_name
