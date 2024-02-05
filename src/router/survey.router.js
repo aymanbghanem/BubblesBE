@@ -485,13 +485,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
       }
 
         if (phase == 1) {
-          // dynamicPage/6596835ea9a94b294cc77340/6596835ea9a94b294cc77365
-          // let qr = await qrModel.create({
-          //   location_id:location_Id,
-          //   survey_id:survey_id,
-          //   link :`dynamicPage/${survey_id}/${location_Id}`
-          // })
-          // Fetch questions for the first phase
+
           const firstPhaseQuestions = await Question.find({
             survey_id: survey_id,
             active: 1,
@@ -508,7 +502,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
               model: 'question_controller',
               select: 'question_type',
             })
-            .select('question_title answers question_type required');
+            .select('question_title answers question_type required drop_down');
 
           if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
             return res.status(404).json({ questions: [] });
@@ -522,6 +516,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
               answers: question.answers,
               question_type: question.question_type.question_type,
               required: question.required,
+              drop_down:question.drop_down
             };
           });
 
@@ -577,6 +572,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
                   phase: question.phase,
                   question_type: question.question_type ? question.question_type.question_type : null,
                   required: question.required,
+                  drop_down:question.drop_down,
                   answers: question.answers.map(answer => ({
                     _id: answer._id,
                     answer: answer.answer,
