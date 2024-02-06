@@ -555,6 +555,11 @@ router.put(`${process.env.BASE_URL}/updateUserInfo`, auth, async (req, res) => {
             })
 
             if (existingUser) {
+                // Validate the email format
+                if (email_address && !validateEmail(email_address)) {
+                    return res.json({ message: "Invalid email address format. Please provide a valid email.", type: 0 });
+                }
+
                 // Check if the updated email is unique
                 if (email_address && email_address !== existingUser.email_address) {
                     const isEmailUnique = await userModels.findOne({
@@ -563,7 +568,7 @@ router.put(`${process.env.BASE_URL}/updateUserInfo`, auth, async (req, res) => {
                     });
 
                     if (isEmailUnique) {
-                        return res.json({ message: "Email address is not unique. Please choose a different email.",type:0 });
+                        return res.json({ message: "Email address is not unique. Please choose a different email.", type: 0 });
                     }
                 }
 
@@ -576,17 +581,16 @@ router.put(`${process.env.BASE_URL}/updateUserInfo`, auth, async (req, res) => {
                     { new: true }
                 );
 
-                return res.json({ message: "successfully updated",type:1 });
-
+                return res.json({ message: "Successfully updated", type: 1 });
 
             } else {
                 return res.json({ message: "User not found in the system", type: 0 });
             }
         } else {
-            return res.json({ message: "sorry, you are unauthorized",type:0 });
+            return res.json({ message: "Sorry, you are unauthorized", type: 0 });
         }
     } catch (error) {
-        return res.json({ message: "catch error " + error });
+        return res.json({ message: "Catch error " + error });
     }
 });
 
