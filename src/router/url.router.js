@@ -41,7 +41,7 @@ router.post(`${process.env.BASE_URL}/addURL`, auth, async (req, res) => {
                         created_by: created_by,
                         link: link
                     });
-
+                     let updateSurvey = await surveyModels.findOneAndUpdate({ _id: survey_id, active: 1  },{updated:0})
                     if (url) {
                         res.json({ message: "The URL code link was successfully added", type: 1 });
                     } else {

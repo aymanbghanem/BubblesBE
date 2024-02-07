@@ -62,6 +62,10 @@ const surveySchema = new Schema({
     deleted:{
         type: Number,
         default: 0
+    },
+    updated:{
+        type:Number,
+        default:1
     }
 
 }, { timestamps: true })
