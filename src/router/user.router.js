@@ -19,7 +19,7 @@ require('dotenv').config()
 
 
 const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z][a-zA-Z0-9_.]*@[^\s@]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
 };
 
@@ -27,11 +27,11 @@ const addOwner = async (company) => {
     const existingOwner = await userModels.findOne({
         user_role: 'owner',
         company_id: company._id,
-        active:1
+        active: 1
     });
 
     if (existingOwner) {
-       return("There is already an owner for this company");
+        return ("There is already an owner for this company");
     }
 };
 
@@ -48,11 +48,11 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
             return res.json({ message: "User name cannot contain spaces", type: 0 });
         }
         if (!config.roles.includes(role)) {
-            return res.json({ message: "sorry, you are unauthorized",type:0 });
+            return res.json({ message: "sorry, you are unauthorized", type: 0 });
         }
 
         if (!validateEmail(email_address)) {
-            return res.json({ message: "Invalid email address",type:0 });
+            return res.json({ message: "Invalid email address", type: 0 });
         }
 
         const existingUser = await userModels.findOne({
@@ -62,7 +62,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
         });
 
         if (existingUser) {
-            return res.json({ message: "The email address or username already exists",type:0 });
+            return res.json({ message: "The email address or username already exists", type: 0 });
         }
 
         //let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
@@ -77,31 +77,33 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
             if (company) {
                 const ownerError = await addOwner(company);
                 if (ownerError) {
-                   res.json({
-                    type: 0,
-                    message: "There is already an owner for this company"
-                });
+                    res.json({
+                        type: 0,
+                        message: "There is already an owner for this company"
+                    });
                 }
                 else {
-                  //   await hashPassword(newPassword, async (hash) => {
+                    //   await hashPassword(newPassword, async (hash) => {
                     // hashedPassword = hash;
-                    hashedPassword = await hashPassword(newPassword);
-                    const user = await userModels.create({
-                        user_name: user_name,
-                        password: hashedPassword,
-                        email_address: email_address,
-                        company_id: company._id,
-                        user_role: "owner",
-                        temp:newPassword,
-                        token: null,
-                    });
+
 
                     try {
                         await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                        hashedPassword = await hashPassword(newPassword);
+                        const user = await userModels.create({
+                            user_name: user_name,
+                            password: hashedPassword,
+                            email_address: email_address,
+                            company_id: company._id,
+                            user_role: "owner",
+                            temp: newPassword,
+                            token: null,
+                        });
                         res.json({ message: "New owner added successfully", type: 1 });
                     } catch (emailError) {
                         // Handle the email sending error
-                        res.json({ message: "successfully added, but email not sent", type: 1 });
+                        console.log(emailError)
+                        res.json({ message: "Failed to add. Email not sent.", type: 0 });
                     }
 
                     // })
@@ -132,21 +134,20 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
                 email_address: email_address,
                 user_role: "admin",
                 token: null,
-                temp:newPassword,
+                temp: newPassword,
             };
-
-            const user = await userModels.create({
-                ...userParams,
-                company_id: req.user.company_id,
-                department_id: department._id,
-            });
-
             try {
                 await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                const user = await userModels.create({
+                    ...userParams,
+                    company_id: req.user.company_id,
+                    department_id: department._id,
+                });
                 res.json({ message: "New admin added successfully", type: 1 });
             } catch (emailError) {
                 // Handle the email sending error
-                res.json({ message: "successfully added, but email not sent", type: 1 });
+                console.log(emailError)
+                res.json({ message: "Failed to add. Email not sent.", type: 0 });
             }
             // })
         }
@@ -155,12 +156,12 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
             hashedPassword = await hashPassword(newPassword);
             // await hashPassword(newPassword, async (hash) => {
             // hashedPassword = hash;
-            
+
             const department = await departmentModels.findOne({
-                _id:req.user.department_id,
+                _id: req.user.department_id,
                 active: 1,
             });
-            
+
             if (!department) {
                 return res.json({ message: "Department not found or inactive", type: 0 });
             }
@@ -170,54 +171,52 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
             const userParams = {
                 user_name: user_name,
                 password: hashedPassword,
-                temp:newPassword,
+                temp: newPassword,
                 email_address: email_address,
                 user_role: 'survey-reader',
                 token: null,
                 created_by: req.user._id
             };
-            // Create a new user
-            user = await userModels.create({
-                ...userParams,
-                company_id: req.user.company_id,
-                department_id: req.user.department_id,
-            });
-            // Check if there are surveys to assign
-            if (survey.length != 0) {
 
-                // Get the survey information
-                const surveyInfo = await surveyModel.findOne({
-                    _id: survey,
-                    company_id: req.user.company_id,
-                    active: 1,
-                });
-                if (surveyInfo) {
-                    let survey_reader = await surveyReaderModel.create({
-                        survey_id: survey,
-                        company_id: req.user.company_id,
-                        department_id: user.department_id,
-                        reader_id: user._id,
-                        created_by: req.user._id, // Assign the survey reader creator
-                        active: 1,
-                    });
-                } else {
-
-                    console.error(`Survey not found`);
-                }
-
-            }
             try {
                 await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                // Create a new user
+                user = await userModels.create({
+                    ...userParams,
+                    company_id: req.user.company_id,
+                    department_id: req.user.department_id,
+                });
+                // Check if there are surveys to assign
+                if (survey.length != 0) {
+
+                    // Get the survey information
+                    const surveyInfo = await surveyModel.findOne({
+                        _id: survey,
+                        company_id: req.user.company_id,
+                        active: 1,
+                    });
+                    if (surveyInfo) {
+                        let survey_reader = await surveyReaderModel.create({
+                            survey_id: survey,
+                            company_id: req.user.company_id,
+                            department_id: user.department_id,
+                            reader_id: user._id,
+                            created_by: req.user._id, // Assign the survey reader creator
+                            active: 1,
+                        });
+                    }
+                }
                 res.json({ message: "New reader added successfully", type: 1 });
             } catch (emailError) {
                 // Handle the email sending error
-                res.json({ message: "successfully added, but email not sent", type: 1 });
+                console.log(emailError)
+                res.json({ message: "Failed to add. Email not sent.", type: 0 });
             }
-           //  });
+            //  });
 
         }
         else {
-            return res.json({ message: "sorry, you are unauthorized",type:0 });
+            return res.json({ message: "sorry, you are unauthorized", type: 0 });
         }
     } catch (error) {
         return res.json({ message: error.message });
@@ -249,32 +248,31 @@ router.post(`${process.env.BASE_URL}/addSuperadmin`, async (req, res) => {
         if (existingUser) {
             return res.json({ message: "Email address or username already exists", type: 0 });
         } else {
-            hashedPassword = await hashPassword(newPassword);
-            let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
-            let new_user = await userModels.create({
-                user_name: user_name,
-                user_role: 'superadmin',
-                email_address: email_address,
-                password: hashedPassword,
-                temp:newPassword,
-                token: token,
-            });
 
             try {
                 await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                hashedPassword = await hashPassword(newPassword);
+                let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
+                let new_user = await userModels.create({
+                    user_name: user_name,
+                    user_role: 'superadmin',
+                    email_address: email_address,
+                    password: hashedPassword,
+                    temp: newPassword,
+                    token: token,
+                });
                 res.json({ message: "successfully added", type: 1 });
             } catch (emailError) {
                 // Handle the email sending error
-                console.log("emailError "+emailError)
-                res.json({ message: "successfully added, but email not sent", type: 1 });
+                console.log("emailError " + emailError)
+                res.json({ message: "Failed to add. Email not sent.", type: 0 });
+
             }
         }
     } catch (error) {
         res.status(500).json({ message: "catch error " + error });
     }
 });
-
-
 
 router.get(`${process.env.BASE_URL}/userById`, async (req, res) => {
     try {
@@ -302,7 +300,7 @@ router.get(`${process.env.BASE_URL}/userById`, async (req, res) => {
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
             };
 
-            res.json({ message: response,type:2 });
+            res.json({ message: response, type: 2 });
         } else {
             res.json({ message: "User not found in the system", type: 0 });
         }
@@ -315,7 +313,7 @@ router.get(`${process.env.BASE_URL}/userInfo`, auth, async (req, res) => {
     try {
         let id = req.user._id;
         let readerUser
-       
+
         let user = await userModels.findById({ _id: id, active: 1 }).populate([
             {
                 path: 'company_id',
@@ -326,49 +324,49 @@ router.get(`${process.env.BASE_URL}/userInfo`, auth, async (req, res) => {
                 select: 'department_name',
             },
         ]);
-        if(req.user.user_role == 'survey-reader'){
-           readerUser = await userModels.findById({ _id: id, active: 1 }).populate([
+        if (req.user.user_role == 'survey-reader') {
+            readerUser = await userModels.findById({ _id: id, active: 1 }).populate([
                 {
                     path: 'created_by',
                     select: 'user_name -_id',
                 }
             ]);
         }
-        if (user && req.user.user_role!="superadmin") {
-          
+        if (user && req.user.user_role != "superadmin") {
+
             let response = {
                 _id: user._id,
                 user_name: user.user_name,
                 user_role: user.user_role,
-                created_by:readerUser?readerUser.created_by.user_name:"",
+                created_by: readerUser ? readerUser.created_by.user_name : "",
                 token: user.token,
                 email_address: user.email_address,
                 company_name: user.company_id ? user.company_id.company_name || " " : " ",
                 department_name: user.department_id ? user.department_id.department_name || " " : " ",
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
-                createdAt:user.createdAt
+                createdAt: user.createdAt
             };
-            let companyInfo={
-                dashboard:user.company_id.dashboard ?user.company_id.dashboard :0 ,
-                notifier : user.company_id.notifier ? user.company_id.notifier: 0,
-                url_builder : user.company_id.url_builder ? user.company_id.url_builder:0
+            let companyInfo = {
+                dashboard: user.company_id.dashboard ? user.company_id.dashboard : 0,
+                notifier: user.company_id.notifier ? user.company_id.notifier : 0,
+                url_builder: user.company_id.url_builder ? user.company_id.url_builder : 0
             }
-            res.json({ message: response,companyInfo,type:2});
+            res.json({ message: response, companyInfo, type: 2 });
         }
-        else if(user && req.user.user_role=="superadmin"){
+        else if (user && req.user.user_role == "superadmin") {
             let response = {
                 _id: user._id,
                 user_name: user.user_name,
                 user_role: user.user_role,
-                created_by:readerUser?readerUser.created_by.user_name:"",
+                created_by: readerUser ? readerUser.created_by.user_name : "",
                 token: user.token,
                 email_address: user.email_address,
                 company_name: user.company_id ? user.company_id.company_name || " " : " ",
                 department_name: user.department_id ? user.department_id.department_name || " " : " ",
                 image: user.company_id && user.image != "" ? `${user.company_id.company_name}/${user.image}` : "",
-                createdAt:user.createdAt
+                createdAt: user.createdAt
             };
-            res.json({ message: response,type:2});
+            res.json({ message: response, type: 2 });
         }
         else {
             res.json({ message: "User not found in the system", type: 0 });
@@ -384,18 +382,18 @@ router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole`, auth, async (req,
         const company_id = req.user.company_id;
 
         if (!config.roles.includes(role)) {
-            return res.json({ message: "Sorry, you are unauthorized",type:0 });
+            return res.json({ message: "Sorry, you are unauthorized", type: 0 });
         }
 
         let users;
 
         if (role === 'superadmin') {
-            users = await userModels.find({ user_role: 'owner'}).populate({
+            users = await userModels.find({ user_role: 'owner' }).populate({
                 path: "company_id",
                 select: "company_name -_id"
             });
         } else if (role === 'owner') {
-            users = await userModels.find({ user_role: 'admin', company_id: company_id}).populate([
+            users = await userModels.find({ user_role: 'admin', company_id: company_id }).populate([
                 {
                     path: "company_id",
                     select: "company_name -_id"
@@ -420,7 +418,7 @@ router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole`, auth, async (req,
                     select: "department_name"
                 }
             ]);
-            
+
             const usersWithSurveys = await Promise.all(users.map(async user => {
                 const surveyReaders = await surveyReaderModel.find({
                     company_id: company_id,
@@ -429,10 +427,10 @@ router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole`, auth, async (req,
                     active: 1
                 }).populate({
                     path: 'survey_id',
-                    select: 'survey_title',  
+                    select: 'survey_title',
                     model: 'survey'
                 });
-            
+
                 const responseArray = surveyReaders.map(reader => {
                     const response = {
                         active: user.active,
@@ -449,7 +447,7 @@ router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole`, auth, async (req,
                     };
                     return response;
                 });
-            
+
                 // If the user is a survey reader but has no associated surveys, add a record with null values
                 if (surveyReaders.length === 0) {
                     const response = {
@@ -467,16 +465,16 @@ router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole`, auth, async (req,
                     };
                     responseArray.push(response);
                 }
-            
+
                 return responseArray;
             }));
-            
-            return res.json({ message: usersWithSurveys.flat(),type:2 });
-            
-        } 
-        
+
+            return res.json({ message: usersWithSurveys.flat(), type: 2 });
+
+        }
+
         else {
-            return res.json({ message: "Invalid user role" ,type:0});
+            return res.json({ message: "Invalid user role", type: 0 });
         }
 
         if (users.length !== 0) {
@@ -495,7 +493,7 @@ router.get(`${process.env.BASE_URL}/getUserAccordingToMyRole`, auth, async (req,
                 return response;
             });
 
-            return res.json({ message: simplifiedUsers,type:2 });
+            return res.json({ message: simplifiedUsers, type: 2 });
         } else {
             return res.json({ message: "No users found under your role", type: 0 });
 
@@ -527,15 +525,15 @@ router.get(`${process.env.BASE_URL}/getSurveysForSurveyReader`, auth, async (req
                 const surveysWithoutId = userSurveys.map(survey => ({
                     survey_title: survey.survey_id.survey_title,
                     survey_id: survey.survey_id._id,
-                    active:survey.survey_id.active
+                    active: survey.survey_id.active
                 }));
 
-                res.json({ message: surveysWithoutId,type:2 });
+                res.json({ message: surveysWithoutId, type: 2 });
             } else {
                 res.json({ message: "No data found", type: 0 });
             }
         } else {
-            res.json({ message: "sorry, you are unauthorized" ,type:0});
+            res.json({ message: "sorry, you are unauthorized", type: 0 });
         }
     } catch (error) {
         res.json({ message: "catch error " + error });
@@ -689,14 +687,14 @@ router.put(`${process.env.BASE_URL}/assignOrDeleteSurveyForReader`, auth, async 
             });
 
             if (!user) {
-                return res.json({ message: "User not found",type:0 });
+                return res.json({ message: "User not found", type: 0 });
             }
 
             const assignments = req.body.assignments; // Extract assignments from req.body
 
             // Ensure assignments is an array
             if (!Array.isArray(assignments)) {
-                return res.json({ message: "Invalid format for assignments",type:0 });
+                return res.json({ message: "Invalid format for assignments", type: 0 });
             }
 
             for (const assignment of assignments) {
@@ -705,13 +703,13 @@ router.put(`${process.env.BASE_URL}/assignOrDeleteSurveyForReader`, auth, async 
                 let existingAssignment = await surveyReaderModel.findOne({
                     reader_id: reader_id,
                     survey_id: survey_id,
-                    active:1
+                    active: 1
                 });
 
                 let surveyInfo = await surveyModel.findOne({ _id: survey_id, company_id: req.user.company_id, active: 1 });
 
                 if (!surveyInfo) {
-                    return res.json({ message: `The survey with ID ${survey_id} does not exist`,type:0 });
+                    return res.json({ message: `The survey with ID ${survey_id} does not exist`, type: 0 });
                 }
 
                 if (!existingAssignment) {
@@ -735,9 +733,9 @@ router.put(`${process.env.BASE_URL}/assignOrDeleteSurveyForReader`, auth, async 
                 }
             }
 
-            return res.json({ message: "Survey assignments updated successfully",type:1 });
+            return res.json({ message: "Survey assignments updated successfully", type: 1 });
         } else {
-            return res.json({ message: "Sorry, you are unauthorized",type:0 });
+            return res.json({ message: "Sorry, you are unauthorized", type: 0 });
         }
     } catch (error) {
         console.error(error);
@@ -749,27 +747,27 @@ router.post(`${process.env.BASE_URL}/resetPassword`, async (req, res) => {
     try {
         let { email_address } = req.body
         let newPassword = await generateMixedID()
-      
+
         let response;
         let existingUser = await userModels.findOne({
             email_address: email_address
         })
         if (existingUser) {
-          //  await hashPassword(newPassword, async (hash) => {
-              //  hashedPassword = hash;
-               hashedPassword = await hashPassword(newPassword);
-                existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword,temp:newPassword, })
-         //   })
+            //  await hashPassword(newPassword, async (hash) => {
+            //  hashedPassword = hash;
+            hashedPassword = await hashPassword(newPassword);
+            existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword, temp: newPassword, })
+            //   })
 
-             let user_name = existingUser.user_name
-            response = await sendEmail(user_name,existingUser.email_address, "Reset password", newPassword,"to reset your password")
-            res.json({ message: "Password successful updated",type:1 })
+            let user_name = existingUser.user_name
+            response = await sendEmail(user_name, existingUser.email_address, "Reset password", newPassword, "to reset your password")
+            res.json({ message: "Password successful updated", type: 1 })
         }
         else {
             res.json({ message: "User does not exist", type: 0 });
         }
     } catch (error) {
-        res.json({ message: "catch error " + error,type:0 })
+        res.json({ message: "catch error " + error, type: 0 })
     }
 })
 
@@ -779,82 +777,82 @@ router.post(`${process.env.BASE_URL}/deleteUsers`, auth, async (req, res) => {
         const { user_ids, active } = req.body;
         let id = user_ids
         if (!config.roles.includes(role)) {
-          return  res.json({message:"sorry, you are unauthorized",type:0})
+            return res.json({ message: "sorry, you are unauthorized", type: 0 })
         }
 
         if (role === "superadmin") {
             // Find the currently active owners
-            let user = await userModels.findOne({_id:id}).select('company_id -_id')
-            if(user){
-                let company = await companyModels.findOne({_id:user.company_id,active:1})
-                if(company){
+            let user = await userModels.findOne({ _id: id }).select('company_id -_id')
+            if (user) {
+                let company = await companyModels.findOne({ _id: user.company_id, active: 1 })
+                if (company) {
                     const currentActiveOwners = await userModels.find({
                         user_role: 'owner',
                         active: 1,
-                        company_id:user.company_id,
-                        deleted:0
+                        company_id: user.company_id,
+                        deleted: 0
                     });
-                    
+
                     // Check if there is more than one active owner
                     if (currentActiveOwners.length > 0 && active === 1) {
-                        return res.json({ message: "Cannot activate user, another owner is already active" ,type:0});
+                        return res.json({ message: "Cannot activate user, another owner is already active", type: 0 });
                     }
-                
+
                     // Update all users in user_ids to be active or inactive based on the 'active' parameter
                     const updatedUsers = await userModels.updateMany(
                         { _id: id },
-                        { $set: { active: active,deleted:!active } }
+                        { $set: { active: active, deleted: !active } }
                     );
-                
+
                     if (updatedUsers.modifiedCount === updatedUsers.matchedCount) {
-                     return res.json({ message: active === 1 ? "User activated successfully" : "User deactivated successfully" ,type:1});
+                        return res.json({ message: active === 1 ? "User activated successfully" : "User deactivated successfully", type: 1 });
                     }
-                }
-                else{
-                    res.json({ message: "Your company is currently inactive. We are unable to complete the requested process.", type: 0 });
-                }
                 }
                 else {
-                    return res.json({ message: "No valid users found to update",type:0 });
+                    res.json({ message: "Your company is currently inactive. We are unable to complete the requested process.", type: 0 });
                 }
-              
+            }
+            else {
+                return res.json({ message: "No valid users found to update", type: 0 });
+            }
+
         }
 
-         else {
-            let user = await userModels.findOne({_id:id}).select('department_id -_id')
-            if(user){
-                let department = await departmentModels.findOne({_id:user.department_id,active:1})
-                if(department){
+        else {
+            let user = await userModels.findOne({ _id: id }).select('department_id -_id')
+            if (user) {
+                let department = await departmentModels.findOne({ _id: user.department_id, active: 1 })
+                if (department) {
                     const deletedUsers = await userModels.updateMany(
-                        { _id:id },
-                        { $set: { active: active,deleted:!active } }
+                        { _id: id },
+                        { $set: { active: active, deleted: !active } }
                     );
-        
+
                     const deletedSurveyReader = await surveyReaderModel.updateMany(
                         { reader_id: id },
-                        { $set: { active: active,deleted:!active } }
+                        { $set: { active: active, deleted: !active } }
                     );
-                    
+
                     let deleteNotify = await notifyModels.updateMany(
-                        {survey_reader_id : id},
-                        {$set:{active: active}}
+                        { survey_reader_id: id },
+                        { $set: { active: active } }
                     )
-                    let deleteNotification= await notificationModel.updateMany(
-                        {survey_reader_id : id},
-                        {$set:{active: active}}
+                    let deleteNotification = await notificationModel.updateMany(
+                        { survey_reader_id: id },
+                        { $set: { active: active } }
                     )
                     if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 0) {
-                        return res.json({ message: "Users deleted successfully",type:1 });
+                        return res.json({ message: "Users deleted successfully", type: 1 });
                     } else if (deletedUsers.modifiedCount === deletedUsers.matchedCount && active === 1) {
-                        return res.json({ message: "Users activated successfully",type:1 });
+                        return res.json({ message: "Users activated successfully", type: 1 });
                     }
                 }
-               else{
-                res.json({ message: "Your department is currently inactive. We are unable to complete the requested process.", type: 0 });
-               }
+                else {
+                    res.json({ message: "Your department is currently inactive. We are unable to complete the requested process.", type: 0 });
+                }
             }
-           else {
-            return res.json({ message: "No valid user found to delete", type: 0 });
+            else {
+                return res.json({ message: "No valid user found to delete", type: 0 });
 
             }
         }

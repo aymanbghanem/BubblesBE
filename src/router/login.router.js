@@ -8,11 +8,6 @@ var jwt = require('jsonwebtoken');
 const CryptoJS = require('crypto-js');
 require('dotenv').config()
 
-//src\helper\hashPass.helper.js
-// const encrypt = (text) => {
-//   const secretKey = "copyRights2023";
-//   return CryptoJS.AES.encrypt(text, secretKey).toString();
-// };
 
 router.post(`${process.env.BASE_URL}/login`, async (req, res) => {
   try {
