@@ -381,7 +381,7 @@ router.put(`${process.env.BASE_URL}/updateSurvey`, auth, async (req, res) => {
       session.startTransaction();
 
       // Update survey information
-      const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1 });
+      const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1,updated:1 });
 
       if (!existingSurvey) {
         return res.json({ message: `Survey with ID ${surveyId} not found`, type: 0 });
