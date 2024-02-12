@@ -58,7 +58,7 @@ router.get(`${process.env.BASE_URL}/getNotifications`, auth, async (req, res) =>
             }
         }
         else if (role === 'admin') {
-         
+            try {
                 // Find notifications based on the specified criteria
                 let notifications = await notificationModel.find({
                     created_by: id,
@@ -85,43 +85,29 @@ router.get(`${process.env.BASE_URL}/getNotifications`, auth, async (req, res) =>
                 ]);
         
                 if (notifications.length > 0) {
-                    // Initialize groupedData to store results by survey reader and user_id
-                    const groupedData = notifications.reduce((result, notification) => {
+                    // Map the notifications to the desired responseData format
+                    const responseData = notifications.map(notification => {
                         const { response_id, survey_reader_id, createdAt, processed, _id } = notification;
                         const { user_answer, survey_id, location_id, user_id } = response_id;
         
-                        if (survey_reader_id) {
-                            const readerId = survey_reader_id._id.toString();
-                            const key = `${readerId}-${user_id}`; // Create a unique key based on reader and user_id
-        
-                            result[key] = result[key] || {
-                                readerName: survey_reader_id.user_name,
-                                processed,
-                                survey_title: survey_id.survey_title,
-                                location_name: location_id.location_name,
-                                createdAt: createdAt,
-                                user_id: user_id,
-                                notification_id: _id
-                            };
-                        }
-                        return result;
-                    }, {});
-        
-                    // Map the groupedData to the desired responseData format
-                    const responseData = Object.values(groupedData).map(reader => ({
-                        notification_id: reader.notification_id,
-                        survey_title: reader.survey_title,
-                        reader_name: reader.readerName,
-                        processed: reader.processed,
-                        createdAt: reader.createdAt,
-                        location_name: reader.location_name,
-                        user_id: reader.user_id
-                    }));
+                        return {
+                            notification_id: _id,
+                            survey_title: survey_id.survey_title,
+                            reader_name: survey_reader_id ? survey_reader_id.user_name : null,
+                            processed,
+                            createdAt,
+                            location_name: location_id ? location_id.location_name : null,
+                            user_id
+                        };
+                    });
         
                     res.json({ message: responseData, type: 2 });
                 } else {
                     res.json({ message: "No data found", type: 0 });
                 }
+            } catch (error) {
+                res.json({ message: "Error in admin section: " + error, type: 0 });
+            }
         }
 
         else {
