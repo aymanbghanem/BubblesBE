@@ -19,7 +19,7 @@ require('dotenv').config()
 
 
 const validateEmail = (email) => {
-    const emailRegex = /^[a-zA-Z][a-zA-Z0-9_.]*@[^\s@]+\.[a-zA-Z]{2,}$/;
+    const emailRegex = /^[a-zA-Z][a-zA-Z0-9_.]*@[^\s@]+\.[a-zA-Z]{1,}$/;
     return emailRegex.test(email);
 };
 
