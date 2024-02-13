@@ -37,39 +37,3 @@ const auth = async (req, res, next) => {
 };
 
 module.exports = auth;
-
-
-/*
-
-
-
-const fetchData = async () => {
-  try {
-    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX25hbWUiOiJzdXBlcmFkbWluIiwiaWF0IjoxNzA3ODEwODA4fQ.8c-FN9m4pympYgWDohsbbrpoWQdON3eSP7LwtnzaJlg';  // Replace with your actual JWT token
-
-    const response = await fetch('http://localhost:2107/api/v1/getReport', {
-      method: 'GET',  // or 'POST', 'PUT', etc., depending on your API
-      headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorMessage = await response.json();
-      console.error(errorMessage);  // Handle the error on the frontend as needed
-    } else {
-      const data = await response.json();
-      console.log(data);  // Handle the successful response data
-    }
-  } catch (error) {
-    console.error('An error occurred while fetching data:', error);
-  }
-};
-
-fetchData();
-
-
-
-
-*/

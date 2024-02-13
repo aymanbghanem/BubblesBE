@@ -384,7 +384,9 @@ router.put(`${process.env.BASE_URL}/updateSurvey`, auth, async (req, res) => {
       const existingSurvey = await surveyModel.findOne({ _id: surveyId, active: 1,updated:1 });
 
       if (!existingSurvey) {
-        return res.json({ message: `Survey with ID ${surveyId} not found`, type: 0 });
+        
+        return res.json({ error: 'Survey not found or cannot be updated.', type: 0 });
+
       }
 
       try {

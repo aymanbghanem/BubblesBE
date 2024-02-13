@@ -2,7 +2,7 @@
 const nodemailer = require("nodemailer");
 //reset your password
 const transporter = nodemailer.createTransport({
-  host: '10.100.26.21', // Updated SMTP server for Jawwal
+  host: '10.100.26.21', 
   port: 25,
   secure: false, // Disabling TLS
   tls: {

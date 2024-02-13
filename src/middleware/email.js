@@ -47,7 +47,7 @@ async function sendEmail(user_name, to, subject, password, message) {
    </html>
  `,
   });
- console.log(info)
+ //console.log(info)
   return info;
 }
 

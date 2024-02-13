@@ -102,7 +102,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
                         res.json({ message: "New owner added successfully", type: 1 });
                     } catch (emailError) {
                         // Handle the email sending error
-                        console.log(emailError)
+                       // console.log(emailError)
                         res.json({ message: "Failed to add. Email not sent.", type: 0 });
                     }
 
@@ -146,7 +146,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
                 res.json({ message: "New admin added successfully", type: 1 });
             } catch (emailError) {
                 // Handle the email sending error
-                console.log(emailError)
+               // console.log(emailError)
                 res.json({ message: "Failed to add. Email not sent.", type: 0 });
             }
             // })
@@ -209,7 +209,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
                 res.json({ message: "New reader added successfully", type: 1 });
             } catch (emailError) {
                 // Handle the email sending error
-                console.log(emailError)
+               // console.log(emailError)
                 res.json({ message: "Failed to add. Email not sent.", type: 0 });
             }
             //  });
@@ -252,19 +252,19 @@ router.post(`${process.env.BASE_URL}/addSuperadmin`, async (req, res) => {
             try {
                 await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
                 hashedPassword = await hashPassword(newPassword);
-                let token = jwt.sign({ user_name: user_name }, process.env.TOKEN_KEY);
+             
                 let new_user = await userModels.create({
                     user_name: user_name,
                     user_role: 'superadmin',
                     email_address: email_address,
                     password: hashedPassword,
                     temp: newPassword,
-                    token: token,
+                    token: null,
                 });
                 res.json({ message: "successfully added", type: 1 });
             } catch (emailError) {
                 // Handle the email sending error
-                console.log("emailError " + emailError)
+             //   console.log("emailError " + emailError)
                 res.json({ message: "Failed to add. Email not sent.", type: 0 });
 
             }
