@@ -743,7 +743,7 @@ router.put(`${process.env.BASE_URL}/assignOrDeleteSurveyForReader`, auth, async 
     }
 });
 
-router.post(`${process.env.BASE_URL}/resetPassword`, async (req, res) => {
+router.post(`${process.env.BASE_URL}/resetPassword`,auth, async (req, res) => {
     try {
         let { email_address } = req.body
         let newPassword = await generateMixedID()

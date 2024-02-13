@@ -8,7 +8,7 @@ router.get(`${process.env.BASE_URL}/getNotifications`, auth, async (req, res) =>
     try {
         let id = req.user._id;
         let role = req.user.user_role;
-
+        let department_id = req.user.department_id
         if (role == 'survey-reader') {
             let notifications = await notificationModel.find({
                 survey_reader_id: id,
@@ -61,7 +61,7 @@ router.get(`${process.env.BASE_URL}/getNotifications`, auth, async (req, res) =>
             try {
                 // Find notifications based on the specified criteria
                 let notifications = await notificationModel.find({
-                    created_by: id,
+                    department_id: department_id,
                     active: 1,
                     processed: 0
                 }).populate([

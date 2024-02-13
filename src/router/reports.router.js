@@ -216,7 +216,7 @@ router.get(`${process.env.BASE_URL}/getReport`, auth, async (req, res) => {
             let department_id = req.user.department_id;
 
             let reports = await reportsModel.find({ created_by, active: 1 });
-            let notification_count = await notificationModel.countDocuments({ created_by, processed: 0 })
+            let notification_count = await notificationModel.countDocuments({ department_id, processed: 0 })
             let survey_count = await surveyModels.countDocuments({ created_by, active: 1 })
             let responses = await responseModel.find({department_id})
             let company = await companyModels.findOne({_id:req.user.company_id ,dashboard:1 })
