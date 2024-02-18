@@ -4,10 +4,13 @@ const locationModels = require("../models/location.models");
 const surveyModels = require("../models/survey.models");
 const { create } = require("../models/user.models");
 const urlModel = require("../models/url.model");
+const restricted_url = require("../models/restricted_url.model")
 const router = express.Router();
 const multer = require('multer');
 const xlsx = require('xlsx');
 const companyModels = require("../models/company.models");
+const uuid = require('uuid');
+const CryptoJS = require('crypto-js');
 require('dotenv').config()
 
 const storage = multer.memoryStorage(); // Use memory storage for reading the file buffer
@@ -39,7 +42,9 @@ router.post(`${process.env.BASE_URL}/addURL`, auth, async (req, res) => {
                         location_id: location_id,
                         survey_id: survey_id,
                         created_by: created_by,
-                        link: link
+                        link: link,
+                        restricted:existingSurvey.restricted,
+                        key :existingSurvey.restricted == 1 ? existingSurvey.key:null
                     });
                      let updateSurvey = await surveyModels.findOneAndUpdate({ _id: survey_id, active: 1  },{updated:0})
                     if (url) {
@@ -106,6 +111,7 @@ router.get(`${process.env.BASE_URL}/getURL`, auth, async (req, res) => {
                             link: 1,
                             location_name: '$location.location_name',
                             survey_title: '$survey.survey_title',
+                            restricted : '$survey.restricted',
                             created_by: 1,
                             createdAt: 1,
                             updatedAt: 1,
@@ -136,65 +142,138 @@ router.post(`${process.env.BASE_URL}/excelBuilder`, auth, upload.single('file'),
         if (role === "admin") {
             let company_id = req.user.company_id
             let company = await companyModels.findOne({ _id: company_id, active: 1, url_builder: 1 })
+           
+            //Not restricted
             if(company){
-                let url = await urlModel.findOne({ _id: url_id, active: 1 }).select('link -_id');
-
-                if (url) {
-                    // Assuming the file is named 'file' in the request
-                    const file = req.file;
-    
-                    if (!file) {
-                        return res.json({ message: 'No file uploaded', type: 0 });
-                    }
-    
-                    // Read the Excel file
-                    const workbook = xlsx.read(file.buffer, { type: 'buffer' });
-    
-                    // Get the sheet names
-                    const sheetNames = workbook.SheetNames;
-    
-                    // Assuming there is only one sheet (modify if you have multiple sheets)
-                    const sheet = workbook.Sheets[sheetNames[0]];
-    
-                    // Extract column names dynamically from the first column
-                    const columnNames = [];
-                    for (const key in sheet) {
-                        if (key[0] === '!' || key.substring(1) !== '1') {
-                            continue; // Skip non-data rows
+                let url = await urlModel.findOne({ _id: url_id, active: 1 }).select('link restricted key -_id');
+                if(url && url.restricted == 0){
+                        // Assuming the file is named 'file' in the request
+                        const file = req.file;
+        
+                        if (!file) {
+                            return res.json({ message: 'No file uploaded', type: 0 });
                         }
-                        columnNames.push(sheet[key].v);
+        
+                        // Read the Excel file
+                        const workbook = xlsx.read(file.buffer, { type: 'buffer' });
+        
+                        // Get the sheet names
+                        const sheetNames = workbook.SheetNames;
+        
+                        // Assuming there is only one sheet (modify if you have multiple sheets)
+                        const sheet = workbook.Sheets[sheetNames[0]];
+        
+                        // Extract column names dynamically from the first column
+                        const columnNames = [];
+                        for (const key in sheet) {
+                            if (key[0] === '!' || key.substring(1) !== '1') {
+                                continue; // Skip non-data rows
+                            }
+                            columnNames.push(sheet[key].v);
+                        }
+        
+                        // Convert the sheet data to JSON
+                        const data = xlsx.utils.sheet_to_json(sheet);
+        
+                        // Concatenate the dynamic column with the URL link
+                        const result = data.map((row) => {
+                            const dynamicColumnName = columnNames[0]; // Assuming the first column is dynamic
+                            return {
+                                dynamicColumn: row[dynamicColumnName],
+                                concatenatedLink: url.link + '/' + row[dynamicColumnName],
+                            };
+                          
+                        });
+                        // Create a new workbook
+                        const newWorkbook = xlsx.utils.book_new();
+                        const newSheet = xlsx.utils.json_to_sheet(result);
+        
+                        // Add the new sheet to the workbook
+                        xlsx.utils.book_append_sheet(newWorkbook, newSheet, 'ConcatenatedData');
+        
+                        // Write the workbook to a buffer
+                        const excelBuffer = xlsx.write(newWorkbook, { bookType: 'xlsx', type: 'buffer' });
+        
+                        // Send the Excel file as a response
+                        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                        res.setHeader('Content-Disposition', 'attachment; filename=concatenated_data.xlsx');
+                        res.send(excelBuffer);
+                }
+              //Restricted
+              else if (url && url.restricted == 1) {
+                // Assuming the file is named 'file' in the request
+                const file = req.file;
+            
+                if (!file) {
+                    return res.json({ message: 'No file uploaded', type: 0 });
+                }
+            
+                // Read the Excel file
+                const workbook = xlsx.read(file.buffer, { type: 'buffer' });
+            
+                // Get the sheet names
+                const sheetNames = workbook.SheetNames;
+            
+                // Assuming there is only one sheet (modify if you have multiple sheets)
+                const sheet = workbook.Sheets[sheetNames[0]];
+            
+                // Extract column names dynamically from the first column
+                const columnNames = [];
+                for (const key in sheet) {
+                    if (key[0] === '!' || key.substring(1) !== '1') {
+                        continue; // Skip non-data rows
                     }
-    
-                    // Convert the sheet data to JSON
-                    const data = xlsx.utils.sheet_to_json(sheet);
-    
-                    // Concatenate the dynamic column with the URL link
-                    const result = data.map((row) => {
-                        const dynamicColumnName = columnNames[0]; // Assuming the first column is dynamic
-                        return {
-                            dynamicColumn: row[dynamicColumnName],
-                            concatenatedLink: url.link + '/' + row[dynamicColumnName]
-                        };
+                    columnNames.push(sheet[key].v);
+                }
+            
+                // Convert the sheet data to JSON
+                const data = xlsx.utils.sheet_to_json(sheet);
+            
+                // Concatenate the dynamic column with the encrypted URL link
+                const result = [];
+                for (const row of data) {
+                    const dynamicColumnName = columnNames[0]; // Assuming the first column is dynamic
+                    const uniqueId = uuid.v4(); // Generate a unique ID
+                
+                    const concatenatedString = row[dynamicColumnName] + '/' + uniqueId;
+                
+                    // Base64 encode the concatenated string
+                    const encodedString = Buffer.from(concatenatedString).toString('base64');
+                    
+                    const concatenatedLink = url.link + '/' + encodeURIComponent(encodedString);
+                
+                    const restrictedURL = await restricted_url.create({
+                        link:concatenatedString,
                     });
-    
-                    // Create a new workbook
-                    const newWorkbook = xlsx.utils.book_new();
-                    const newSheet = xlsx.utils.json_to_sheet(result);
-    
-                    // Add the new sheet to the workbook
-                    xlsx.utils.book_append_sheet(newWorkbook, newSheet, 'ConcatenatedData');
-    
-                    // Write the workbook to a buffer
-                    const excelBuffer = xlsx.write(newWorkbook, { bookType: 'xlsx', type: 'buffer' });
-    
-                    // Send the Excel file as a response
-                    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                    res.setHeader('Content-Disposition', 'attachment; filename=concatenated_data.xlsx');
-                    res.send(excelBuffer);
-                } else {
+                
+                    result.push({
+                        dynamicColumn: row[dynamicColumnName],
+                        concatenatedLink: concatenatedLink,
+                    });
+                }
+                
+            
+                // Create a new workbook
+                const newWorkbook = xlsx.utils.book_new();
+                const newSheet = xlsx.utils.json_to_sheet(result);
+            
+                // Add the new sheet to the workbook
+                xlsx.utils.book_append_sheet(newWorkbook, newSheet, 'ConcatenatedData');
+            
+                // Write the workbook to a buffer
+                const excelBuffer = xlsx.write(newWorkbook, { bookType: 'xlsx', type: 'buffer' });
+            
+                // Send the Excel file as a response
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                res.setHeader('Content-Disposition', 'attachment; filename=URL.xlsx');
+                res.send(excelBuffer);
+            }
+                else {
                     res.json({ message: "No data found", type: 0 });
                 }
             }
+        
+            
             else{
                res.json({ message: "Apologies, but your company currently lacks the necessary access for this operation.", type: 0 }); 
             }

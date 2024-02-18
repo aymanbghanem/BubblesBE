@@ -66,6 +66,13 @@ const surveySchema = new Schema({
     updated:{
         type:Number,
         default:1
+    },
+    restricted:{
+        type:Number,
+        default:0
+    },
+    key:{
+        type:String
     }
 
 }, { timestamps: true })

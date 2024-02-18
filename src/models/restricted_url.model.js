@@ -19,15 +19,8 @@ const urlSchema = new Schema({
     created_by: {
         type: Schema.Types.ObjectId,
         ref: 'user'
-    },
-    restricted:{
-        type:Number,
-        default:0
-    },
-    key:{
-        type:String
     }
 
 }, { timestamps: true })
 
-module.exports = model('url', urlSchema)
+module.exports = model('restricted_url', urlSchema)

@@ -8,7 +8,7 @@ module.exports = {
 /* 
 PORT = 3030
 DB_URL = mongodb://127.0.0.1:27878/Digital_Feedback
-BASE_URL = process.env.BASE_URL
+BASE_URL = /api/v1
 TOKEN_KEY = Digital_Feedback_token
 BEARER_TOKEN_KEY = Digital_Feedback_token@
 SECRET_HASH_KEY = Digital_Feedback_key
@@ -18,7 +18,7 @@ CRYPTO_PASS = copyRights2023
 
 PORT = 2107
 DB_URL = mongodb://127.0.0.1:27017/Digital_Feedback
-BASE_URL = process.env.BASE_URL
+BASE_URL = /api/v1
 TOKEN_KEY = Digital_Feedback_token
 BEARER_TOKEN_KEY = Digital_Feedback_token@
 SECRET_HASH_KEY = Digital_Feedback_key

@@ -20,6 +20,8 @@ const departmentModels = require("../models/department.models");
 const companyModels = require("../models/company.models");
 const urlModel = require("../models/url.model");
 const reportsModel = require("../models/reports.model");
+const restricted_urlModel = require("../models/restricted_url.model");
+const uuid = require('uuid');
 require('dotenv').config()
 
 router.post(`${process.env.BASE_URL}/createSurvey`, auth, async (req, res) => {
@@ -204,7 +206,7 @@ async function processAndStoreSurvey(surveyData, user) {
   try {
 
 
-    let existingSurvey = await surveyModel.findOne({ survey_title: surveyData.survey_title, department_id: user.department_id, active: 1 });
+    let existingSurvey = await surveyModel.findOne({ survey_title: surveyData.survey_title, department_id: user.department_id });
 
     if (existingSurvey) {
       throw new Error("Survey with the same name already exists in the department");
@@ -224,7 +226,7 @@ async function processAndStoreSurvey(surveyData, user) {
         title_font_size: surveyData.title_font_size,
         description_font_size: surveyData.description_font_size,
         response_message: surveyData.response_message,
-       
+        key : uuid.v4()
       });
 
       return survey;
@@ -455,12 +457,35 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
       path: "company_id",
       select: "company_name"
     })
-      .select('survey_title response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+      .select('survey_title restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
     if (!survey) {
       return res.json({ message: "Survey not found or is inactive.", type: 0 });
     } else {
       let company_name = survey.company_id.company_name;
+         // Check if location_id is provided and the location check is required
+      if (location_id) {
+        const existingLocation = await locationModel.findOne({
+          _id: location_id,
+          survey_id: survey_id,
+          active: 1,
+        });
+
+        if (!existingLocation) {
+          return res.json({ message: "The location does not exist or is not active.", type: 0 });
+        }
+      }
+      if (survey.restricted == 1){
+        const encodedLink = decodeURIComponent(req.query.user_number);
+        // Base64 decode the URL parameter
+        const decodedString = Buffer.from(encodedLink, 'base64').toString('utf-8');
+        // Split the decoded string if needed
+        let user_link = decodedString
+        let link = await restricted_urlModel.findOne({link:user_link , active:1})
+        if(!link){
+          return  res.json({message:"This link is not valid any more ",type:0})
+        }
+      }
       let surveyData = {
         survey_title: survey.survey_title,
         survey_description: survey.survey_description,
@@ -472,19 +497,6 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
         response_message: survey.response_message,
         logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
       };
-
-      // Check if location_id is provided and the location check is required
-      if (location_id) {
-        const existingLocation = await locationModel.findOne({
-          _id: location_id,
-          survey_id: survey_id,
-          active: 1,
-        });
-
-        if (!existingLocation) {
-          return res.status(404).json({ message: "The location does not exist or is not active.", type: 0 });
-        }
-      }
 
         if (phase == 1) {
 
@@ -522,7 +534,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
             };
           });
 
-          res.json({ questions: flattenedQuestions, surveyData, type: 2 });
+          return res.json({ questions: flattenedQuestions, surveyData, type: 2 });
         }
         else {
           let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
