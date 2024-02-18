@@ -45,7 +45,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
         user_name = user_name.toLowerCase()
 
         if (user_name.includes(' ')) {
-            return res.json({ message: "User name cannot contain spaces", type: 0 });
+            return res.json({ message: "User name can not contain spaces", type: 0 });
         }
         if (!config.roles.includes(role)) {
             return res.json({ message: "sorry, you are unauthorized", type: 0 });
