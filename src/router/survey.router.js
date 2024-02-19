@@ -1033,7 +1033,8 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           locations: buildTree(locations, null),
           questions: simplifiedQuestions,
           updated : survey.updated,
-          updatedMessage : survey.updated == 1 ? "valid action":"sorry we can not complete this action" 
+          updatedMessage : survey.updated == 1 ? "valid action":"sorry we can not complete this action" ,
+          restricted:survey.restricted
         };
 
          res.json({ message: response, type: 2 });
@@ -1060,7 +1061,7 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           },
           {
             path: 'survey_id',
-            select: 'survey_title updated response_message symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+            select: 'survey_title restricted updated response_message symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
           }
         ]);
 
@@ -1122,7 +1123,8 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           locations: buildTree(locations, null),
           questions: simplifiedQuestions,
           updated : survey.survey_id.updated,
-          updatedMessage : survey.survey_id.updated == 1 ? "valid action":"sorry we can not complete this action" 
+          updatedMessage : survey.survey_id.updated == 1 ? "valid action":"sorry we can not complete this action" ,
+          restricted : survey.survey_id.restricted
         };
 
         res.json({ message: response, type: 2 });
@@ -1191,7 +1193,8 @@ router.get(`${process.env.BASE_URL}/getSurveys`, auth, async (req, res) => {
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
               updated : item.updated,
-              updatedMessage : item.updated == 1 ? "valid action":"sorry we can not complete this action" 
+              updatedMessage : item.updated == 1 ? "valid action":"sorry we can not complete this action" ,
+              restricted:item.restricted
             };
           })
         );
@@ -1229,7 +1232,7 @@ router.get(`${process.env.BASE_URL}/getSurveys`, auth, async (req, res) => {
             },
             {
               path: 'survey_id',
-              select: 'survey_title updated symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+              select: 'survey_title restricted updated symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
             }
           ]);
 
@@ -1257,7 +1260,8 @@ router.get(`${process.env.BASE_URL}/getSurveys`, auth, async (req, res) => {
             createdAt: item.survey_id.createdAt,
             updatedAt: item.survey_id.updatedAt,
             updated : item.survey_id.updated,
-            updatedMessage : item.survey_id.updated == 1 ? "valid action":"sorry we can not complete this action" 
+            updatedMessage : item.survey_id.updated == 1 ? "valid action":"sorry we can not complete this action" ,
+            restricted:item.survey_id.restricted
           };
         }));
 
@@ -1308,7 +1312,8 @@ router.get(`${process.env.BASE_URL}/getSurveys`, auth, async (req, res) => {
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             updatedMessage : item.updated == 1 ? "valid action":"sorry we can not complete this action",
-            updated : item.updated
+            updated : item.updated,
+            restricted:item.restricted
           };
         }));
 
