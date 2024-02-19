@@ -404,7 +404,7 @@ router.put(`${process.env.BASE_URL}/updateSurvey`, auth, async (req, res) => {
               description_font_size: updatedSurveyData.description_font_size || existingSurvey.description_font_size,
               response_message: updatedSurveyData.response_message || existingSurvey.response_message,
               symbol_size : updatedSurveyData.symbol_size || existingSurvey.symbol_size,
-              restricted:updatedSurveyData.restricted || existingSurvey.restricted
+              restricted:updatedSurveyData.restricted 
             },
           }
         );
