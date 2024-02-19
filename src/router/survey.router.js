@@ -483,7 +483,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
         let user_link = decodedString
         let link = await restricted_urlModel.findOne({link:user_link , active:1})
         if(!link){
-          return  res.json({message:"This link is not valid any more ",type:0})
+          return  res.json({message:"This link is not valid",type:0})
         }
       }
       let surveyData = {

@@ -324,7 +324,7 @@ router.post(`${process.env.BASE_URL}/createResponse`, async (req, res) => {
                     }
                 }
                 else {
-                    res.json({ message: "This link is not valid any more ", type: 0 })
+                    res.json({ message: "This link is not valid", type: 0 })
                 }
 
             }
