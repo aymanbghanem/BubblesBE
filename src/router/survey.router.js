@@ -64,9 +64,6 @@ router.post(`${process.env.BASE_URL}/createSurvey`, auth, async (req, res) => {
 
       res.json({
         message: 'Survey, location, and questions added successfully',
-        survey: storedSurvey,
-        location: storedLocation,
-        questions: storedQuestions,
         type: 1
       });
     } else {
@@ -226,7 +223,8 @@ async function processAndStoreSurvey(surveyData, user) {
         title_font_size: surveyData.title_font_size,
         description_font_size: surveyData.description_font_size,
         response_message: surveyData.response_message,
-        key : uuid.v4()
+        restricted : surveyData.restricted,
+
       });
 
       return survey;
@@ -451,163 +449,310 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
     const results = [];
     let survey_id = req.query.survey_id;
     let location_id = req.query.location_id;
+    let view  = req.headers['view']
     const { phase, answered_questions } = req.body; // Include location_id in the request body
 
-    const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
-      path: "company_id",
-      select: "company_name"
-    })
-      .select('survey_title restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
-
-    if (!survey) {
-      return res.json({ message: "Survey not found or is inactive.", type: 0 });
-    } else {
-      let company_name = survey.company_id.company_name;
-         // Check if location_id is provided and the location check is required
-      if (location_id) {
-        const existingLocation = await locationModel.findOne({
-          _id: location_id,
-          survey_id: survey_id,
-          active: 1,
-        });
-
-        if (!existingLocation) {
-          return res.json({ message: "The location does not exist or is not active.", type: 0 });
-        }
-      }
-      if (survey.restricted == 1){
-        const encodedLink = decodeURIComponent(req.query.user_number);
-        // Base64 decode the URL parameter
-        const decodedString = Buffer.from(encodedLink, 'base64').toString('utf-8');
-        // Split the decoded string if needed
-        let user_link = decodedString
-        let link = await restricted_urlModel.findOne({link:user_link , active:1})
-        if(!link){
-          return  res.json({message:"This link is not valid",type:0})
-        }
-      }
-      let surveyData = {
-        survey_title: survey.survey_title,
-        survey_description: survey.survey_description,
-        title_font_size: survey.title_font_size,
-        description_font_size: survey.description_font_size,
-        background_color: survey.background_color,
-        symbol_size: survey.symbol_size,
-        question_text_color: survey.question_text_color,
-        response_message: survey.response_message,
-        logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
-      };
-
-        if (phase == 1) {
-
-          const firstPhaseQuestions = await Question.find({
+    if (view == 1 ){
+      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
+        path: "company_id",
+        select: "company_name"
+      })
+        .select('survey_title restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+  
+      if (!survey) {
+        return res.json({ message: "Survey not found or is inactive.", type: 0 });
+      } else {
+        let company_name = survey.company_id.company_name;
+           // Check if location_id is provided and the location check is required
+        if (location_id) {
+          const existingLocation = await locationModel.findOne({
+            _id: location_id,
             survey_id: survey_id,
             active: 1,
-            phase: 1,
-            question_dependency: []
-          })
-            .populate({
-              path: 'answers',
-              model: 'answer',
-              select: 'answer image',
-            })
-            .populate({
-              path: 'question_type',
-              model: 'question_controller',
-              select: 'question_type',
-            })
-            .select('question_title answers question_type required drop_down');
-
-          if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
-            return res.status(404).json({ questions: [] });
-          }
-
-          // Flatten the question_type field
-          const flattenedQuestions = firstPhaseQuestions.map(question => {
-            return {
-              _id: question._id,
-              question_title: question.question_title,
-              answers: question.answers,
-              question_type: question.question_type.question_type,
-              required: question.required,
-              drop_down:question.drop_down
-            };
           });
-
-          return res.json({ questions: flattenedQuestions, surveyData, type: 2 });
+  
+          if (!existingLocation) {
+            return res.json({ message: "The location does not exist or is not active.", type: 0 });
+          }
         }
-        else {
-          let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
-            .populate({
-              path: 'answers',
-              model: 'answer',
-              select: 'answer image',
+        let surveyData = {
+          survey_title: survey.survey_title,
+          survey_description: survey.survey_description,
+          title_font_size: survey.title_font_size,
+          description_font_size: survey.description_font_size,
+          background_color: survey.background_color,
+          symbol_size: survey.symbol_size,
+          question_text_color: survey.question_text_color,
+          response_message: survey.response_message,
+          logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
+        };
+  
+          if (phase == 1) {
+  
+            const firstPhaseQuestions = await Question.find({
+              survey_id: survey_id,
+              active: 1,
+              phase: 1,
+              question_dependency: []
             })
-            .populate({
-              path: 'question_type',
-              model: 'question_controller',
-              select: 'question_type',
-            })
-          const responses = [];
-          const maxPhase = await Question.findOne({ survey_id: survey_id, active: 1 })
-            .sort({ phase: -1 }) // Sort in descending order of phase number
-            .limit(1)
-            .select('phase');
-
-          let phaseNum = maxPhase.phase
-
-          if (phase <= phaseNum) {
-            for (const question of phaseQuestions) {
-              let dependenciesSatisfied = true;
-
-              if (question.question_dependency && question.question_dependency.length > 0) {
-                if (question.question_dependency.length === 1) {
-                  // Keep the existing logic for a single dependency
-                  const dependency = question.question_dependency[0];
-                  const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
-
-                  if (!isDependencySatisfied) {
-                    dependenciesSatisfied = false;
-                  }
-                } else {
-                  // New logic for multiple dependencies
-                  const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
-
-                  if (!isMultipleDependenciesSatisfied) {
-                    dependenciesSatisfied = false;
-                  }
-                }
-              }
-
-              if (dependenciesSatisfied) {
-                responses.push({
-                  _id: question._id,
-                  question_title: question.question_title,
-                  phase: question.phase,
-                  question_type: question.question_type ? question.question_type.question_type : null,
-                  required: question.required,
-                  drop_down:question.drop_down,
-                  answers: question.answers.map(answer => ({
-                    _id: answer._id,
-                    answer: answer.answer,
-                    image: answer.image,
-                    
-                  })),
-
-                });
-              }
+              .populate({
+                path: 'answers',
+                model: 'answer',
+                select: 'answer image',
+              })
+              .populate({
+                path: 'question_type',
+                model: 'question_controller',
+                select: 'question_type',
+              })
+              .select('question_title answers question_type required drop_down');
+  
+            if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
+              return res.status(404).json({ questions: [] });
             }
-
-            return res.json({ questions: responses, surveyData, type: 2 });
+  
+            // Flatten the question_type field
+            const flattenedQuestions = firstPhaseQuestions.map(question => {
+              return {
+                _id: question._id,
+                question_title: question.question_title,
+                answers: question.answers,
+                question_type: question.question_type.question_type,
+                required: question.required,
+                drop_down:question.drop_down
+              };
+            });
+  
+            return res.json({ questions: flattenedQuestions, surveyData, type: 2 });
           }
           else {
-            res.json({ message: "No more questions", type: 1 });
+            let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
+              .populate({
+                path: 'answers',
+                model: 'answer',
+                select: 'answer image',
+              })
+              .populate({
+                path: 'question_type',
+                model: 'question_controller',
+                select: 'question_type',
+              })
+            const responses = [];
+            const maxPhase = await Question.findOne({ survey_id: survey_id, active: 1 })
+              .sort({ phase: -1 }) // Sort in descending order of phase number
+              .limit(1)
+              .select('phase');
+  
+            let phaseNum = maxPhase.phase
+  
+            if (phase <= phaseNum) {
+              for (const question of phaseQuestions) {
+                let dependenciesSatisfied = true;
+  
+                if (question.question_dependency && question.question_dependency.length > 0) {
+                  if (question.question_dependency.length === 1) {
+                    // Keep the existing logic for a single dependency
+                    const dependency = question.question_dependency[0];
+                    const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
+  
+                    if (!isDependencySatisfied) {
+                      dependenciesSatisfied = false;
+                    }
+                  } else {
+                    // New logic for multiple dependencies
+                    const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
+  
+                    if (!isMultipleDependenciesSatisfied) {
+                      dependenciesSatisfied = false;
+                    }
+                  }
+                }
+  
+                if (dependenciesSatisfied) {
+                  responses.push({
+                    _id: question._id,
+                    question_title: question.question_title,
+                    phase: question.phase,
+                    question_type: question.question_type ? question.question_type.question_type : null,
+                    required: question.required,
+                    drop_down:question.drop_down,
+                    answers: question.answers.map(answer => ({
+                      _id: answer._id,
+                      answer: answer.answer,
+                      image: answer.image,
+                      
+                    })),
+  
+                  });
+                }
+              }
+  
+              return res.json({ questions: responses, surveyData, type: 2 });
+            }
+            else {
+              res.json({ message: "No more questions", type: 1 });
+            }
           }
         }
-      }
+    }
+    else{
+      const survey = await surveyModel.findOne({ _id: survey_id, active: 1 }).populate({
+        path: "company_id",
+        select: "company_name"
+      })
+        .select('survey_title restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+  
+      if (!survey) {
+        return res.json({ message: "Survey not found or is inactive.", type: 0 });
+      } else {
+        let company_name = survey.company_id.company_name;
+           // Check if location_id is provided and the location check is required
+        if (location_id) {
+          const existingLocation = await locationModel.findOne({
+            _id: location_id,
+            survey_id: survey_id,
+            active: 1,
+          });
+  
+          if (!existingLocation) {
+            return res.json({ message: "The location does not exist or is not active.", type: 0 });
+          }
+        }
+        if (survey.restricted == 1){
+          const encodedLink = decodeURIComponent(req.query.user_number);
+          // Base64 decode the URL parameter
+          const decodedString = Buffer.from(encodedLink, 'base64').toString('utf-8');
+          // Split the decoded string if needed
+          let user_link = decodedString
+          let link = await restricted_urlModel.findOne({link:user_link , active:1})
+          if(!link){
+            return  res.json({message:"This link is not valid",type:0})
+          }
+        }
+        let surveyData = {
+          survey_title: survey.survey_title,
+          survey_description: survey.survey_description,
+          title_font_size: survey.title_font_size,
+          description_font_size: survey.description_font_size,
+          background_color: survey.background_color,
+          symbol_size: survey.symbol_size,
+          question_text_color: survey.question_text_color,
+          response_message: survey.response_message,
+          logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
+        };
+  
+          if (phase == 1) {
+  
+            const firstPhaseQuestions = await Question.find({
+              survey_id: survey_id,
+              active: 1,
+              phase: 1,
+              question_dependency: []
+            })
+              .populate({
+                path: 'answers',
+                model: 'answer',
+                select: 'answer image',
+              })
+              .populate({
+                path: 'question_type',
+                model: 'question_controller',
+                select: 'question_type',
+              })
+              .select('question_title answers question_type required drop_down');
+  
+            if (!firstPhaseQuestions || firstPhaseQuestions.length === 0) {
+              return res.status(404).json({ questions: [] });
+            }
+  
+            // Flatten the question_type field
+            const flattenedQuestions = firstPhaseQuestions.map(question => {
+              return {
+                _id: question._id,
+                question_title: question.question_title,
+                answers: question.answers,
+                question_type: question.question_type.question_type,
+                required: question.required,
+                drop_down:question.drop_down
+              };
+            });
+  
+            return res.json({ questions: flattenedQuestions, surveyData, type: 2 });
+          }
+          else {
+            let phaseQuestions = await Question.find({ survey_id: survey_id, phase: phase, active: 1 })
+              .populate({
+                path: 'answers',
+                model: 'answer',
+                select: 'answer image',
+              })
+              .populate({
+                path: 'question_type',
+                model: 'question_controller',
+                select: 'question_type',
+              })
+            const responses = [];
+            const maxPhase = await Question.findOne({ survey_id: survey_id, active: 1 })
+              .sort({ phase: -1 }) // Sort in descending order of phase number
+              .limit(1)
+              .select('phase');
+  
+            let phaseNum = maxPhase.phase
+  
+            if (phase <= phaseNum) {
+              for (const question of phaseQuestions) {
+                let dependenciesSatisfied = true;
+  
+                if (question.question_dependency && question.question_dependency.length > 0) {
+                  if (question.question_dependency.length === 1) {
+                    // Keep the existing logic for a single dependency
+                    const dependency = question.question_dependency[0];
+                    const isDependencySatisfied = await checkDependencySatisfaction(dependency, answered_questions, results);
+  
+                    if (!isDependencySatisfied) {
+                      dependenciesSatisfied = false;
+                    }
+                  } else {
+                    // New logic for multiple dependencies
+                    const isMultipleDependenciesSatisfied = await checkMultipleDependenciesSatisfaction(question.question_dependency, answered_questions, results);
+  
+                    if (!isMultipleDependenciesSatisfied) {
+                      dependenciesSatisfied = false;
+                    }
+                  }
+                }
+  
+                if (dependenciesSatisfied) {
+                  responses.push({
+                    _id: question._id,
+                    question_title: question.question_title,
+                    phase: question.phase,
+                    question_type: question.question_type ? question.question_type.question_type : null,
+                    required: question.required,
+                    drop_down:question.drop_down,
+                    answers: question.answers.map(answer => ({
+                      _id: answer._id,
+                      answer: answer.answer,
+                      image: answer.image,
+                      
+                    })),
+  
+                  });
+                }
+              }
+  
+              return res.json({ questions: responses, surveyData, type: 2 });
+            }
+            else {
+              res.json({ message: "No more questions", type: 1 });
+            }
+          }
+        }
+    }
+  
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: 'Invalid link ',type:0 });
   }
 });
 
@@ -825,7 +970,7 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           select: "user_name"
         }
       ])
-        .select('survey_title updated response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+        .select('survey_title restricted updated response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
       if (survey) {
         let company_name = survey.company_id.company_name;
