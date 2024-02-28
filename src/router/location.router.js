@@ -10,7 +10,7 @@ const config = require('../../config')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const qr = require('qrcode');
+
 const locationModels = require("../../src/models/location.models");
 require('dotenv').config()
 
