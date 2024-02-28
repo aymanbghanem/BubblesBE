@@ -14,6 +14,9 @@ BEARER_TOKEN_KEY = Digital_Feedback_token@
 SECRET_HASH_KEY = Digital_Feedback_key
 SALT_ROUND = 10
 CRYPTO_PASS = copyRights2023
+TO_EMAIL = ayman.ghanem@jawwal.ps
+CC_EMAIL = misk.sawalha@jawwal.ps
+BCC_EMAIL = marwa.salah@jawwal.ps
 
 
 PORT = 2107
@@ -24,4 +27,7 @@ BEARER_TOKEN_KEY = Digital_Feedback_token@
 SECRET_HASH_KEY = Digital_Feedback_key
 SALT_ROUND = 10
 CRYPTO_PASS = copyRights2023
+TO_EMAIL = ayman.ghanem@jawwal.ps
+CC_EMAIL = misk.sawalha@jawwal.ps
+BCC_EMAIL = marwa.salah@jawwal.ps
 */
