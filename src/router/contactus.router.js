@@ -1,4 +1,4 @@
-const  express = require('express')
+const express = require('express')
 const router = express.Router()
 const sendEmail = require('../middleware/contact')
 require('dotenv').config()
@@ -9,18 +9,20 @@ const validateEmail = (email) => {
 };
 
 router.post(`${process.env.BASE_URL}/contactUs`, async (req, res) => {
-    try {
-      let { name, number, subject, email, message } = req.body;
+  try {
+    let { name, number, subject, email, message } = req.body;
 
-      if (!validateEmail(email)) {
-        return res.json({ message: "Invalid email address", type: 0 });
-      }
-
-     // await sendEmail(name, number, email, subject, message);
-  
-      res.json({ message: 'Email sent successfully',type:1 });
-    } catch (error) {
-      res.json({ message: 'Catch error: ' + error,type:0 });
+    if (!validateEmail(email)) {
+      return res.json({ message: "Invalid email address", type: 0 });
     }
-  });
+    else {
+      // await sendEmail(name, number, email, subject, message);
+
+      res.json({ message: 'Email sent successfully', type: 1 });
+    }
+
+  } catch (error) {
+    res.json({ message: 'Catch error: ' + error, type: 0 });
+  }
+});
 module.exports = router
