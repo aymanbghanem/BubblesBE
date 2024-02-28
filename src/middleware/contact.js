@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 // await sendEmail(name, number, email, subject, message);
-async function sendEmail(name, number, from, subject, message) {
+async function sendEmail(first_name,last_name, number, from, subject, message) {
     const info = await transporter.sendMail({
         from: `${from}`,
         to: process.env.TO_EMAIL,
@@ -38,7 +38,7 @@ async function sendEmail(name, number, from, subject, message) {
         
                 <p style="font-size: 16px; line-height: 1.4; margin-bottom: 10px;">Hello,</p>
                 <p style="font-size: 16px; line-height: 1.4; margin-bottom: 10px;">You have a new contact inquiry from:</p>
-                <p style="margin-bottom: 5px;"><strong>${name}</strong> can be reached at <strong>${number}</strong> for further communication.</p>
+                <p style="margin-bottom: 5px;"><strong>${first_name} ${last_name}</strong> can be reached at <strong>${number}</strong> for further communication.</p>
                 <p style="font-size: 16px;"><strong>Message:</strong></p>
                 <p style="font-size: 16px; ">${message}</p>
         

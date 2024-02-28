@@ -10,13 +10,13 @@ const validateEmail = (email) => {
 
 router.post(`${process.env.BASE_URL}/contactUs`, async (req, res) => {
   try {
-    let { name, number, subject, email, message } = req.body;
+    let { first_name,last_name, number, subject, email, message } = req.body;
 
     if (!validateEmail(email)) {
       return res.json({ message: "Invalid email address", type: 0 });
     }
     else {
-      // await sendEmail(name, number, email, subject, message);
+      // await sendEmail(first_name,last_name, number, email, subject, message,);
 
       res.json({ message: 'Email sent successfully', type: 1 });
     }
