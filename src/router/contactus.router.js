@@ -16,7 +16,7 @@ router.post(`${process.env.BASE_URL}/contactUs`, async (req, res) => {
       return res.json({ message: "Invalid email address", type: 0 });
     }
     else {
-      // await sendEmail(first_name,last_name, number, email, subject, message,);
+      await sendEmail(first_name,last_name, number, email, subject, message,);
 
       res.json({ message: 'Email sent successfully', type: 1 });
     }

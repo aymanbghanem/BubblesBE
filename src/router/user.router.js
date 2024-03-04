@@ -96,7 +96,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
                             email_address: email_address,
                             company_id: company._id,
                             user_role: "owner",
-                            temp: newPassword,
+                         
                             token: null,
                         });
                         res.json({ message: "New owner added successfully", type: 1 });
@@ -134,7 +134,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
                 email_address: email_address,
                 user_role: "admin",
                 token: null,
-                temp: newPassword,
+             
             };
             try {
                 await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
@@ -171,7 +171,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
             const userParams = {
                 user_name: user_name,
                 password: hashedPassword,
-                temp: newPassword,
+              
                 email_address: email_address,
                 user_role: 'survey-reader',
                 token: null,
@@ -258,7 +258,7 @@ router.post(`${process.env.BASE_URL}/addSuperadmin`, async (req, res) => {
                     user_role: 'superadmin',
                     email_address: email_address,
                     password: hashedPassword,
-                    temp: newPassword,
+                  
                     token: null,
                 });
                 res.json({ message: "successfully added", type: 1 });
@@ -756,7 +756,7 @@ router.post(`${process.env.BASE_URL}/resetPassword`,auth, async (req, res) => {
             //  await hashPassword(newPassword, async (hash) => {
             //  hashedPassword = hash;
             hashedPassword = await hashPassword(newPassword);
-            existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword, temp: newPassword, })
+            existingUser = await userModels.findOneAndUpdate({ email_address: email_address }, { password: hashedPassword})
             //   })
 
             let user_name = existingUser.user_name
