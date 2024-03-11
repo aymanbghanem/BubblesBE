@@ -259,7 +259,6 @@ router.post(`${process.env.BASE_URL}/addSuperadmin`,basicAuthentication, async (
                     user_role: 'superadmin',
                     email_address: email_address,
                     password: hashedPassword,
-                  
                     token: null,
                 });
                 res.json({ message: "successfully added", type: 1 });

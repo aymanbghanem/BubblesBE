@@ -40,9 +40,9 @@ settingSchema.statics.initializeSettings = async function () {
         if (existingSettings.length === 0) {
             await this.create({
                 title_weight: 'bold',
-                title_font_size: '16px',
-                description_font_size: '14px',
-                question_font_size: '18px',
+                title_font_size: '16',
+                description_font_size: '14',
+                question_font_size: '18',
                 location_limitation: 5,
                 range_limitation: 5,
                 char_limitation: 120,

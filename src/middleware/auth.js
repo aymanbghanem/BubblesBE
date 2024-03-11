@@ -13,9 +13,9 @@ const auth = async (req, res, next) => {
     jwt.verify(token, process.env.TOKEN_KEY, async function (err, decode) {
       if (err) {
         if (err.name === 'TokenExpiredError') {
-          res.json({ message: "Your session has expired. Please log in again to continue.", type: 0 });
+          res.status(401).json({ message: "Your session has expired. Please log in again to continue.", type: 0 });
         } else {
-          res.json({ message: "Invalid token format. Please provide a valid token.", type: 0 });
+          res.status(401).json({ message: "Invalid token format. Please provide a valid token.", type: 0 });
         }
       } else {
         const user = await User.findOne({
@@ -24,7 +24,7 @@ const auth = async (req, res, next) => {
         });
 
         if (!user) {
-          res.json({ message: "User authentication failed. Please check your credentials.", type: 0 });
+          res.status(401).json({ message: "User authentication failed. Please check your credentials.", type: 0 });
         } else {
           req.user = user;
           next();
@@ -32,7 +32,7 @@ const auth = async (req, res, next) => {
       }
     });
   } catch (e) {
-    res.json({ error: "Please authenticate.", type: 0 });
+    res.status(401).json({ error: "Please authenticate.", type: 0 });
   }
 };
 

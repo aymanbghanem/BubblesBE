@@ -124,7 +124,7 @@ router.get(`${process.env.BASE_URL}/getCompanyById`,auth,async(req,res)=>{
     try {
         let company_id = req.headers['company_id']
         let role = req.user.user_role
-        if(role == 'admin'){
+        if(role == 'superadmin'){
             let company = await companyModel.findOne({_id:company_id , active:1})
             if(company){
                 res.json({message:company , type:2})
@@ -174,7 +174,7 @@ router.put(`${process.env.BASE_URL}/updateCompanyAccess`,auth,async(req,res)=>{
                     ]);
                 }
                 }
-                company = await companyModel.findOneAndUpdate({_id:company_id},{notifier:notifier , dashboard:dashboard})
+                company = await companyModel.findOneAndUpdate({_id:company_id},{notifier:notifier , dashboard:dashboard,url_builder:url_builder})
                 res.json({ message: "Successfully updated", type: 1 });
             }
             else{
