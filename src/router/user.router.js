@@ -10,6 +10,7 @@ const surveyReaderModel = require('../models/surveyReader.model')
 const surveyModel = require('../models/survey.models')
 const config = require('../../config')
 const auth = require('../middleware/auth')
+const basicAuthentication = require('../middleware/basicAuth')
 var jwt = require('jsonwebtoken');
 const companyModels = require("../models/company.models");
 const departmentModels = require("../models/department.models");
@@ -223,7 +224,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
     }
 });
 
-router.post(`${process.env.BASE_URL}/addSuperadmin`, async (req, res) => {
+router.post(`${process.env.BASE_URL}/addSuperadmin`,basicAuthentication, async (req, res) => {
     try {
         let { user_name, email_address, password } = req.body;
         user_name = user_name.toLowerCase();
