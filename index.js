@@ -18,6 +18,9 @@ const urlRouter = require('./src/router/url.router')
 const reportsRouter = require('./src/router/reports.router')
 const notificationRouter = require('./src/router/notification.router')
 const contactRouter = require('./src/router/contactus.router')
+const Setting = require('./src/models/setting.models');
+const QuestionController = require('./src/models/questions_controller.models');
+
 const app = express()
 app.use(cors())
 app.use(express.static("logo"));
@@ -45,5 +48,9 @@ app.use(urlRouter)
 app.use(reportsRouter)
 app.use(notificationRouter)
 app.use(contactRouter)
+
+
+Setting.initializeSettings();
+QuestionController.initializeQuestionTypes()
 app.get('/', (req, res) => res.send('Hello World!'))
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))

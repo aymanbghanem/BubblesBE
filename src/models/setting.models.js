@@ -34,4 +34,24 @@ const settingSchema = new Schema({
 
 }, { timestamps: true })
 
-module.exports = model('setting', settingSchema)
+settingSchema.statics.initializeSettings = async function () {
+    try {
+        const existingSettings = await this.find();
+        if (existingSettings.length === 0) {
+            await this.create({
+                title_weight: 'bold',
+                title_font_size: '16px',
+                description_font_size: '14px',
+                question_font_size: '18px',
+                location_limitation: 5,
+                range_limitation: 5,
+                char_limitation: 120,
+            });
+            console.log('Default settings inserted successfully.');
+        }
+    } catch (error) {
+        console.error('Error initializing settings:', error);
+    }
+};
+
+module.exports = model('Setting', settingSchema);
