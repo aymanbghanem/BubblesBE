@@ -224,7 +224,7 @@ async function processAndStoreSurvey(surveyData, user) {
         description_font_size: surveyData.description_font_size,
         response_message: surveyData.response_message,
         restricted : surveyData.restricted,
-
+        language : surveyData.language
       });
 
       return survey;
@@ -404,7 +404,8 @@ router.put(`${process.env.BASE_URL}/updateSurvey`, auth, async (req, res) => {
               description_font_size: updatedSurveyData.description_font_size || existingSurvey.description_font_size,
               response_message: updatedSurveyData.response_message || existingSurvey.response_message,
               symbol_size : updatedSurveyData.symbol_size || existingSurvey.symbol_size,
-              restricted:updatedSurveyData.restricted 
+              restricted:updatedSurveyData.restricted ,
+              language : updatedSurveyData.language
             },
           }
         );
@@ -971,7 +972,7 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           select: "user_name"
         }
       ])
-        .select('survey_title restricted updated response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+        .select('survey_title language restricted updated response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
 
       if (survey) {
         let company_name = survey.company_id.company_name;
@@ -1035,7 +1036,8 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           questions: simplifiedQuestions,
           updated : survey.updated,
           updatedMessage : survey.updated == 1 ? "valid action":"sorry we can not complete this action" ,
-          restricted:survey.restricted
+          restricted:survey.restricted,
+          language:survey.language
         };
 
          res.json({ message: response, type: 2 });
@@ -1062,7 +1064,7 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           },
           {
             path: 'survey_id',
-            select: 'survey_title restricted updated response_message symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
+            select: 'survey_title language restricted updated response_message symbol_size responses created_by active survey_description logo submission_pwd background_color question_text_color createdAt updatedAt',
           }
         ]);
 
@@ -1125,7 +1127,8 @@ router.get(`${process.env.BASE_URL}/getSurveyById`, auth, async (req, res) => {
           questions: simplifiedQuestions,
           updated : survey.survey_id.updated,
           updatedMessage : survey.survey_id.updated == 1 ? "valid action":"sorry we can not complete this action" ,
-          restricted : survey.survey_id.restricted
+          restricted : survey.survey_id.restricted,
+          language : survey.survey_id.language
         };
 
         res.json({ message: response, type: 2 });

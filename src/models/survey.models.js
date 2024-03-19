@@ -73,6 +73,10 @@ const surveySchema = new Schema({
     },
     key:{
         type:String
+    },
+    language:{
+        type:String,
+        default:'En'
     }
 
 }, { timestamps: true })
