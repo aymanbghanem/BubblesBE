@@ -459,7 +459,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
         path: "company_id",
         select: "company_name"
       })
-        .select('survey_title restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+        .select('survey_title language restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
   
       if (!survey) {
         return res.json({ message: "Survey not found or is inactive.", type: 0 });
@@ -487,6 +487,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
           question_text_color: survey.question_text_color,
           response_message: survey.response_message,
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
+          language : survey.language
         };
   
           if (phase == 1) {
@@ -602,7 +603,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
         path: "company_id",
         select: "company_name"
       })
-        .select('survey_title restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
+        .select('survey_title language restricted response_message symbol_size survey_description logo title_font_size description_font_size submission_pwd background_color question_text_color company_id');
   
       if (!survey) {
         return res.json({ message: "Survey not found or is inactive.", type: 0 });
@@ -641,6 +642,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
           question_text_color: survey.question_text_color,
           response_message: survey.response_message,
           logo: (survey.logo != "" && survey.logo != " ") ? `${company_name}/${survey.logo}` : " " || "",
+          language : survey.language
         };
   
           if (phase == 1) {
