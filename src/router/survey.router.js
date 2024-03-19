@@ -627,8 +627,11 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
           const decodedString = Buffer.from(encodedLink, 'base64').toString('utf-8');
           // Split the decoded string if needed
           let user_link = decodedString
-          let link = await restricted_urlModel.findOne({link:user_link , active:1})
+          let link = await restricted_urlModel.findOne({link:user_link})
           if(!link){
+            return  res.json({message:"This link is not valid you need to upload file contain user's id's ",type:0})
+          }
+          else if(link.active == 0){
             return  res.json({message:"This link is not valid",type:0})
           }
         }
@@ -756,7 +759,7 @@ router.post(`${process.env.BASE_URL}/getQuestions`, async (req, res) => {
   
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Invalid link ',type:0 });
+    return res.json({ message: 'Invalid link '+error,type:0 });
   }
 });
 
