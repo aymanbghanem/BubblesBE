@@ -31,7 +31,7 @@ router.post(`${process.env.BASE_URL}/addSetting`, auth, async (req, res) => {
     }
 })
 
-router.get(`${process.env.BASE_URL}/getSetting`,auth,async(req,res)=>{
+router.get(`${process.env.BASE_URL}/getSetting`,async(req,res)=>{
     try {
         let role = req.user.user_role
         if (role==="superadmin" || role==="admin" ) {
