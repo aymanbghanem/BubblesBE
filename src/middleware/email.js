@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendEmail(user_name, to, subject, password, message) {
+async function sendEmail(user_name, to, subject, subtitle,password, message) {
   const info = await transporter.sendMail({
     from: `"digitalfeedback@jawwal.ps"`,
     to: to,
@@ -36,7 +36,7 @@ async function sendEmail(user_name, to, subject, password, message) {
    <p style=" font-size: 16px;">Dear ${user_name},</p>
    <p style="font-size: 16px;">We hope this email finds you well.</p>
    <p style="font-size: 16px;">This email ${message}</p>
-   <p style="font-size: 16px;">Your password: <strong>${password}</strong></p>
+   <p style="font-size: 16px;">Your ${subtitle}: <strong>${password}</strong></p>
    <p style="font-size: 16px;">Thank you for your attention!</p>
    <p style="font-size: 16px;">Best regards,</p>
    <p style="font-size: 18px; font-weight: bold; text-align: center;">Digital Support Team</p>

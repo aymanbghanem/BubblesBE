@@ -89,7 +89,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
 
 
                     try {
-                        await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                        await sendEmail(user_name, email_address, "Account Password ","password",newPassword, "for your account password.");
                         hashedPassword = await hashPassword(newPassword);
                         const user = await userModels.create({
                             user_name: user_name,
@@ -138,7 +138,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
              
             };
             try {
-                await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                await sendEmail(user_name, email_address, "Account Password ","password",newPassword, "for your account password.");
                 const user = await userModels.create({
                     ...userParams,
                     company_id: req.user.company_id,
@@ -180,7 +180,7 @@ router.post(`${process.env.BASE_URL}/addUsers`, auth, async (req, res) => {
             };
 
             try {
-                await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                await sendEmail(user_name, email_address, "Account Password ","password",newPassword, "for your account password.");
                 // Create a new user
                 user = await userModels.create({
                     ...userParams,
@@ -251,7 +251,7 @@ router.post(`${process.env.BASE_URL}/addSuperadmin`,basicAuthentication, async (
         } else {
 
             try {
-                await sendEmail(user_name, email_address, "Account Password ", newPassword, "for your account password.");
+                await sendEmail(user_name, email_address, "Account Password ","password",newPassword, "for your account password.");
                 hashedPassword = await hashPassword(newPassword);
              
                 let new_user = await userModels.create({
@@ -760,7 +760,7 @@ router.post(`${process.env.BASE_URL}/resetPassword`,auth, async (req, res) => {
             //   })
 
             let user_name = existingUser.user_name
-            response = await sendEmail(user_name, existingUser.email_address, "Reset password", newPassword, "to reset your password")
+            response = await sendEmail(user_name, existingUser.email_address, "Reset password","password",newPassword, "to reset your password")
             res.json({ message: "Password successful updated", type: 1 })
         }
         else {
