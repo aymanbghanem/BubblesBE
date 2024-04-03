@@ -1,12 +1,13 @@
 function pinCodeGenerator() {
     var pinCode = '';
-    for (var i = 0; i < 6; i++) {
-      // Generate a random number from 0 to 9 and append it to the pinCode
-      pinCode += Math.floor(Math.random() * 10);
+
+    // Generate digits until the PIN code reaches 6 digits
+    while (pinCode.length < 6) {
+        pinCode += Math.floor(Math.random() * 10); // Generate a random digit (0-9)
     }
+
     return pinCode;
-  }
-  
-  // Export the pin code generator function
-  module.exports = pinCodeGenerator;
-  
+}
+
+// Export the pin code generator function
+module.exports = pinCodeGenerator;
