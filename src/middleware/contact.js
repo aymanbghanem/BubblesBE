@@ -45,7 +45,7 @@ async function sendEmail(first_name,last_name, number, from, subject, message) {
             </div>
         
             <p style="font-size: 16px; margin-bottom: 5px;">Best regards,</p>
-            <p style="font-size: 18px; font-weight: bold; text-align: center; margin-top: 15px;">Digital Support Team</p>
+            
         
         </body>
         

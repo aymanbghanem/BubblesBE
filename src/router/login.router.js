@@ -4,7 +4,7 @@ const config = require('../../config')
 const userModels = require("../models/user.models");
 const { hashPassword, compareHashedPassword } = require('../helper/hashPass.helper')
 const pinCodeGenerator = require('../helper/pinCodeGenerator.helper')
-const sendEmail = require('../middleware/email')
+const sendEmail = require('../middleware/pincodeEmail')
 const auth = require('../middleware/auth')
 var jwt = require('jsonwebtoken');
 const CryptoJS = require('crypto-js');
@@ -35,7 +35,7 @@ router.post(`${process.env.BASE_URL}/login`, async (req, res) => {
 
           try {
 
-            await sendEmail(existingUser.user_name, existingUser.email_address, "User PIN code ", "PIN code is", pinCode, "for your account on Bubbles platform .");
+            await sendEmail(existingUser.user_name, existingUser.email_address, "PIN Code for Account Verification ",pinCode);
 
             let userPinCode = await userModels.findOneAndUpdate({
               user_name: user_name,
